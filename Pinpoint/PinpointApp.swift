@@ -20,10 +20,22 @@ struct PinpointApp: App {
 }
 
 struct SettingsView: View {
+    @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
+
     var body: some View {
         Form {
             Section("Raccourci de capture") {
                 KeyboardShortcuts.Recorder("Capturer l’écran :", name: .capture)
+            }
+            Section("Style des repères") {
+                Picker("Style :", selection: $pinStyle) {
+                    ForEach(PinStyle.allCases) { style in
+                        Text(style.label).tag(style)
+                    }
+                }
+                Text(pinStyle.caption)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
             }
             Section {
                 Text("Pinpoint vit dans la barre de menus. Appuie sur le raccourci, annote, copie.")

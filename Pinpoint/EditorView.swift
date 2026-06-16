@@ -27,6 +27,8 @@ struct EditorView: View {
     let image: NSImage
     var onClose: () -> Void
 
+    @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
+
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
     @State private var context: String = ""
@@ -34,6 +36,7 @@ struct EditorView: View {
     @State private var selectedPinID: Pin.ID?
     @State private var selectedShapeID: Markup.ID?
     @State private var draft: Markup?
+    @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
 
     var body: some View {
@@ -113,24 +116,32 @@ struct EditorView: View {
 
                 // Numbered pins.
                 ForEach($pins) { $pin in
-                    PinMarker(number: pin.number, selected: pin.id == selectedPinID)
-                        .position(
-                            x: fitted.minX + pin.position.x * fitted.width,
-                            y: fitted.minY + pin.position.y * fitted.height
-                        )
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    selectPin(pin.id)
-                                    pin.position = clamp01(normalize(value.location, in: fitted))
-                                }
-                        )
+                    let anchor = absolutePoint(pin.position, in: fitted)
+                    PinMarker(number: pin.number, style: pinStyle, selected: pin.id == selectedPinID)
+                        .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle))
+                        .gesture(pinDrag($pin, in: fitted))
                         .allowsHitTesting(tool == .pin)
                 }
             }
             .contentShape(Rectangle())
             .gesture(canvasGesture(in: fitted))
         }
+    }
+
+    /// Drag-to-move a pin. Translation-based so grabbing anywhere on the marker
+    /// (e.g. the head of a pointer whose anchor is the tip) never makes it jump.
+    private func pinDrag(_ pin: Binding<Pin>, in fitted: CGRect) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                selectPin(pin.wrappedValue.id)
+                let base = dragStartPosition ?? pin.wrappedValue.position
+                if dragStartPosition == nil { dragStartPosition = base }
+                pin.wrappedValue.position = clamp01(CGPoint(
+                    x: base.x + value.translation.width / fitted.width,
+                    y: base.y + value.translation.height / fitted.height
+                ))
+            }
+            .onEnded { _ in dragStartPosition = nil }
     }
 
     /// One drag gesture for the whole canvas, branching on the active tool. A
@@ -163,7 +174,7 @@ struct EditorView: View {
         case .rectangle:
             let r = absoluteRect(shape.rect, in: fitted)
             RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.accentColor, lineWidth: width)
+                .stroke(Color.pinpointVermillon, lineWidth: width)
                 .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
                 .frame(width: r.width, height: r.height)
                 .position(x: r.midX, y: r.midY)
@@ -172,7 +183,7 @@ struct EditorView: View {
                 start: absolutePoint(shape.start, in: fitted),
                 end: absolutePoint(shape.end, in: fitted)
             )
-            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+            .stroke(Color.pinpointVermillon, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
         }
     }
@@ -204,6 +215,7 @@ struct EditorView: View {
             }
             .controlSize(.large)
             .buttonStyle(.borderedProminent)
+            .tint(.pinpointVermillon)
             .keyboardShortcut("c", modifiers: [.command])
         }
         .padding(14)
@@ -243,7 +255,7 @@ struct EditorView: View {
                 .font(.caption.bold())
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.accentColor))
+                .background(Circle().fill(Color.pinpointVermillon))
 
             TextField("Décris ce repère…", text: pin.note)
                 .textFieldStyle(.roundedBorder)
@@ -259,7 +271,7 @@ struct EditorView: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(pin.wrappedValue.id == selectedPinID ? Color.accentColor.opacity(0.12) : Color.clear)
+                .fill(pin.wrappedValue.id == selectedPinID ? Color.pinpointVermillon.opacity(0.12) : Color.clear)
         )
         .onTapGesture { selectPin(pin.wrappedValue.id) }
     }
@@ -267,7 +279,7 @@ struct EditorView: View {
     private func shapeRow(_ shape: Markup) -> some View {
         HStack(spacing: 8) {
             Image(systemName: shape.symbol)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.pinpointVermillon)
                 .frame(width: 22, height: 22)
 
             Text(shape.label)
@@ -285,7 +297,7 @@ struct EditorView: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(shape.id == selectedShapeID ? Color.accentColor.opacity(0.12) : Color.clear)
+                .fill(shape.id == selectedShapeID ? Color.pinpointVermillon.opacity(0.12) : Color.clear)
         )
         .onTapGesture { selectShape(shape.id) }
     }
@@ -345,7 +357,7 @@ struct EditorView: View {
     }
 
     private func copy() {
-        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context)
+        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context, style: pinStyle)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withAnimation { didCopy = false }
@@ -409,31 +421,95 @@ struct ArrowShape: Shape {
         let headLength: CGFloat = 16
         let spread = CGFloat.pi / 6.5
 
+        let leftAngle = angle - spread
+        let rightAngle = angle + spread
         path.move(to: end)
-        path.addLine(to: CGPoint(
-            x: end.x - headLength * cos(angle - spread),
-            y: end.y - headLength * sin(angle - spread)
-        ))
+        path.addLine(to: CGPoint(x: end.x - headLength * cos(leftAngle), y: end.y - headLength * sin(leftAngle)))
         path.move(to: end)
-        path.addLine(to: CGPoint(
-            x: end.x - headLength * cos(angle + spread),
-            y: end.y - headLength * sin(angle + spread)
-        ))
+        path.addLine(to: CGPoint(x: end.x - headLength * cos(rightAngle), y: end.y - headLength * sin(rightAngle)))
         return path
     }
 }
 
+/// Map-pin silhouette filling its rect: a circular head at the top tapering to
+/// a tip at the bottom-centre. Used for the `.pointer` marker style.
+struct PinShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let diameter = rect.width
+        let radius = diameter / 2
+        let headCenter = CGPoint(x: rect.midX, y: rect.minY + radius)
+        let tip = CGPoint(x: rect.midX, y: rect.maxY)
+
+        var path = Path()
+        path.addEllipse(in: CGRect(x: rect.minX, y: rect.minY, width: diameter, height: diameter))
+        let baseY = headCenter.y + radius * 0.55
+        let halfWidth = radius * 0.7
+        path.move(to: CGPoint(x: headCenter.x - halfWidth, y: baseY))
+        path.addLine(to: tip)
+        path.addLine(to: CGPoint(x: headCenter.x + halfWidth, y: baseY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The numbered marker, rendered in one of the three design-system styles.
 struct PinMarker: View {
     let number: Int
+    var style: PinStyle = .disc
     var selected: Bool = false
 
+    static let headDiameter: CGFloat = 28
+    static let pointerHeight: CGFloat = 42
+
+    /// Vertical offset to apply when positioning the marker so its anchor lands
+    /// on the marked point: centred for disc/outline, tip-anchored for pointer.
+    static func anchorYOffset(_ style: PinStyle) -> CGFloat {
+        style == .pointer ? -(pointerHeight / 2) : 0
+    }
+
     var body: some View {
-        Text("\(number)")
-            .font(.system(size: 14, weight: .bold))
+        switch style {
+        case .disc: disc
+        case .outline: outline
+        case .pointer: pointer
+        }
+    }
+
+    private var numberText: some View {
+        Text("\(number)").font(.system(size: 14, weight: .bold))
+    }
+
+    private var disc: some View {
+        numberText
             .foregroundStyle(.white)
-            .frame(width: 28, height: 28)
-            .background(Circle().fill(Color.accentColor))
-            .overlay(Circle().stroke(.white, lineWidth: selected ? 3 : 2))
-            .shadow(radius: 2, y: 1)
+            .frame(width: Self.headDiameter, height: Self.headDiameter)
+            .background(Circle().fill(Color.pinpointVermillon))
+            .overlay(Circle().stroke(.white, lineWidth: selected ? 3.5 : 2.5))
+            .overlay(Circle().stroke(.black.opacity(0.18), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+    }
+
+    private var outline: some View {
+        numberText
+            .foregroundStyle(Color.pinpointVermillon)
+            .frame(width: Self.headDiameter, height: Self.headDiameter)
+            .overlay(Circle().stroke(.white, lineWidth: selected ? 5 : 4))
+            .overlay(Circle().stroke(Color.pinpointVermillon, lineWidth: selected ? 3 : 2))
+            .shadow(color: .black.opacity(0.25), radius: 1.5, y: 0.5)
+    }
+
+    private var pointer: some View {
+        ZStack(alignment: .top) {
+            PinShape()
+                .fill(Color.pinpointVermillon)
+                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+            Circle()
+                .stroke(.white, lineWidth: selected ? 3 : 2)
+                .frame(width: Self.headDiameter, height: Self.headDiameter)
+            numberText
+                .foregroundStyle(.white)
+                .frame(width: Self.headDiameter, height: Self.headDiameter)
+        }
+        .frame(width: Self.headDiameter, height: Self.pointerHeight)
     }
 }
