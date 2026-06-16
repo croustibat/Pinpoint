@@ -1,15 +1,21 @@
 import AppKit
 
 enum Exporter {
-    /// Renders the base capture with numbered markers drawn on top, at full
-    /// image resolution.
-    static func annotatedImage(base: NSImage, pins: [Pin]) -> NSImage {
+    /// Renders the base capture with markups (arrows/rectangles) and numbered
+    /// pins drawn on top, at full image resolution. Markups are drawn first so
+    /// numbered pins stay legible above them.
+    static func annotatedImage(base: NSImage, pins: [Pin], shapes: [Markup]) -> NSImage {
         let size = base.size
         let result = NSImage(size: size)
         result.lockFocus()
 
         base.draw(in: NSRect(origin: .zero, size: size),
                   from: .zero, operation: .copy, fraction: 1.0)
+
+        let lineWidth = max(3, size.width * 0.004)
+        for shape in shapes {
+            drawMarkup(shape, in: size, lineWidth: lineWidth)
+        }
 
         let radius = max(16, size.width * 0.014)
         for pin in pins {
@@ -23,6 +29,55 @@ enum Exporter {
 
         result.unlockFocus()
         return result
+    }
+
+    private static func drawMarkup(_ shape: Markup, in size: CGSize, lineWidth: CGFloat) {
+        NSColor.controlAccentColor.setStroke()
+
+        // Normalized (top-left origin) → image space (bottom-left origin).
+        func px(_ p: CGPoint) -> CGPoint {
+            CGPoint(x: p.x * size.width, y: (1 - p.y) * size.height)
+        }
+
+        switch shape.kind {
+        case .rectangle:
+            let r = shape.rect
+            let rect = NSRect(
+                x: r.minX * size.width,
+                y: (1 - r.maxY) * size.height,
+                width: r.width * size.width,
+                height: r.height * size.height
+            )
+            let path = NSBezierPath(roundedRect: rect, xRadius: lineWidth, yRadius: lineWidth)
+            path.lineWidth = lineWidth
+            path.stroke()
+
+        case .arrow:
+            let start = px(shape.start)
+            let end = px(shape.end)
+            let path = NSBezierPath()
+            path.lineWidth = lineWidth
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+            path.move(to: start)
+            path.line(to: end)
+
+            let angle = atan2(end.y - start.y, end.x - start.x)
+            let headLength = max(14, size.width * 0.018)
+            let spread = CGFloat.pi / 6.5
+
+            let leftAngle = angle - spread
+            let rightAngle = angle + spread
+            let left = CGPoint(x: end.x - headLength * cos(leftAngle),
+                               y: end.y - headLength * sin(leftAngle))
+            let right = CGPoint(x: end.x - headLength * cos(rightAngle),
+                                y: end.y - headLength * sin(rightAngle))
+            path.move(to: end)
+            path.line(to: left)
+            path.move(to: end)
+            path.line(to: right)
+            path.stroke()
+        }
     }
 
     private static func drawMarker(number: Int, at center: CGPoint, radius: CGFloat) {
@@ -93,8 +148,8 @@ enum Exporter {
     }
 
     /// Puts the annotated PNG and the instruction text on the general pasteboard.
-    static func copyToPasteboard(base: NSImage, pins: [Pin], context: String) {
-        let annotated = annotatedImage(base: base, pins: pins)
+    static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String) {
+        let annotated = annotatedImage(base: base, pins: pins, shapes: shapes)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
