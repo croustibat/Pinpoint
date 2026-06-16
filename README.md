@@ -21,8 +21,10 @@ App macOS native, Swift / SwiftUI + ScreenCaptureKit. Vit dans la barre de menus
 - Accent **vermillon** `#FF4D2E` + **3 styles de repères** réglables (disque plein,
   pin pointeur, contour léger) appliqués à l’écran **et** à l’export
 - **⌘C** / bouton → copie l’image annotée (PNG) **et** le texte dans le presse-papier
+- **Historique** : sous-menu « Captures récentes » (15 dernières, persistées dans
+  Application Support avec leurs annotations) → rouvre une capture telle qu’elle était
 
-Pas encore : historique des captures. Voir `PROMPTS.md`.
+Pistes futures : capture de fenêtre, export fichier, partage. Voir `PROMPTS.md`.
 
 ## Build
 
@@ -66,6 +68,8 @@ Pinpoint/
     RegionSelectionController.swift # overlay multi-écran + résolution des coordonnées
     RegionSelectionView.swift  # dessin de l’assombrissement + rectangle + dimensions
     CaptureRegion.swift        # modèle : display cible + rect (points, top-left) + scale
+    CaptureRecord.swift        # modèle persisté d’une capture (image + annotations + date)
+    CaptureHistory.swift       # store des captures récentes (Application Support + index JSON)
     ScreenCapture.swift        # ScreenCaptureKit : capture région (sourceRect) ou plein écran
     Pin.swift                  # modèle d’un repère numéroté
     Markup.swift               # modèle d’une annotation flèche / rectangle
