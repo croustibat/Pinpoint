@@ -12,12 +12,17 @@ App macOS native, Swift / SwiftUI + ScreenCaptureKit. Vit dans la barre de menus
   s’assombrit, trace un rectangle (dimensions affichées en live), `Échap` annule.
   Capture de la seule région choisie, à la résolution native (Retina, multi-écran).
 - Fallback **« Capturer tout l’écran »** (⌘⇧3) dans le menu de la barre de menus.
-- Éditeur : clic pour poser un repère, glisser pour le déplacer, note par repère
-- Champ « instructions pour l’agent »
+- Éditeur : barre d’outils **Repère / Flèche / Rectangle**. Clic pour poser un
+  repère numéroté (glisser pour le déplacer, note par repère) ; glisser pour tracer
+  une flèche ou un rectangle. Les flèches/rectangles sont visuels ; seuls les repères
+  numérotés sont référencés dans le texte agent.
+- Champ « instructions pour l’agent » + texte Markdown structuré (dimensions,
+  position de chaque repère en %)
+- Accent **vermillon** `#FF4D2E` + **3 styles de repères** réglables (disque plein,
+  pin pointeur, contour léger) appliqués à l’écran **et** à l’export
 - **⌘C** / bouton → copie l’image annotée (PNG) **et** le texte dans le presse-papier
 
-Pas encore : flèches/rectangles d’annotation, réglage du style des repères,
-historique des captures. Voir `PROMPTS.md`.
+Pas encore : historique des captures. Voir `PROMPTS.md`.
 
 ## Build
 
@@ -62,7 +67,10 @@ Pinpoint/
     RegionSelectionView.swift  # dessin de l’assombrissement + rectangle + dimensions
     CaptureRegion.swift        # modèle : display cible + rect (points, top-left) + scale
     ScreenCapture.swift        # ScreenCaptureKit : capture région (sourceRect) ou plein écran
-    Pin.swift                  # modèle d’un repère
+    Pin.swift                  # modèle d’un repère numéroté
+    Markup.swift               # modèle d’une annotation flèche / rectangle
+    PinStyle.swift             # styles de repères (disque / pointeur / contour) + clé @AppStorage
+    Theme.swift                # palette vermillon (NSColor + Color)
     EditorWindowController.swift  # fenêtre AppKit qui héberge l’éditeur SwiftUI
     EditorView.swift           # canvas d’annotation + panneau latéral
     Exporter.swift             # rendu PNG annoté + texte + copie presse-papier
