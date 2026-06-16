@@ -1,0 +1,44 @@
+name: Pinpoint
+options:
+  bundleIdPrefix: app.pinpoint
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "15.0"
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.2.0"
+
+targets:
+  Pinpoint:
+    type: application
+    platform: macOS
+    sources:
+      - Pinpoint
+    dependencies:
+      - package: KeyboardShortcuts
+    info:
+      path: Pinpoint/Info.plist
+      properties:
+        CFBundleDisplayName: Pinpoint
+        CFBundleName: Pinpoint
+        # Menu-bar only app: no Dock icon, no main window.
+        LSUIElement: true
+        NSHumanReadableCopyright: "© 2026 Baptiste Bouillot"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.pinpoint.Pinpoint
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        # Stable signing identity so the TCC "Screen Recording" grant persists
+        # across rebuilds. Without a team, Xcode ad-hoc-signs (cdhash changes
+        # every build → macOS re-prompts each time). Baked in here so it
+        # survives `xcodegen generate`.
+        DEVELOPMENT_TEAM: MMJD6CLKNQ
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

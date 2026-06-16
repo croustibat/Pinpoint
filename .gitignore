@@ -1,0 +1,17 @@
+# Xcode / XcodeGen
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+.build/
+*.swiftpm
+
+# macOS
+.DS_Store
+
+# Tooling state
+.omc/
+
+# SPM
+Package.resolved
