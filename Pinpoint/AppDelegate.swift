@@ -2,10 +2,12 @@ import AppKit
 import SwiftUI
 import KeyboardShortcuts
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var editorController: EditorWindowController?
     private var regionController: RegionSelectionController?
+    private let recentMenu = NSMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -36,6 +38,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(fullScreenItem)
         menu.addItem(.separator())
 
+        let recentItem = NSMenuItem(title: "Captures récentes", action: nil, keyEquivalent: "")
+        recentMenu.delegate = self
+        recentItem.submenu = recentMenu
+        menu.addItem(recentItem)
+        menu.addItem(.separator())
+
         let settingsItem = NSMenuItem(title: "Réglages…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -45,13 +53,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
+    // MARK: - Recent captures submenu
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === recentMenu else { return }
+        rebuildRecentMenu()
+    }
+
+    private func rebuildRecentMenu() {
+        recentMenu.removeAllItems()
+
+        let records = CaptureHistory.shared.records
+        guard !records.isEmpty else {
+            let empty = NSMenuItem(title: "Aucune capture récente", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            recentMenu.addItem(empty)
+            return
+        }
+
+        for record in records {
+            let item = NSMenuItem(title: title(for: record), action: #selector(openRecent(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = record.id.uuidString
+            recentMenu.addItem(item)
+        }
+
+        recentMenu.addItem(.separator())
+        let clear = NSMenuItem(title: "Vider l’historique", action: #selector(clearHistory), keyEquivalent: "")
+        clear.target = self
+        recentMenu.addItem(clear)
+    }
+
+    private func title(for record: CaptureRecord) -> String {
+        let when = record.date.formatted(date: .abbreviated, time: .shortened)
+        return "\(when) · \(record.width)×\(record.height)"
+    }
+
+    @objc private func openRecent(_ sender: NSMenuItem) {
+        guard let idString = sender.representedObject as? String,
+              let id = UUID(uuidString: idString),
+              let record = CaptureHistory.shared.records.first(where: { $0.id == id }),
+              let image = CaptureHistory.shared.image(for: record) else { return }
+        presentEditor(image: image, recordID: record.id,
+                      pins: record.pins, shapes: record.shapes, context: record.context)
+    }
+
+    @objc private func clearHistory() {
+        CaptureHistory.shared.clear()
+    }
+
+    // MARK: - Capture actions
+
     @objc private func captureFromMenu() { startCapture() }
 
     @objc private func captureFullScreen() {
         Task { @MainActor in
             do {
                 let image = try await ScreenCapture.captureDisplayUnderCursor()
-                presentEditor(with: image)
+                let record = CaptureHistory.shared.add(image: image)
+                presentEditor(image: image, recordID: record?.id)
             } catch {
                 presentCaptureError(error)
             }
@@ -87,7 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             do {
                 let image = try await ScreenCapture.captureRegion(region)
-                presentEditor(with: image)
+                let record = CaptureHistory.shared.add(image: image)
+                presentEditor(image: image, recordID: record?.id)
             } catch {
                 presentCaptureError(error)
             }
@@ -95,8 +156,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    private func presentEditor(with image: NSImage) {
-        let controller = EditorWindowController(image: image)
+    private func presentEditor(image: NSImage, recordID: UUID?,
+                               pins: [Pin] = [], shapes: [Markup] = [], context: String = "") {
+        let controller = EditorWindowController(
+            image: image,
+            initialPins: pins,
+            initialShapes: shapes,
+            initialContext: context,
+            onPersist: { pins, shapes, context in
+                guard let recordID else { return }
+                CaptureHistory.shared.update(id: recordID, pins: pins, shapes: shapes, context: context)
+            }
+        )
         editorController = controller
         controller.onClose = { [weak self] in self?.editorController = nil }
         NSApp.activate(ignoringOtherApps: true)

@@ -7,13 +7,13 @@ import Foundation
 /// agent-ready text — they're purely visual emphasis. Coordinates are
 /// normalized (0...1) in image space, top-left origin (same convention as
 /// `Pin`), so they scale with the canvas and export correctly.
-struct Markup: Identifiable, Equatable {
-    enum Kind: Equatable {
+struct Markup: Identifiable, Equatable, Codable {
+    enum Kind: String, Equatable, Codable {
         case arrow
         case rectangle
     }
 
-    let id = UUID()
+    var id = UUID()
     var kind: Kind
     /// Arrow: tail. Rectangle: one corner.
     var start: CGPoint

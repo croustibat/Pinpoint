@@ -26,6 +26,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
 struct EditorView: View {
     let image: NSImage
     var onClose: () -> Void
+    /// Called with the current annotation state so it can be persisted to
+    /// history (on copy and when the editor closes).
+    var onPersist: ([Pin], [Markup], String) -> Void
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
 
@@ -38,6 +41,22 @@ struct EditorView: View {
     @State private var draft: Markup?
     @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
+
+    init(
+        image: NSImage,
+        initialPins: [Pin] = [],
+        initialShapes: [Markup] = [],
+        initialContext: String = "",
+        onPersist: @escaping ([Pin], [Markup], String) -> Void = { _, _, _ in },
+        onClose: @escaping () -> Void
+    ) {
+        self.image = image
+        self.onPersist = onPersist
+        self.onClose = onClose
+        _pins = State(initialValue: initialPins)
+        _shapes = State(initialValue: initialShapes)
+        _context = State(initialValue: initialContext)
+    }
 
     var body: some View {
         HSplitView {
@@ -53,6 +72,7 @@ struct EditorView: View {
                 .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
         }
         .frame(minWidth: 680, minHeight: 440)
+        .onDisappear { onPersist(pins, shapes, context) }
     }
 
     // MARK: - Toolbar
@@ -358,6 +378,7 @@ struct EditorView: View {
 
     private func copy() {
         Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context, style: pinStyle)
+        onPersist(pins, shapes, context)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withAnimation { didCopy = false }
