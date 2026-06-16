@@ -55,21 +55,38 @@ enum Exporter {
     }
 
     /// Builds the agent-ready text block referencing each numbered pin.
-    static func buildText(pins: [Pin], context: String) -> String {
+    ///
+    /// Markdown-structured so an AI agent can parse it: image dimensions, each
+    /// marker with its description and approximate position (percentage of the
+    /// image, top-left origin) so the agent can locate it even without reading
+    /// the pixels, then the user's instructions in their own section.
+    static func buildText(pins: [Pin], context: String, imageSize: CGSize) -> String {
+        let width = Int(imageSize.width.rounded())
+        let height = Int(imageSize.height.rounded())
+
         var lines: [String] = []
-        lines.append("Capture d’écran annotée. Les repères numérotés indiquent les éléments concernés :")
+        lines.append("# Capture annotée — \(width)×\(height) px")
         lines.append("")
+
         if pins.isEmpty {
-            lines.append("(aucun repère posé)")
+            lines.append("Une image est jointe (aucun repère posé).")
         } else {
+            lines.append("Une image est jointe. Des pastilles numérotées (cerclées) pointent des éléments précis.")
+            lines.append("Repères (position en % de l’image, origine haut-gauche) :")
+            lines.append("")
             for pin in pins.sorted(by: { $0.number < $1.number }) {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
-                lines.append("- #\(pin.number) : \(note.isEmpty ? "—" : note)")
+                let description = note.isEmpty ? "(sans description)" : note
+                let xPct = Int((pin.position.x * 100).rounded())
+                let yPct = Int((pin.position.y * 100).rounded())
+                lines.append("\(pin.number). \(description) · ~\(xPct) % × \(yPct) %")
             }
         }
+
         let ctx = context.trimmingCharacters(in: .whitespacesAndNewlines)
         if !ctx.isEmpty {
             lines.append("")
+            lines.append("## Instructions")
             lines.append(ctx)
         }
         return lines.joined(separator: "\n")
@@ -87,6 +104,6 @@ enum Exporter {
             pasteboard.setData(png, forType: .png)
         }
 
-        pasteboard.setString(buildText(pins: pins, context: context), forType: .string)
+        pasteboard.setString(buildText(pins: pins, context: context, imageSize: base.size), forType: .string)
     }
 }
