@@ -77,6 +77,7 @@ Pinpoint/
     Theme.swift                # palette vermillon (NSColor + Color)
     EditorWindowController.swift  # fenêtre AppKit qui héberge l’éditeur SwiftUI
     EditorView.swift           # canvas d’annotation + panneau latéral
+    SettingsWindowController.swift # fenêtre AppKit des réglages (contourne le bug SettingsLink macOS 14+)
     Exporter.swift             # rendu PNG annoté + texte + copie presse-papier
 ```
 
