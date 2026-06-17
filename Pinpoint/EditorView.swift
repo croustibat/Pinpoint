@@ -31,6 +31,7 @@ struct EditorView: View {
     var onPersist: ([Pin], [Markup], String) -> Void
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
+    @AppStorage("includeLegend") private var includeLegend = true
 
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
@@ -377,7 +378,8 @@ struct EditorView: View {
     }
 
     private func copy() {
-        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context, style: pinStyle)
+        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
+                                  style: pinStyle, includeLegend: includeLegend)
         onPersist(pins, shapes, context)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {

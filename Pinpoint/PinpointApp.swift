@@ -21,6 +21,7 @@ struct PinpointApp: App {
 
 struct SettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
+    @AppStorage("includeLegend") private var includeLegend = true
 
     var body: some View {
         Form {
@@ -34,6 +35,12 @@ struct SettingsView: View {
                     }
                 }
                 Text(pinStyle.caption)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+            }
+            Section("Partage pour l’agent") {
+                Toggle("Inclure la légende dans l’image", isOn: $includeLegend)
+                Text("Ajoute les descriptions des repères et les instructions sous la capture, pour qu’un seul collage transmette tout à l’agent.")
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
