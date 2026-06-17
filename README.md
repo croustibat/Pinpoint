@@ -84,3 +84,26 @@ Pinpoint/
 ## Dépendances
 
 - [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (Sindre Sorhus) — raccourci global réglable.
+
+## Release (DMG notarisé)
+
+L'icône d'app est **générée** depuis le design system :
+
+```bash
+swift scripts/generate_icon.swift Pinpoint/Assets.xcassets/AppIcon.appiconset
+```
+
+Build signé Developer ID + notarisé + DMG via `scripts/release.sh`. Pré-requis
+une seule fois : stocker les credentials de notarisation dans un profil trousseau
+
+```bash
+xcrun notarytool store-credentials pinpoint-notary \
+  --apple-id "<ton-apple-id>" --team-id MMJD6CLKNQ \
+  --password "<mot-de-passe-d-app>"          # appleid.apple.com ▸ Sécurité ▸ mots de passe pour app
+```
+
+puis :
+
+```bash
+scripts/release.sh        # → build/dist/Pinpoint.dmg (signé, notarisé, staplé)
+```
