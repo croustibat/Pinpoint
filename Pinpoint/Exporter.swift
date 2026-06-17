@@ -191,13 +191,93 @@ enum Exporter {
         return lines.joined(separator: "\n")
     }
 
-    /// Puts the annotated PNG and the instruction text on the general pasteboard.
-    static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String, style: PinStyle) {
+    /// The image to share with an agent: the annotated capture, optionally with
+    /// a legend strip below it (numbered pin descriptions + instructions) so a
+    /// single paste carries everything — most chat UIs paste only the image and
+    /// drop the clipboard text.
+    static func exportImage(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
+                            style: PinStyle, includeLegend: Bool) -> NSImage {
         let annotated = annotatedImage(base: base, pins: pins, shapes: shapes, style: style)
+        guard includeLegend, let legend = legendString(pins: pins, context: context, width: annotated.size.width) else {
+            return annotated
+        }
+
+        let width = annotated.size.width
+        let pad = max(18, width * 0.022)
+        let textWidth = width - pad * 2
+        let textHeight = ceil(legend.boundingRect(
+            with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]).height)
+        let panelHeight = textHeight + pad * 2
+        let totalHeight = annotated.size.height + panelHeight
+
+        let result = NSImage(size: NSSize(width: width, height: totalHeight))
+        result.lockFocus()
+        // Capture on top (image space is bottom-left origin, so the panel sits
+        // at the bottom and the capture above it).
+        annotated.draw(in: NSRect(x: 0, y: panelHeight, width: width, height: annotated.size.height))
+        NSColor.white.setFill()
+        NSRect(x: 0, y: 0, width: width, height: panelHeight).fill()
+        NSColor.black.withAlphaComponent(0.10).setFill()
+        NSRect(x: 0, y: panelHeight - 1, width: width, height: 1).fill()
+        // .usesLineFragmentOrigin fills from the top edge of the rect downwards.
+        legend.draw(with: NSRect(x: pad, y: pad, width: textWidth, height: textHeight),
+                    options: [.usesLineFragmentOrigin])
+        result.unlockFocus()
+        return result
+    }
+
+    /// The legend rendered into the exported image, or nil if there's nothing to
+    /// show (no pins and no instructions).
+    private static func legendString(pins: [Pin], context: String, width: CGFloat) -> NSAttributedString? {
+        let trimmedContext = context.trimmingCharacters(in: .whitespacesAndNewlines)
+        let orderedPins = pins.sorted { $0.number < $1.number }
+        guard !orderedPins.isEmpty || !trimmedContext.isEmpty else { return nil }
+
+        let bodySize = max(15, width * 0.016)
+        let body = NSFont.systemFont(ofSize: bodySize)
+        let number = NSFont.systemFont(ofSize: bodySize, weight: .bold)
+        let heading = NSFont.systemFont(ofSize: bodySize * 0.8, weight: .bold)
+        let dark = NSColor(srgbRed: 0.114, green: 0.114, blue: 0.122, alpha: 1)
+        let secondary = NSColor(srgbRed: 0.43, green: 0.43, blue: 0.45, alpha: 1)
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = bodySize * 0.22
+        paragraph.paragraphSpacing = bodySize * 0.35
+
+        let result = NSMutableAttributedString()
+        func add(_ text: String, _ font: NSFont, _ color: NSColor) {
+            result.append(NSAttributedString(string: text, attributes: [
+                .font: font, .foregroundColor: color, .paragraphStyle: paragraph
+            ]))
+        }
+
+        if !orderedPins.isEmpty {
+            add("REPÈRES\n", heading, secondary)
+            for pin in orderedPins {
+                let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
+                add("\(pin.number)", number, .pinpointVermillon)
+                add("   \(note.isEmpty ? "(sans description)" : note)\n", body, dark)
+            }
+        }
+        if !trimmedContext.isEmpty {
+            if !orderedPins.isEmpty { add("\n", body, dark) }
+            add("INSTRUCTIONS\n", heading, secondary)
+            add(trimmedContext, body, dark)
+        }
+        return result
+    }
+
+    /// Puts the (optionally legend-bearing) annotated PNG and the instruction
+    /// text on the general pasteboard.
+    static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
+                                 style: PinStyle, includeLegend: Bool) {
+        let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
+                                style: style, includeLegend: includeLegend)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
-        if let tiff = annotated.tiffRepresentation,
+        if let tiff = image.tiffRepresentation,
            let rep = NSBitmapImageRep(data: tiff),
            let png = rep.representation(using: .png, properties: [:]) {
             pasteboard.setData(png, forType: .png)

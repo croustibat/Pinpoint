@@ -18,6 +18,9 @@ App macOS native, Swift / SwiftUI + ScreenCaptureKit. Vit dans la barre de menus
   numérotés sont référencés dans le texte agent.
 - Champ « instructions pour l’agent » + texte Markdown structuré (dimensions,
   position de chaque repère en %)
+- Option **« légende dans l’image »** (réglable) : descriptions des repères +
+  instructions incrustées sous la capture, pour qu’un **seul collage** transmette
+  tout à l’agent (la plupart des UI ne collent que l’image, pas le texte)
 - Accent **vermillon** `#FF4D2E` + **3 styles de repères** réglables (disque plein,
   pin pointeur, contour léger) appliqués à l’écran **et** à l’export
 - **⌘C** / bouton → copie l’image annotée (PNG) **et** le texte dans le presse-papier
