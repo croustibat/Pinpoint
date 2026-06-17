@@ -23,6 +23,11 @@ targets:
       properties:
         CFBundleDisplayName: Pinpoint
         CFBundleName: Pinpoint
+        # Version comes from the build settings below. Must be declared here,
+        # otherwise `xcodegen generate` rewrites Info.plist with its defaults
+        # (CFBundleShortVersionString=1.0 / CFBundleVersion=1) on every run.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # Menu-bar only app: no Dock icon, no main window.
         LSUIElement: true
         NSHumanReadableCopyright: "© 2026 Baptiste Bouillot"
