@@ -56,9 +56,9 @@ Dans Xcode :
    annuler) → l’éditeur s’ouvre avec la région capturée.
 
 > Astuce : grâce au `DEVELOPMENT_TEAM` fixe + au bundle id stable
-> (`app.pinpoint.Pinpoint`), macOS mémorise l’autorisation d’un build à l’autre.
+> (`app.croustibat.Pinpoint`), macOS mémorise l’autorisation d’un build à l’autre.
 > Si une autorisation reste « bloquée » après un changement d’identité, repars à zéro :
-> `tccutil reset ScreenCapture app.pinpoint.Pinpoint`, puis relance et ré-accorde.
+> `tccutil reset ScreenCapture app.croustibat.Pinpoint`, puis relance et ré-accorde.
 
 ## Structure
 
