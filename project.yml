@@ -1,6 +1,6 @@
 name: Pinpoint
 options:
-  bundleIdPrefix: app.pinpoint
+  bundleIdPrefix: app.croustibat
   createIntermediateGroups: true
   deploymentTarget:
     macOS: "15.0"
@@ -28,9 +28,9 @@ targets:
         NSHumanReadableCopyright: "© 2026 Baptiste Bouillot"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.pinpoint.Pinpoint
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        PRODUCT_BUNDLE_IDENTIFIER: app.croustibat.Pinpoint
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
