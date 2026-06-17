@@ -7,13 +7,22 @@ import SwiftUI
 /// scene (`showSettingsWindow:`), which doesn't work for menu-bar (`LSUIElement`)
 /// apps and logs "Please use SettingsLink…". Presenting our own window — the same
 /// way the editor window is shown — opens reliably and avoids that path entirely.
+///
+/// The window uses a fixed content size + `NSHostingView` (not
+/// `NSWindow(contentViewController:)`), because letting the window auto-size to a
+/// SwiftUI `Form` triggers a constraint-update loop ("more Update Constraints
+/// passes than there are views").
 final class SettingsWindowController: NSWindowController {
     init() {
-        let hosting = NSHostingController(rootView: SettingsView())
-        let window = NSWindow(contentViewController: hosting)
-        window.styleMask = [.titled, .closable]
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 280),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
         window.title = "Réglages Pinpoint"
         window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: SettingsView())
 
         super.init(window: window)
         window.center()
