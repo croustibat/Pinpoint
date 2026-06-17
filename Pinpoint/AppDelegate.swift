@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var editorController: EditorWindowController?
     private var regionController: RegionSelectionController?
     private var settingsController: SettingsWindowController?
+    private var shelfController: ShelfWindowController?
     private let recentMenu = NSMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -38,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         fullScreenItem.target = self
         menu.addItem(fullScreenItem)
         menu.addItem(.separator())
+
+        let shelfItem = NSMenuItem(title: "Étagère…", action: #selector(openShelf), keyEquivalent: "")
+        shelfItem.target = self
+        menu.addItem(shelfItem)
 
         let recentItem = NSMenuItem(title: "Captures récentes", action: nil, keyEquivalent: "")
         recentMenu.delegate = self
@@ -126,6 +131,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.activate(ignoringOtherApps: true)
         settingsController?.showWindow(nil)
         settingsController?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func openShelf() {
+        if shelfController == nil {
+            shelfController = ShelfWindowController()
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        shelfController?.showWindow(nil)
+        shelfController?.window?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Capture flow
