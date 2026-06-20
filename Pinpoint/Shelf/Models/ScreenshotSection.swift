@@ -12,15 +12,15 @@ enum ScreenshotSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .today:
-            return "Aujourd’hui"
+            return String(localized: "Today")
         case .yesterday:
-            return "Hier"
+            return String(localized: "Yesterday")
         case .thisWeek:
-            return "Cette semaine"
+            return String(localized: "This week")
         case .thisMonth:
-            return "Ce mois-ci"
+            return String(localized: "This month")
         case .older:
-            return "Plus ancien"
+            return String(localized: "Older")
         }
     }
 

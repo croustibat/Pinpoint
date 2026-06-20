@@ -20,7 +20,7 @@ final class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Réglages Pinpoint"
+        window.title = String(localized: "Pinpoint Settings")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SettingsView())
 

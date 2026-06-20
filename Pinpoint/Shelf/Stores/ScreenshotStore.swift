@@ -72,7 +72,7 @@ final class ScreenshotStore: ObservableObject {
             lastErrorMessage = nil
         } catch {
             screenshots = []
-            lastErrorMessage = "Impossible de lire \(watchedFolderURL.lastPathComponent)."
+            lastErrorMessage = String(localized: "store.error.read", defaultValue: "Couldn’t read \(watchedFolderURL.lastPathComponent).")
         }
     }
 
@@ -129,7 +129,7 @@ final class ScreenshotStore: ObservableObject {
                 await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 await refresh()
             } catch {
-                lastErrorMessage = "Impossible de modifier \(item.filename)."
+                lastErrorMessage = String(localized: "store.error.update", defaultValue: "Couldn’t update \(item.filename).")
             }
         }
     }
@@ -157,7 +157,7 @@ final class ScreenshotStore: ObservableObject {
                     updateFavoritePath(from: item.url.path, to: destinationURL.path)
                     await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 } catch {
-                    lastErrorMessage = "Impossible de déplacer \(item.filename)."
+                    lastErrorMessage = String(localized: "store.error.move", defaultValue: "Couldn’t move \(item.filename).")
                 }
             }
 
@@ -173,7 +173,7 @@ final class ScreenshotStore: ObservableObject {
                 await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 await refresh()
             } catch {
-                lastErrorMessage = "Impossible de modifier \(item.filename)."
+                lastErrorMessage = String(localized: "store.error.update", defaultValue: "Couldn’t update \(item.filename).")
             }
         }
     }
@@ -196,7 +196,7 @@ final class ScreenshotStore: ObservableObject {
 
     func copyImage(_ item: ScreenshotItem) {
         guard let image = NSImage(contentsOf: item.url) else {
-            lastErrorMessage = "Impossible de copier \(item.filename)."
+            lastErrorMessage = String(localized: "store.error.copy", defaultValue: "Couldn’t copy \(item.filename).")
             return
         }
 
@@ -204,7 +204,7 @@ final class ScreenshotStore: ObservableObject {
         pasteboard.clearContents()
 
         if pasteboard.writeObjects([image]) == false {
-            lastErrorMessage = "Impossible de copier \(item.filename)."
+            lastErrorMessage = String(localized: "store.error.copy", defaultValue: "Couldn’t copy \(item.filename).")
             return
         }
 
@@ -217,7 +217,7 @@ final class ScreenshotStore: ObservableObject {
 
         let urls = items.map(\.url) as [NSURL]
         if pasteboard.writeObjects(urls) == false {
-            lastErrorMessage = "Impossible de copier les fichiers sélectionnés."
+            lastErrorMessage = String(localized: "Couldn’t copy the selected files.")
             return
         }
 
@@ -261,7 +261,7 @@ final class ScreenshotStore: ObservableObject {
                     favoritePaths.remove(item.url.path)
                     await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 } catch {
-                    lastErrorMessage = "Impossible de modifier \(item.filename)."
+                    lastErrorMessage = String(localized: "store.error.update", defaultValue: "Couldn’t update \(item.filename).")
                 }
             }
 
@@ -282,7 +282,7 @@ final class ScreenshotStore: ObservableObject {
             lastErrorMessage = nil
         } catch {
             launchAtLoginEnabled = Self.currentLaunchAtLoginState()
-            lastErrorMessage = "Impossible de modifier le lancement au démarrage."
+            lastErrorMessage = String(localized: "Couldn’t update Launch at Login.")
         }
     }
 
@@ -307,7 +307,7 @@ final class ScreenshotStore: ObservableObject {
                 await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 await refresh()
             } catch {
-                lastErrorMessage = "Impossible de modifier \(item.filename)."
+                lastErrorMessage = String(localized: "store.error.update", defaultValue: "Couldn’t update \(item.filename).")
             }
         }
     }
@@ -380,7 +380,7 @@ final class ScreenshotStore: ObservableObject {
             let bookmark = try url.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
             defaults.set(bookmark, forKey: watchedFolderBookmarkKey)
         } catch {
-            lastErrorMessage = "Impossible d’enregistrer le dossier surveillé."
+            lastErrorMessage = String(localized: "Couldn’t save the watched folder.")
         }
     }
 

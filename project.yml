@@ -2,6 +2,7 @@ name: Pinpoint
 options:
   bundleIdPrefix: app.croustibat
   createIntermediateGroups: true
+  developmentLanguage: en
   deploymentTarget:
     macOS: "15.0"
 

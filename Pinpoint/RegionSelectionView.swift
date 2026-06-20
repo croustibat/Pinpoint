@@ -131,7 +131,7 @@ final class RegionSelectionView: NSView {
     }
 
     private func drawHint() {
-        let text = "Trace un rectangle · Échap pour annuler" as NSString
+        let text = String(localized: "Drag a rectangle · Esc to cancel") as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),
             .foregroundColor: NSColor.white.withAlphaComponent(0.9)

@@ -11,13 +11,13 @@ struct ShelfSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Emplacement des captures") {
-                Toggle("Suivre l’emplacement des captures de macOS", isOn: Binding(
+            Section("Capture location") {
+                Toggle("Follow the macOS screenshot location", isOn: Binding(
                     get: { store.followsSystemScreenshotLocation },
                     set: { store.setFollowsSystemScreenshotLocation($0) }
                 ))
 
-                LabeledContent("Emplacement macOS") {
+                LabeledContent("macOS location") {
                     Text(systemLocationPath)
                         .textSelection(.enabled)
                         .foregroundStyle(.secondary)
@@ -25,13 +25,13 @@ struct ShelfSettingsView: View {
                 }
 
                 if store.followsSystemScreenshotLocation == false {
-                    Button("Utiliser l’emplacement macOS actuel") {
+                    Button("Use the current macOS location") {
                         store.applyCurrentSystemScreenshotLocation()
                     }
                 }
             }
 
-            Section("Dossier surveillé") {
+            Section("Watched folder") {
                 HStack {
                     Text(store.watchedFolderURL.path)
                         .textSelection(.enabled)
@@ -40,15 +40,15 @@ struct ShelfSettingsView: View {
 
                     Spacer()
 
-                    Button("Choisir un dossier…") {
+                    Button("Choose a folder…") {
                         store.chooseWatchedFolder()
                     }
                     .disabled(store.followsSystemScreenshotLocation)
                 }
             }
 
-            Section("Démarrage") {
-                Toggle("Lancer au démarrage de session", isOn: Binding(
+            Section("Startup") {
+                Toggle("Launch at login", isOn: Binding(
                     get: { store.launchAtLoginEnabled },
                     set: { store.setLaunchAtLogin(enabled: $0) }
                 ))

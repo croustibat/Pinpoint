@@ -164,18 +164,18 @@ enum Exporter {
         let height = Int(imageSize.height.rounded())
 
         var lines: [String] = []
-        lines.append("# Capture annotée — \(width)×\(height) px")
+        lines.append(String(localized: "export.header", defaultValue: "# Annotated capture — \(width)×\(height) px"))
         lines.append("")
 
         if pins.isEmpty {
-            lines.append("Une image est jointe (aucun repère posé).")
+            lines.append(String(localized: "An image is attached (no markers placed)."))
         } else {
-            lines.append("Une image est jointe. Des pastilles numérotées (cerclées) pointent des éléments précis.")
-            lines.append("Repères (position en % de l’image, origine haut-gauche) :")
+            lines.append(String(localized: "An image is attached. Numbered (ringed) badges point to specific elements."))
+            lines.append(String(localized: "Markers (position in % of the image, top-left origin):"))
             lines.append("")
             for pin in pins.sorted(by: { $0.number < $1.number }) {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
-                let description = note.isEmpty ? "(sans description)" : note
+                let description = note.isEmpty ? String(localized: "(no description)") : note
                 let xPct = Int((pin.position.x * 100).rounded())
                 let yPct = Int((pin.position.y * 100).rounded())
                 lines.append("\(pin.number). \(description) · ~\(xPct) % × \(yPct) %")
@@ -185,7 +185,7 @@ enum Exporter {
         let ctx = context.trimmingCharacters(in: .whitespacesAndNewlines)
         if !ctx.isEmpty {
             lines.append("")
-            lines.append("## Instructions")
+            lines.append("## " + String(localized: "Instructions"))
             lines.append(ctx)
         }
         return lines.joined(separator: "\n")
@@ -253,16 +253,16 @@ enum Exporter {
         }
 
         if !orderedPins.isEmpty {
-            add("REPÈRES\n", heading, secondary)
+            add(String(localized: "legend.markers", defaultValue: "MARKERS") + "\n", heading, secondary)
             for pin in orderedPins {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
                 add("\(pin.number)", number, .pinpointVermillon)
-                add("   \(note.isEmpty ? "(sans description)" : note)\n", body, dark)
+                add("   \(note.isEmpty ? String(localized: "(no description)") : note)\n", body, dark)
             }
         }
         if !trimmedContext.isEmpty {
             if !orderedPins.isEmpty { add("\n", body, dark) }
-            add("INSTRUCTIONS\n", heading, secondary)
+            add(String(localized: "legend.instructions", defaultValue: "INSTRUCTIONS") + "\n", heading, secondary)
             add(trimmedContext, body, dark)
         }
         return result

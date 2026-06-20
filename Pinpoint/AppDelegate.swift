@@ -66,33 +66,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         let menu = NSMenu()
-        let regionItem = NSMenuItem(title: "Capturer une région", action: #selector(captureFromMenu), keyEquivalent: "1")
+        let regionItem = NSMenuItem(title: String(localized: "Capture a region"), action: #selector(captureFromMenu), keyEquivalent: "1")
         regionItem.keyEquivalentModifierMask = [.command, .shift]
         regionItem.target = self
         menu.addItem(regionItem)
 
-        let fullScreenItem = NSMenuItem(title: "Capturer tout l’écran", action: #selector(captureFullScreen), keyEquivalent: "3")
+        let fullScreenItem = NSMenuItem(title: String(localized: "Capture the whole screen"), action: #selector(captureFullScreen), keyEquivalent: "3")
         fullScreenItem.keyEquivalentModifierMask = [.command, .shift]
         fullScreenItem.target = self
         menu.addItem(fullScreenItem)
         menu.addItem(.separator())
 
-        let shelfItem = NSMenuItem(title: "Étagère…", action: #selector(openShelf), keyEquivalent: "")
+        let shelfItem = NSMenuItem(title: String(localized: "Shelf…"), action: #selector(openShelf), keyEquivalent: "")
         shelfItem.target = self
         menu.addItem(shelfItem)
 
-        let recentItem = NSMenuItem(title: "Captures récentes", action: nil, keyEquivalent: "")
+        let recentItem = NSMenuItem(title: String(localized: "Recent captures"), action: nil, keyEquivalent: "")
         recentMenu.delegate = self
         recentItem.submenu = recentMenu
         menu.addItem(recentItem)
         menu.addItem(.separator())
 
-        let settingsItem = NSMenuItem(title: "Réglages…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
 
-        menu.addItem(NSMenuItem(title: "Quitter Pinpoint", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: String(localized: "Quit Pinpoint"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
@@ -108,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let records = CaptureHistory.shared.records
         guard !records.isEmpty else {
-            let empty = NSMenuItem(title: "Aucune capture récente", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: String(localized: "No recent captures"), action: nil, keyEquivalent: "")
             empty.isEnabled = false
             recentMenu.addItem(empty)
             return
@@ -122,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         recentMenu.addItem(.separator())
-        let clear = NSMenuItem(title: "Vider l’historique", action: #selector(clearHistory), keyEquivalent: "")
+        let clear = NSMenuItem(title: String(localized: "Clear history"), action: #selector(clearHistory), keyEquivalent: "")
         clear.target = self
         recentMenu.addItem(clear)
     }
@@ -230,13 +230,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @MainActor
     private func presentCaptureError(_ error: Error) {
         let alert = NSAlert()
-        alert.messageText = "Capture impossible"
-        alert.informativeText = """
-        \(error.localizedDescription)
-
-        Vérifie que Pinpoint a l’autorisation « Enregistrement de l’écran » dans \
-        Réglages Système ▸ Confidentialité et sécurité, puis relance l’app.
-        """
+        alert.messageText = String(localized: "Capture failed")
+        alert.informativeText = String(
+            localized: "capture.error.body",
+            defaultValue: "\(error.localizedDescription)\n\nMake sure Pinpoint has the “Screen Recording” permission in System Settings ▸ Privacy & Security, then relaunch the app."
+        )
         alert.alertStyle = .warning
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()

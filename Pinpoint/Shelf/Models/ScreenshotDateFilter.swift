@@ -15,21 +15,21 @@ enum ScreenshotDateFilter: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .all:
-            return "Tout"
+            return String(localized: "All")
         case .today:
-            return "Aujourd’hui"
+            return String(localized: "Today")
         case .yesterday:
-            return "Hier"
+            return String(localized: "Yesterday")
         case .last7Days:
-            return "7 derniers jours"
+            return String(localized: "Last 7 days")
         case .last30Days:
-            return "30 derniers jours"
+            return String(localized: "Last 30 days")
         case .thisWeek:
-            return "Cette semaine"
+            return String(localized: "This week")
         case .thisMonth:
-            return "Ce mois-ci"
+            return String(localized: "This month")
         case .older:
-            return "Plus ancien"
+            return String(localized: "Older")
         }
     }
 

@@ -21,7 +21,7 @@ final class ShelfWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Étagère"
+        window.title = String(localized: "Shelf")
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("PinpointShelfWindow")
 

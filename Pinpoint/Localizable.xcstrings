@@ -1,0 +1,580 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "(no description)" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "(sans description)" } }
+      }
+    },
+    "1 selected" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 sélectionnée" } }
+      }
+    },
+    "Add to favorites" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter aux favoris" } }
+      }
+    },
+    "Adds the marker descriptions and instructions below the capture so a single paste carries everything to the agent." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajoute les descriptions des repères et les instructions sous la capture, pour qu’un seul collage transmette tout à l’agent." } }
+      }
+    },
+    "Agent sharing" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partage pour l’agent" } }
+      }
+    },
+    "All" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tout" } }
+      }
+    },
+    "An image is attached (no markers placed)." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Une image est jointe (aucun repère posé)." } }
+      }
+    },
+    "An image is attached. Numbered (ringed) badges point to specific elements." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Une image est jointe. Des pastilles numérotées (cerclées) pointent des éléments précis." } }
+      }
+    },
+    "Arrow" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Flèche" } }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } }
+      }
+    },
+    "Capture a region" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturer une région" } }
+      }
+    },
+    "Capture failed" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capture impossible" } }
+      }
+    },
+    "Capture location" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Emplacement des captures" } }
+      }
+    },
+    "Capture screen:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturer l’écran :" } }
+      }
+    },
+    "Capture the whole screen" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturer tout l’écran" } }
+      }
+    },
+    "capture.error.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@\n\nMake sure Pinpoint has the “Screen Recording” permission in System Settings ▸ Privacy & Security, then relaunch the app." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%@\n\nVérifie que Pinpoint a l’autorisation « Enregistrement de l’écran » dans Réglages Système ▸ Confidentialité et sécurité, puis relance l’app." } }
+      }
+    },
+    "Captured" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturée le" } }
+      }
+    },
+    "Choose a folder…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Choisir un dossier…" } }
+      }
+    },
+    "Clear history" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider l’historique" } }
+      }
+    },
+    "Clear selection" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la sélection" } }
+      }
+    },
+    "Click the image to drop a numbered marker." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Clique sur l’image pour poser un repère numéroté." } }
+      }
+    },
+    "Click to drop a marker" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Clique pour poser un repère" } }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fermer" } }
+      }
+    },
+    "Copied!" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copié !" } }
+      }
+    },
+    "Copy file path" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le chemin" } }
+      }
+    },
+    "Copy files" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier les fichiers" } }
+      }
+    },
+    "Copy for the agent" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier pour l’agent" } }
+      }
+    },
+    "Copy image" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier l’image" } }
+      }
+    },
+    "Copy path" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le chemin" } }
+      }
+    },
+    "Copy paths" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier les chemins" } }
+      }
+    },
+    "Couldn’t copy the selected files." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de copier les fichiers sélectionnés." } }
+      }
+    },
+    "Couldn’t save the watched folder." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’enregistrer le dossier surveillé." } }
+      }
+    },
+    "Couldn’t update Launch at Login." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de modifier le lancement au démarrage." } }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer" } }
+      }
+    },
+    "Delete selection" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer la sélection" } }
+      }
+    },
+    "Describe this marker…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décris ce repère…" } }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Détails" } }
+      }
+    },
+    "Doesn’t obscure the target element." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "N’obscurcit pas l’élément visé." } }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } }
+      }
+    },
+    "Drag a rectangle · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Échap pour annuler" } }
+      }
+    },
+    "Drag file" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser le fichier" } }
+      }
+    },
+    "drag.files" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag %lld files" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser %lld fichiers" } }
+      }
+    },
+    "Drag the selected screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser les captures sélectionnées" } }
+      }
+    },
+    "Drag the selected screenshots into another app" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse les captures sélectionnées vers une autre app" } }
+      }
+    },
+    "Drag to draw an arrow" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer une flèche" } }
+      }
+    },
+    "Drag to draw a rectangle" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer un rectangle" } }
+      }
+    },
+    "Drop screenshots into %@ or change the watched folder in Settings." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dépose des captures dans %@ ou change le dossier surveillé dans les Réglages." } }
+      }
+    },
+    "Embed legend in the image" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure la légende dans l’image" } }
+      }
+    },
+    "export.header" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "# Annotated capture — %lld×%lld px" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "# Capture annotée — %lld×%lld px" } }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Favoris" } }
+      }
+    },
+    "File name" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nom du fichier" } }
+      }
+    },
+    "File size" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Taille" } }
+      }
+    },
+    "Filled disc" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Disque plein" } }
+      }
+    },
+    "Follow the macOS screenshot location" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
+      }
+    },
+    "Instructions for the agent" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Instructions pour l’agent" } }
+      }
+    },
+    "Launch at login" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lancer au démarrage de session" } }
+      }
+    },
+    "Last 30 days" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "30 derniers jours" } }
+      }
+    },
+    "Last 7 days" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "7 derniers jours" } }
+      }
+    },
+    "legend.markers" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "MARKERS" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "REPÈRES" } }
+      }
+    },
+    "Light outline" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Contour léger" } }
+      }
+    },
+    "Loading…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Chargement…" } }
+      }
+    },
+    "Loading screenshots…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Chargement des captures…" } }
+      }
+    },
+    "macOS location" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Emplacement macOS" } }
+      }
+    },
+    "Marker" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repère" } }
+      }
+    },
+    "Marker style" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Style des repères" } }
+      }
+    },
+    "Markers" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repères" } }
+      }
+    },
+    "Markers (position in % of the image, top-left origin):" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repères (position en % de l’image, origine haut-gauche) :" } }
+      }
+    },
+    "More actions" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus d’actions" } }
+      }
+    },
+    "Move" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer" } }
+      }
+    },
+    "Move selection" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer la sélection" } }
+      }
+    },
+    "Move to folder" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer vers un dossier" } }
+      }
+    },
+    "Newest" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus récent" } }
+      }
+    },
+    "No recent captures" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture récente" } }
+      }
+    },
+    "No screen available for capture." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun écran disponible pour la capture." } }
+      }
+    },
+    "No screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture" } }
+      }
+    },
+    "Older" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus ancien" } }
+      }
+    },
+    "Oldest" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus ancien" } }
+      }
+    },
+    "Open details" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les détails" } }
+      }
+    },
+    "Open shelf:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir l’étagère :" } }
+      }
+    },
+    "Pinpoint Settings" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages Pinpoint" } }
+      }
+    },
+    "Pointer pin" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pin pointeur" } }
+      }
+    },
+    "Quick Look" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Coup d’œil" } }
+      }
+    },
+    "Quit Pinpoint" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Quitter Pinpoint" } }
+      }
+    },
+    "Recent captures" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Captures récentes" } }
+      }
+    },
+    "Remove from favorites" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer des favoris" } }
+      }
+    },
+    "Rename" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer" } }
+      }
+    },
+    "Rename screenshot" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer la capture" } }
+      }
+    },
+    "Reveal" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher" } }
+      }
+    },
+    "Reveal in Finder" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher dans le Finder" } }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer" } }
+      }
+    },
+    "Select" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélectionner" } }
+      }
+    },
+    "selection.count" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld sélectionnées" } }
+      }
+    },
+    "Settings…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages…" } }
+      }
+    },
+    "Shelf" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Étagère" } }
+      }
+    },
+    "Shelf…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Étagère…" } }
+      }
+    },
+    "Shortcuts" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Raccourcis" } }
+      }
+    },
+    "Show favorites only" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher seulement les favoris" } }
+      }
+    },
+    "Startup" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Démarrage" } }
+      }
+    },
+    "store.error.copy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t copy %@." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de copier %@." } }
+      }
+    },
+    "store.error.move" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t move %@." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de déplacer %@." } }
+      }
+    },
+    "store.error.read" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t read %@." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de lire %@." } }
+      }
+    },
+    "store.error.update" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t update %@." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de modifier %@." } }
+      }
+    },
+    "Style:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Style :" } }
+      }
+    },
+    "The tip marks the exact pixel." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La pointe désigne le pixel exact." } }
+      }
+    },
+    "This month" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce mois-ci" } }
+      }
+    },
+    "This week" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Cette semaine" } }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aujourd’hui" } }
+      }
+    },
+    "Tool" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Outil" } }
+      }
+    },
+    "Unknown" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inconnu" } }
+      }
+    },
+    "Use the current macOS location" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utiliser l’emplacement macOS actuel" } }
+      }
+    },
+    "Watched folder" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossier surveillé" } }
+      }
+    },
+    "White ring + drop shadow." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anneau blanc + ombre portée." } }
+      }
+    },
+    "Yesterday" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Hier" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

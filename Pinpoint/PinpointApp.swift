@@ -31,7 +31,7 @@ struct SettingsView: View {
 
             ShelfSettingsView()
                 .environmentObject(ScreenshotStore.shared)
-                .tabItem { Label("Étagère", systemImage: "tray.full") }
+                .tabItem { Label("Shelf", systemImage: "tray.full") }
         }
         .frame(width: 460, height: 340)
     }
@@ -43,12 +43,12 @@ struct CaptureSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Raccourcis") {
-                KeyboardShortcuts.Recorder("Capturer l’écran :", name: .capture)
-                KeyboardShortcuts.Recorder("Ouvrir l’étagère :", name: .openShelf)
+            Section("Shortcuts") {
+                KeyboardShortcuts.Recorder(String(localized: "Capture screen:"), name: .capture)
+                KeyboardShortcuts.Recorder(String(localized: "Open shelf:"), name: .openShelf)
             }
-            Section("Style des repères") {
-                Picker("Style :", selection: $pinStyle) {
+            Section("Marker style") {
+                Picker("Style:", selection: $pinStyle) {
                     ForEach(PinStyle.allCases) { style in
                         Text(style.label).tag(style)
                     }
@@ -57,9 +57,9 @@ struct CaptureSettingsView: View {
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
-            Section("Partage pour l’agent") {
-                Toggle("Inclure la légende dans l’image", isOn: $includeLegend)
-                Text("Ajoute les descriptions des repères et les instructions sous la capture, pour qu’un seul collage transmette tout à l’agent.")
+            Section("Agent sharing") {
+                Toggle("Embed legend in the image", isOn: $includeLegend)
+                Text("Adds the marker descriptions and instructions below the capture so a single paste carries everything to the agent.")
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
