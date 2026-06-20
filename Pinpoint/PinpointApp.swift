@@ -19,7 +19,24 @@ struct PinpointApp: App {
     }
 }
 
+/// Fenêtre Réglages unifiée : onglet Capture (raccourci, repères, partage agent)
+/// et onglet Étagère (dossier surveillé, lancement au démarrage). Les deux
+/// onglets pilotent le même `ScreenshotStore` partagé que la fenêtre Étagère.
 struct SettingsView: View {
+    var body: some View {
+        TabView {
+            CaptureSettingsView()
+                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+
+            ShelfSettingsView()
+                .environmentObject(ScreenshotStore.shared)
+                .tabItem { Label("Étagère", systemImage: "tray.full") }
+        }
+        .frame(width: 460, height: 340)
+    }
+}
+
+struct CaptureSettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
 
@@ -44,13 +61,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
-            Section {
-                Text("Pinpoint vit dans la barre de menus. Appuie sur le raccourci, annote, copie.")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
-            }
         }
-        .padding(20)
-        .frame(minWidth: 360)
+        .formStyle(.grouped)
     }
 }

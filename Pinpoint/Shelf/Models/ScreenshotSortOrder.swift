@@ -9,9 +9,9 @@ enum ScreenshotSortOrder: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .newestFirst:
-            return "Newest"
+            return "Plus récent"
         case .oldestFirst:
-            return "Oldest"
+            return "Plus ancien"
         }
     }
 

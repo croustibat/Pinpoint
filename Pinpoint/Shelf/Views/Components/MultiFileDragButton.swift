@@ -37,7 +37,7 @@ final class MultiFileDragNSButton: NSButton, NSDraggingSource {
         layer?.backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.14).cgColor
         contentTintColor = .labelColor
         font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
-        image = NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Drag selected screenshots")
+        image = NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Glisser les captures sélectionnées")
         image?.isTemplate = true
     }
 
@@ -49,8 +49,8 @@ final class MultiFileDragNSButton: NSButton, NSDraggingSource {
     func configure(with items: [ScreenshotItem], compact: Bool) {
         itemURLs = items.map(\.url)
         self.compact = compact
-        title = compact ? "" : (itemURLs.count == 1 ? "Drag File" : "Drag \(itemURLs.count) Files")
-        toolTip = "Drag the selected screenshots into another app"
+        title = compact ? "" : (itemURLs.count == 1 ? "Glisser le fichier" : "Glisser \(itemURLs.count) fichiers")
+        toolTip = "Glisse les captures sélectionnées vers une autre app"
         isEnabled = itemURLs.isEmpty == false
         alphaValue = isEnabled ? 1 : 0.45
         invalidateIntrinsicContentSize()

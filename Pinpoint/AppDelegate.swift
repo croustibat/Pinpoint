@@ -2,6 +2,11 @@ import AppKit
 import SwiftUI
 import KeyboardShortcuts
 
+extension Notification.Name {
+    /// Posted by the shelf to open Pinpoint's unified settings window.
+    static let pinpointOpenSettings = Notification.Name("pinpointOpenSettings")
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
@@ -17,6 +22,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         KeyboardShortcuts.onKeyUp(for: .capture) { [weak self] in
             self?.startCapture()
         }
+
+        // The shelf's ⚙️ button posts this — it can't use SwiftUI's
+        // `showSettingsWindow:` (a no-op for menu-bar apps). Route it to the
+        // unified settings window instead.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(openSettings),
+            name: .pinpointOpenSettings, object: nil
+        )
     }
 
     // MARK: - Menu bar

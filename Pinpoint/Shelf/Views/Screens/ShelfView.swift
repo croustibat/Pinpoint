@@ -2,7 +2,9 @@ import AppKit
 import SwiftUI
 
 struct ShelfView: View {
-    @Environment(\.openWindow) private var openWindow
+    var onOpenSettings: () -> Void = {}
+    var onOpenDetail: (ScreenshotItem) -> Void = { _ in }
+
     @EnvironmentObject private var store: ScreenshotStore
     @State private var renameTarget: ScreenshotItem?
     @State private var selectionMode = false
@@ -43,7 +45,7 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("SnapShelf")
+                    Text("Étagère")
                         .font(.title3.weight(.semibold))
 
                     Text(store.watchedFolderURL.lastPathComponent)
@@ -54,13 +56,13 @@ struct ShelfView: View {
                 Spacer()
 
                 if selectionMode {
-                    Button("Done") {
+                    Button("Terminé") {
                         selectionMode = false
                         selectedIDs.removeAll()
                     }
                     .buttonStyle(.borderless)
                 } else {
-                    Button("Select") {
+                    Button("Sélectionner") {
                         selectionMode = true
                     }
                     .buttonStyle(.borderless)
@@ -102,11 +104,11 @@ struct ShelfView: View {
                 Button {
                     store.showsFavoritesOnly.toggle()
                 } label: {
-                    Label("Favorites", systemImage: store.showsFavoritesOnly ? "star.fill" : "star")
+                    Label("Favoris", systemImage: store.showsFavoritesOnly ? "star.fill" : "star")
                         .foregroundStyle(store.showsFavoritesOnly ? .yellow : .secondary)
                 }
                 .buttonStyle(.borderless)
-                .help("Show Favorites Only")
+                .help("Afficher seulement les favoris")
 
                 Spacer()
 
@@ -139,14 +141,14 @@ struct ShelfView: View {
     @ViewBuilder
     private var content: some View {
         if store.isLoading && store.screenshots.isEmpty {
-            ProgressView("Loading screenshots…")
+            ProgressView("Chargement des captures…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if store.groupedScreenshots.isEmpty {
             VStack(spacing: 12) {
                 ContentUnavailableView(
-                    "No screenshots found",
+                    "Aucune capture",
                     systemImage: "photo.on.rectangle.angled",
-                    description: Text("Drop screenshots into \(store.watchedFolderURL.lastPathComponent) or change the watched folder in Settings.")
+                    description: Text("Dépose des captures dans \(store.watchedFolderURL.lastPathComponent) ou change le dossier surveillé dans les Réglages.")
                 )
 
                 if let error = store.lastErrorMessage {
@@ -215,7 +217,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "space")
                 }
-                .help("Quick Look")
+                .help("Coup d’œil")
                 .keyboardShortcut(.space, modifiers: [])
 
                 Button {
@@ -223,7 +225,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                 }
-                .help("Copy Files")
+                .help("Copier les fichiers")
                 .keyboardShortcut("c")
 
                 Button {
@@ -234,33 +236,33 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "folder")
                 }
-                .help("Move Selection")
+                .help("Déplacer la sélection")
 
                 Menu {
-                    Button(allSelectedItemsAreFavorites ? "Remove Favorites" : "Favorite Selection", systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
+                    Button(allSelectedItemsAreFavorites ? "Retirer des favoris" : "Ajouter aux favoris", systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
                         store.setFavorite(allSelectedItemsAreFavorites == false, for: selectedItems)
                     }
 
                     Divider()
 
-                    Button("Copy Paths", systemImage: "link") {
+                    Button("Copier les chemins", systemImage: "link") {
                         store.copyPaths(selectedItems)
                     }
 
-                    Button("Move to Folder", systemImage: "folder") {
+                    Button("Déplacer vers un dossier", systemImage: "folder") {
                         let items = selectedItems
                         selectedIDs.removeAll()
                         selectionMode = false
                         store.move(items)
                     }
 
-                    Button("Reveal in Finder", systemImage: "finder") {
+                    Button("Afficher dans le Finder", systemImage: "finder") {
                         store.revealInFinder(selectedItems)
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .help("More Actions")
+                .help("Plus d’actions")
 
                 Button(role: .destructive) {
                     let items = selectedItems
@@ -270,7 +272,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .help("Delete Selection")
+                .help("Supprimer la sélection")
                 .keyboardShortcut(.delete, modifiers: [])
 
                 Button {
@@ -278,7 +280,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "xmark")
                 }
-                .help("Clear Selection")
+                .help("Effacer la sélection")
             }
             .buttonStyle(.bordered)
         }
@@ -289,7 +291,7 @@ struct ShelfView: View {
     }
 
     private var selectionSummaryText: String {
-        selectedItems.count == 1 ? "1 selected" : "\(selectedItems.count) selected"
+        selectedItems.count == 1 ? "1 sélectionnée" : "\(selectedItems.count) sélectionnées"
     }
 
     private func toggleSelection(for item: ScreenshotItem) {
@@ -523,13 +525,11 @@ struct ShelfView: View {
     }
 
     private func openSettingsWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        onOpenSettings()
     }
 
     private func openDetailWindow(for item: ScreenshotItem) {
-        NSApp.activate(ignoringOtherApps: true)
-        openWindow(id: "screenshot-detail", value: item.id)
+        onOpenDetail(item)
     }
 }
 
@@ -543,18 +543,18 @@ private struct RenameScreenshotView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Rename Screenshot")
+            Text("Renommer la capture")
                 .font(.title3.weight(.semibold))
 
-            TextField("Filename", text: $newName)
+            TextField("Nom du fichier", text: $newName)
                 .textFieldStyle(.roundedBorder)
                 .focused($isFocused)
 
             HStack {
                 Spacer()
 
-                Button("Cancel", action: onCancel)
-                Button("Save") {
+                Button("Annuler", action: onCancel)
+                Button("Enregistrer") {
                     onSave(newName)
                 }
                 .keyboardShortcut(.defaultAction)
