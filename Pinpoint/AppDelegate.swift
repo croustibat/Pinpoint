@@ -22,14 +22,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         KeyboardShortcuts.onKeyUp(for: .capture) { [weak self] in
             self?.startCapture()
         }
+        KeyboardShortcuts.onKeyUp(for: .openShelf) { [weak self] in
+            self?.openShelf()
+        }
 
+        let center = NotificationCenter.default
         // The shelf's ⚙️ button posts this — it can't use SwiftUI's
         // `showSettingsWindow:` (a no-op for menu-bar apps). Route it to the
         // unified settings window instead.
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(openSettings),
-            name: .pinpointOpenSettings, object: nil
-        )
+        center.addObserver(self, selector: #selector(openSettings),
+                           name: .pinpointOpenSettings, object: nil)
+        // Menu-bar app (LSUIElement = accessory): become a regular app while a
+        // content window is on screen, so it shows in the Dock and ⌘Tab, and
+        // drop back to accessory once everything is closed.
+        center.addObserver(self, selector: #selector(refreshActivationPolicy),
+                           name: NSWindow.didBecomeKeyNotification, object: nil)
+        center.addObserver(self, selector: #selector(refreshActivationPolicy),
+                           name: NSWindow.willCloseNotification, object: nil)
+    }
+
+    /// Switches the app between `.regular` (Dock icon + ⌘Tab) and `.accessory`
+    /// (pure menu-bar) based on whether any normal content window is visible.
+    /// Deferred to the next tick so a closing window's state is already updated.
+    @objc private func refreshActivationPolicy() {
+        DispatchQueue.main.async {
+            let hasContentWindow = NSApp.windows.contains {
+                $0.isVisible && $0.level == .normal && $0.canBecomeMain
+            }
+            let policy: NSApplication.ActivationPolicy = hasContentWindow ? .regular : .accessory
+            if NSApp.activationPolicy() != policy {
+                NSApp.setActivationPolicy(policy)
+            }
+        }
     }
 
     // MARK: - Menu bar
