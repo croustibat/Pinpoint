@@ -47,14 +47,14 @@ struct ScreenshotCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(alignment: .topTrailing) {
                 Menu {
-                    Button("Open Details", systemImage: "rectangle.portrait.and.arrow.right", action: onOpenDetails)
+                    Button("Open details", systemImage: "rectangle.portrait.and.arrow.right", action: onOpenDetails)
                     Divider()
                     Button("Quick Look", systemImage: "space", action: onQuickLook)
                     Divider()
-                    Button(isFavorite ? "Remove Favorite" : "Favorite", systemImage: isFavorite ? "star.slash" : "star", action: onToggleFavorite)
+                    Button(isFavorite ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"), systemImage: isFavorite ? "star.slash" : "star", action: onToggleFavorite)
                     Divider()
-                    Button("Copy Image", systemImage: "doc.on.doc", action: onCopyImage)
-                    Button("Copy File Path", systemImage: "link", action: onCopyPath)
+                    Button("Copy image", systemImage: "doc.on.doc", action: onCopyImage)
+                    Button("Copy file path", systemImage: "link", action: onCopyPath)
                     Divider()
                     Button("Rename", systemImage: "pencil", action: onRename)
                     Button("Move", systemImage: "folder", action: onMove)

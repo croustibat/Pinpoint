@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Design tokens — the app's vermillon accent ties the site to the product. */
+@theme {
+  --color-brand: #ff4d2e;
+  --color-brand-600: #e63e20;
+  --color-ink: #0a0a0c;
+  --color-ink-2: #111114;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "SF Pro Text",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo,
+    Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: #d4d4d8;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ambient vermillon glow used behind the hero. */
+.glow {
+  background: radial-gradient(
+    60% 60% at 50% 0%,
+    rgba(255, 77, 46, 0.18) 0%,
+    rgba(255, 77, 46, 0) 70%
+  );
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(70% 55% at 50% 0%, #000 30%, transparent 75%);
+}

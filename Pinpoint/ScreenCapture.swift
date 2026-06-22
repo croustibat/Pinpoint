@@ -6,7 +6,7 @@ enum ScreenCaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noDisplay: return "Aucun écran disponible pour la capture."
+        case .noDisplay: return String(localized: "No screen available for capture.")
         }
     }
 }
@@ -29,7 +29,9 @@ enum ScreenCapture {
 
         let scale = screen?.backingScaleFactor ?? 2.0
 
-        let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        let filter = SCContentFilter(display: display,
+                                     excludingApplications: ownApplications(in: content),
+                                     exceptingWindows: [])
 
         let config = SCStreamConfiguration()
         config.width = Int(CGFloat(display.width) * scale)
@@ -56,7 +58,9 @@ enum ScreenCapture {
             throw ScreenCaptureError.noDisplay
         }
 
-        let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        let filter = SCContentFilter(display: display,
+                                     excludingApplications: ownApplications(in: content),
+                                     exceptingWindows: [])
 
         let config = SCStreamConfiguration()
         config.sourceRect = region.rect
@@ -68,6 +72,13 @@ enum ScreenCapture {
 
         let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
         return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+    }
+
+    /// Pinpoint's own running application(s), so its windows (a leftover editor,
+    /// the shelf, the dimming overlay…) are never part of a capture.
+    private static func ownApplications(in content: SCShareableContent) -> [SCRunningApplication] {
+        let pid = ProcessInfo.processInfo.processIdentifier
+        return content.applications.filter { $0.processID == pid }
     }
 }
 

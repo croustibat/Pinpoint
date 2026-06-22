@@ -1,9 +1,10 @@
 import SwiftUI
 import KeyboardShortcuts
 
-// Default global shortcut: ⌘⇧1
+// Default global shortcuts: ⌘⇧1 capture, ⌘⇧2 étagère.
 extension KeyboardShortcuts.Name {
     static let capture = Self("capture", default: .init(.one, modifiers: [.command, .shift]))
+    static let openShelf = Self("openShelf", default: .init(.two, modifiers: [.command, .shift]))
 }
 
 @main
@@ -19,17 +20,35 @@ struct PinpointApp: App {
     }
 }
 
+/// Fenêtre Réglages unifiée : onglet Capture (raccourci, repères, partage agent)
+/// et onglet Étagère (dossier surveillé, lancement au démarrage). Les deux
+/// onglets pilotent le même `ScreenshotStore` partagé que la fenêtre Étagère.
 struct SettingsView: View {
+    var body: some View {
+        TabView {
+            CaptureSettingsView()
+                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+
+            ShelfSettingsView()
+                .environmentObject(ScreenshotStore.shared)
+                .tabItem { Label("Shelf", systemImage: "tray.full") }
+        }
+        .frame(width: 460, height: 340)
+    }
+}
+
+struct CaptureSettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
 
     var body: some View {
         Form {
-            Section("Raccourci de capture") {
-                KeyboardShortcuts.Recorder("Capturer l’écran :", name: .capture)
+            Section("Shortcuts") {
+                KeyboardShortcuts.Recorder(String(localized: "Capture screen:"), name: .capture)
+                KeyboardShortcuts.Recorder(String(localized: "Open shelf:"), name: .openShelf)
             }
-            Section("Style des repères") {
-                Picker("Style :", selection: $pinStyle) {
+            Section("Marker style") {
+                Picker("Style:", selection: $pinStyle) {
                     ForEach(PinStyle.allCases) { style in
                         Text(style.label).tag(style)
                     }
@@ -38,19 +57,13 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
-            Section("Partage pour l’agent") {
-                Toggle("Inclure la légende dans l’image", isOn: $includeLegend)
-                Text("Ajoute les descriptions des repères et les instructions sous la capture, pour qu’un seul collage transmette tout à l’agent.")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
-            }
-            Section {
-                Text("Pinpoint vit dans la barre de menus. Appuie sur le raccourci, annote, copie.")
+            Section("Agent sharing") {
+                Toggle("Embed legend in the image", isOn: $includeLegend)
+                Text("Adds the marker descriptions and instructions below the capture so a single paste carries everything to the agent.")
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
         }
-        .padding(20)
-        .frame(minWidth: 360)
+        .formStyle(.grouped)
     }
 }

@@ -14,6 +14,9 @@ struct ScreenshotDetailView: View {
     let onCopyPath: () -> Void
     let onMove: () -> Void
     let onDelete: () -> Void
+    /// Set when hosted in a plain AppKit window, where `@Environment(\.dismiss)`
+    /// is a no-op. Falls back to `dismiss` (used by previews).
+    var onClose: (() -> Void)? = nil
 
     @State private var image: NSImage?
     @State private var metadata = ScreenshotDetailMetadata.empty
@@ -71,15 +74,23 @@ struct ScreenshotDetailView: View {
                     .foregroundStyle(isFavorite ? .yellow : .secondary)
             }
             .buttonStyle(.borderless)
-            .help(isFavorite ? "Remove Favorite" : "Favorite")
+            .help(isFavorite ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"))
 
-            Button(action: { dismiss() }) {
+            Button(action: close) {
                 Image(systemName: "xmark")
             }
             .buttonStyle(.borderless)
             .help("Close")
         }
         .padding(16)
+    }
+
+    private func close() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
+        }
     }
 
     private var previewCard: some View {
@@ -108,10 +119,10 @@ struct ScreenshotDetailView: View {
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
-                detailValue(title: "Captured", value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                detailValue(title: "Dimensions", value: metadata.dimensionsText)
-                detailValue(title: "Format", value: item.fileExtension.uppercased())
-                detailValue(title: "File Size", value: metadata.fileSizeText)
+                detailValue(title: String(localized: "Captured"), value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                detailValue(title: String(localized: "Dimensions"), value: metadata.dimensionsText)
+                detailValue(title: String(localized: "Format"), value: item.fileExtension.uppercased())
+                detailValue(title: String(localized: "File size"), value: metadata.fileSizeText)
             }
         }
     }
@@ -124,8 +135,8 @@ struct ScreenshotDetailView: View {
             HStack(spacing: 10) {
                 Button("Quick Look", systemImage: "space", action: onQuickLook)
                 Button("Reveal", systemImage: "finder", action: onReveal)
-                Button("Copy Image", systemImage: "doc.on.doc", action: onCopyImage)
-                Button("Copy Path", systemImage: "link", action: onCopyPath)
+                Button("Copy image", systemImage: "doc.on.doc", action: onCopyImage)
+                Button("Copy path", systemImage: "link", action: onCopyPath)
             }
             .buttonStyle(.bordered)
 
@@ -136,7 +147,7 @@ struct ScreenshotDetailView: View {
                 }
                 Button("Move", systemImage: "folder", action: onMove)
                 Button("Delete", systemImage: "trash", role: .destructive) {
-                    dismiss()
+                    close()
                     onDelete()
                 }
             }
@@ -168,7 +179,7 @@ private struct ScreenshotDetailMetadata {
     let dimensionsText: String
     let fileSizeText: String
 
-    static let empty = ScreenshotDetailMetadata(dimensionsText: "Loading…", fileSizeText: "Loading…")
+    static let empty = ScreenshotDetailMetadata(dimensionsText: String(localized: "Loading…"), fileSizeText: String(localized: "Loading…"))
 
     init(dimensionsText: String, fileSizeText: String) {
         self.dimensionsText = dimensionsText
@@ -180,14 +191,14 @@ private struct ScreenshotDetailMetadata {
             let size = image.size
             dimensionsText = "\(Int(size.width)) × \(Int(size.height))"
         } else {
-            dimensionsText = "Unknown"
+            dimensionsText = String(localized: "Unknown")
         }
 
         if let values = try? url.resourceValues(forKeys: [.fileSizeKey]),
            let fileSize = values.fileSize {
             fileSizeText = ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
         } else {
-            fileSizeText = "Unknown"
+            fileSizeText = String(localized: "Unknown")
         }
     }
 }
@@ -219,10 +230,10 @@ private struct RenameDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Rename Screenshot")
+            Text("Rename screenshot")
                 .font(.title3.weight(.semibold))
 
-            TextField("Filename", text: $newName)
+            TextField("File name", text: $newName)
                 .textFieldStyle(.roundedBorder)
                 .focused($isFocused)
 

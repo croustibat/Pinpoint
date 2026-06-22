@@ -15,12 +15,12 @@ import SwiftUI
 final class SettingsWindowController: NSWindowController {
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 280),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 340),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "Réglages Pinpoint"
+        window.title = String(localized: "Pinpoint Settings")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SettingsView())
 

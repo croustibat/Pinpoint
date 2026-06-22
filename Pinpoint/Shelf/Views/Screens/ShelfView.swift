@@ -2,7 +2,9 @@ import AppKit
 import SwiftUI
 
 struct ShelfView: View {
-    @Environment(\.openWindow) private var openWindow
+    var onOpenSettings: () -> Void = {}
+    var onOpenDetail: (ScreenshotItem) -> Void = { _ in }
+
     @EnvironmentObject private var store: ScreenshotStore
     @State private var renameTarget: ScreenshotItem?
     @State private var selectionMode = false
@@ -43,7 +45,7 @@ struct ShelfView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("SnapShelf")
+                    Text("Shelf")
                         .font(.title3.weight(.semibold))
 
                     Text(store.watchedFolderURL.lastPathComponent)
@@ -106,7 +108,7 @@ struct ShelfView: View {
                         .foregroundStyle(store.showsFavoritesOnly ? .yellow : .secondary)
                 }
                 .buttonStyle(.borderless)
-                .help("Show Favorites Only")
+                .help("Show favorites only")
 
                 Spacer()
 
@@ -144,7 +146,7 @@ struct ShelfView: View {
         } else if store.groupedScreenshots.isEmpty {
             VStack(spacing: 12) {
                 ContentUnavailableView(
-                    "No screenshots found",
+                    "No screenshots",
                     systemImage: "photo.on.rectangle.angled",
                     description: Text("Drop screenshots into \(store.watchedFolderURL.lastPathComponent) or change the watched folder in Settings.")
                 )
@@ -223,7 +225,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "doc.on.doc")
                 }
-                .help("Copy Files")
+                .help("Copy files")
                 .keyboardShortcut("c")
 
                 Button {
@@ -234,20 +236,20 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "folder")
                 }
-                .help("Move Selection")
+                .help("Move selection")
 
                 Menu {
-                    Button(allSelectedItemsAreFavorites ? "Remove Favorites" : "Favorite Selection", systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
+                    Button(allSelectedItemsAreFavorites ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"), systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
                         store.setFavorite(allSelectedItemsAreFavorites == false, for: selectedItems)
                     }
 
                     Divider()
 
-                    Button("Copy Paths", systemImage: "link") {
+                    Button("Copy paths", systemImage: "link") {
                         store.copyPaths(selectedItems)
                     }
 
-                    Button("Move to Folder", systemImage: "folder") {
+                    Button("Move to folder", systemImage: "folder") {
                         let items = selectedItems
                         selectedIDs.removeAll()
                         selectionMode = false
@@ -260,7 +262,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .help("More Actions")
+                .help("More actions")
 
                 Button(role: .destructive) {
                     let items = selectedItems
@@ -270,7 +272,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .help("Delete Selection")
+                .help("Delete selection")
                 .keyboardShortcut(.delete, modifiers: [])
 
                 Button {
@@ -278,7 +280,7 @@ struct ShelfView: View {
                 } label: {
                     Image(systemName: "xmark")
                 }
-                .help("Clear Selection")
+                .help("Clear selection")
             }
             .buttonStyle(.bordered)
         }
@@ -289,7 +291,9 @@ struct ShelfView: View {
     }
 
     private var selectionSummaryText: String {
-        selectedItems.count == 1 ? "1 selected" : "\(selectedItems.count) selected"
+        selectedItems.count == 1
+            ? String(localized: "1 selected")
+            : String(localized: "selection.count", defaultValue: "\(selectedItems.count) selected")
     }
 
     private func toggleSelection(for item: ScreenshotItem) {
@@ -523,13 +527,11 @@ struct ShelfView: View {
     }
 
     private func openSettingsWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        onOpenSettings()
     }
 
     private func openDetailWindow(for item: ScreenshotItem) {
-        NSApp.activate(ignoringOtherApps: true)
-        openWindow(id: "screenshot-detail", value: item.id)
+        onOpenDetail(item)
     }
 }
 
@@ -543,10 +545,10 @@ private struct RenameScreenshotView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Rename Screenshot")
+            Text("Rename screenshot")
                 .font(.title3.weight(.semibold))
 
-            TextField("Filename", text: $newName)
+            TextField("File name", text: $newName)
                 .textFieldStyle(.roundedBorder)
                 .focused($isFocused)
 

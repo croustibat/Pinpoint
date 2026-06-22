@@ -8,9 +8,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .pin: return "Repère"
-        case .arrow: return "Flèche"
-        case .rectangle: return "Rectangle"
+        case .pin: return String(localized: "Marker")
+        case .arrow: return String(localized: "Arrow")
+        case .rectangle: return String(localized: "Rectangle")
         }
     }
 
@@ -80,7 +80,7 @@ struct EditorView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            Picker("Outil", selection: $tool) {
+            Picker("Tool", selection: $tool) {
                 ForEach(EditorTool.allCases) { tool in
                     Label(tool.label, systemImage: tool.symbol).tag(tool)
                 }
@@ -101,9 +101,9 @@ struct EditorView: View {
 
     private var toolHint: String {
         switch tool {
-        case .pin: return "Clique pour poser un repère"
-        case .arrow: return "Glisse pour tracer une flèche"
-        case .rectangle: return "Glisse pour tracer un rectangle"
+        case .pin: return String(localized: "Click to drop a marker")
+        case .arrow: return String(localized: "Drag to draw an arrow")
+        case .rectangle: return String(localized: "Drag to draw a rectangle")
         }
     }
 
@@ -222,7 +222,7 @@ struct EditorView: View {
 
             Divider()
 
-            Text("Instructions pour l’agent")
+            Text("Instructions for the agent")
                 .font(.headline)
             TextEditor(text: $context)
                 .font(.body)
@@ -230,7 +230,7 @@ struct EditorView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
 
             Button(action: copy) {
-                Label(didCopy ? "Copié !" : "Copier pour l’agent",
+                Label(didCopy ? String(localized: "Copied!") : String(localized: "Copy for the agent"),
                       systemImage: didCopy ? "checkmark.circle.fill" : "doc.on.clipboard")
                     .frame(maxWidth: .infinity)
             }
@@ -244,11 +244,11 @@ struct EditorView: View {
 
     private var pinsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Repères")
+            Text("Markers")
                 .font(.headline)
 
             if pins.isEmpty {
-                Text("Clique sur l’image pour poser un repère numéroté.")
+                Text("Click the image to drop a numbered marker.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
@@ -278,7 +278,7 @@ struct EditorView: View {
                 .frame(width: 22, height: 22)
                 .background(Circle().fill(Color.pinpointVermillon))
 
-            TextField("Décris ce repère…", text: pin.note)
+            TextField("Describe this marker…", text: pin.note)
                 .textFieldStyle(.roundedBorder)
 
             Button {

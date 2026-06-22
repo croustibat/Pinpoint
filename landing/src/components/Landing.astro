@@ -1,0 +1,206 @@
+---
+import { content, otherLang, GITHUB_URL, DOWNLOAD_URL, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = content[lang];
+const alt = otherLang[lang];
+
+const featureIcons = [
+  'M12 2a10 10 0 100 20 10 10 0 000-20zm0 6a4 4 0 110 8 4 4 0 010-8z',
+  'M5 19L19 5M19 5h-7M19 5v7',
+  'M4 7h16M4 12h16M4 17h10',
+  'M4 5h7v7H4zM13 5h7v4h-7zM13 12h7v7h-7zM4 15h7v4H4z',
+  'M9 9V7a3 3 0 10-3 3h12a3 3 0 10-3-3v2m-6 0h6m-6 0v6m6-6v6m-6 0a3 3 0 103 3v-2m0-1h0',
+  'M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z',
+];
+---
+
+<!-- ============================= NAV ============================= -->
+<header class="sticky top-0 z-50 border-b border-white/5 bg-ink/70 backdrop-blur-xl">
+  <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+    <a href={lang === 'fr' ? '/fr/' : '/'} class="flex items-center gap-2.5">
+      <img src="/icon.png" alt="Pinpoint" width="28" height="28" class="rounded-[7px]" />
+      <span class="text-[15px] font-semibold tracking-tight text-white">Pinpoint</span>
+    </a>
+
+    <div class="hidden items-center gap-8 text-sm text-zinc-400 md:flex">
+      <a href="#how" class="transition hover:text-white">{t.nav.how}</a>
+      <a href="#features" class="transition hover:text-white">{t.nav.features}</a>
+      <a href="#agents" class="transition hover:text-white">{t.nav.agents}</a>
+      <a href={GITHUB_URL} class="transition hover:text-white">{t.nav.github}</a>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <a href={alt.href} class="rounded-md border border-white/10 px-2 py-1 text-xs font-medium text-zinc-400 transition hover:text-white" aria-label="Change language">{alt.code.toUpperCase()}</a>
+      <a href={DOWNLOAD_URL} class="rounded-lg bg-white px-3.5 py-1.5 text-sm font-semibold text-ink transition hover:bg-zinc-200">{t.nav.download}</a>
+    </div>
+  </nav>
+</header>
+
+<!-- ============================= HERO ============================= -->
+<section class="relative isolate overflow-hidden">
+  <div class="glow pointer-events-none absolute inset-0 -z-10"></div>
+  <div class="grid-bg pointer-events-none absolute inset-0 -z-10 h-[600px]"></div>
+
+  <div class="mx-auto max-w-6xl px-5 pt-20 pb-16 text-center md:pt-28">
+    <a href={GITHUB_URL} class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-brand/40">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span>
+      {t.hero.eyebrow}
+    </a>
+
+    <h1 class="mx-auto mt-7 max-w-3xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight text-white md:text-7xl">
+      {t.hero.titleA}<br />
+      <span class="bg-gradient-to-r from-brand to-amber-400 bg-clip-text text-transparent">{t.hero.titleB}</span>
+    </h1>
+
+    <p class="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-zinc-400">
+      {t.hero.subtitle}
+    </p>
+
+    <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <a href={DOWNLOAD_URL} class="group inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 font-semibold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-600">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.36 2.5c.05 1.05-.36 2.08-1.02 2.83-.7.79-1.84 1.4-2.94 1.32-.07-1.02.4-2.07 1.04-2.78.72-.81 1.96-1.42 2.92-1.37zM19.7 17c-.5 1.15-.74 1.66-1.38 2.68-.9 1.42-2.16 3.18-3.73 3.2-1.4.01-1.76-.91-3.65-.9-1.9.01-2.29.92-3.69.9-1.57-.01-2.77-1.6-3.66-3.02C.9 15.93.64 11.3 2.18 8.86c1.1-1.74 2.83-2.76 4.46-2.76 1.66 0 2.7.91 4.07.91 1.33 0 2.14-.91 4.06-.91 1.45 0 2.99.79 4.09 2.16-3.6 1.97-3.01 7.1.84 8.74z"/></svg>
+        {t.hero.download}
+      </a>
+      <a href={GITHUB_URL} class="inline-flex items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-6 py-3 font-semibold text-white transition hover:bg-white/10">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5a10.5 10.5 0 00-3.32 20.46c.53.1.72-.23.72-.5v-1.75c-2.92.64-3.54-1.4-3.54-1.4-.48-1.22-1.17-1.54-1.17-1.54-.95-.65.07-.64.07-.64 1.06.07 1.61 1.09 1.61 1.09.94 1.6 2.46 1.14 3.06.87.1-.68.37-1.14.67-1.4-2.33-.27-4.78-1.17-4.78-5.18 0-1.15.41-2.08 1.08-2.82-.11-.27-.47-1.34.1-2.79 0 0 .88-.28 2.88 1.07a9.96 9.96 0 015.24 0c2-1.35 2.88-1.07 2.88-1.07.57 1.45.21 2.52.1 2.79.68.74 1.08 1.67 1.08 2.82 0 4.02-2.45 4.9-4.79 5.16.38.33.71.97.71 1.96v2.9c0 .28.19.61.73.5A10.5 10.5 0 0012 1.5z"/></svg>
+        {t.hero.github}
+      </a>
+    </div>
+    <p class="mt-4 text-sm text-zinc-500">{t.hero.req}</p>
+
+    <!-- App mockup -->
+    <div class="mx-auto mt-16 max-w-4xl">
+      <div class="overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-2xl shadow-black/50">
+        <div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-3">
+          <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
+          <span class="ml-2 text-xs text-zinc-500">Pinpoint</span>
+        </div>
+        <div class="grid gap-0 md:grid-cols-[1.7fr_1fr]">
+          <!-- canvas -->
+          <div class="relative aspect-[16/10] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">
+            <div class="absolute inset-0 grid-bg opacity-40"></div>
+            <!-- faux UI blocks -->
+            <div class="absolute left-6 top-6 h-3 w-24 rounded bg-white/15"></div>
+            <div class="absolute left-6 top-12 h-2 w-40 rounded bg-white/8"></div>
+            <div class="absolute bottom-8 right-8 h-9 w-40 rounded-lg bg-white/12"></div>
+            <!-- markers -->
+            <div class="absolute" style="left:62%;top:74%">
+              <span class="flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-lg ring-2 ring-white">1</span>
+            </div>
+            <div class="absolute" style="left:12%;top:22%">
+              <span class="flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-lg ring-2 ring-white">2</span>
+            </div>
+          </div>
+          <!-- side panel -->
+          <div class="flex flex-col gap-3 border-t border-white/5 p-4 text-left md:border-l md:border-t-0">
+            <div class="flex items-start gap-2.5">
+              <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">1</span>
+              <span class="text-sm text-zinc-300">{t.mockup.note1}</span>
+            </div>
+            <div class="flex items-start gap-2.5">
+              <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">2</span>
+              <span class="text-sm text-zinc-300">{t.mockup.note2}</span>
+            </div>
+            <div class="mt-1 rounded-lg border border-white/8 bg-white/5 p-2.5 text-xs leading-relaxed text-zinc-400">{t.mockup.instructions}</div>
+            <div class="mt-auto rounded-lg bg-brand py-2 text-center text-sm font-semibold text-white">⌘C</div>
+          </div>
+        </div>
+      </div>
+      <p class="mt-3 text-xs text-zinc-600">{t.mockup.caption}</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= STEPS ============================= -->
+<section id="how" class="mx-auto max-w-6xl px-5 py-24">
+  <div class="text-center">
+    <h2 class="text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.steps.title}</h2>
+    <p class="mx-auto mt-3 max-w-xl text-zinc-400">{t.steps.subtitle}</p>
+  </div>
+  <div class="mt-14 grid gap-6 md:grid-cols-3">
+    {t.steps.items.map((s) => (
+      <div class="relative rounded-2xl border border-white/8 bg-white/[0.02] p-6">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-lg font-bold text-brand">{s.n}</span>
+        <h3 class="mt-5 text-lg font-semibold text-white">{s.t}</h3>
+        <p class="mt-2 text-sm leading-relaxed text-zinc-400">{s.d}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+<!-- ============================= FEATURES ============================= -->
+<section id="features" class="border-y border-white/5 bg-white/[0.015]">
+  <div class="mx-auto max-w-6xl px-5 py-24">
+    <div class="text-center">
+      <h2 class="text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.features.title}</h2>
+      <p class="mx-auto mt-3 max-w-xl text-zinc-400">{t.features.subtitle}</p>
+    </div>
+    <div class="mt-14 grid gap-px overflow-hidden rounded-2xl border border-white/8 bg-white/8 sm:grid-cols-2 lg:grid-cols-3">
+      {t.features.items.map((f, i) => (
+        <div class="bg-ink p-7">
+          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/12">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-brand"><path d={featureIcons[i]} /></svg>
+          </div>
+          <h3 class="mt-5 font-semibold text-white">{f.t}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-zinc-400">{f.d}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ============================= AGENTS ============================= -->
+<section id="agents" class="mx-auto max-w-6xl px-5 py-24">
+  <div class="grid items-center gap-12 lg:grid-cols-2">
+    <div>
+      <span class="text-sm font-semibold text-brand">{t.agents.eyebrow}</span>
+      <h2 class="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.agents.title}</h2>
+      <p class="mt-5 text-lg leading-relaxed text-zinc-400">{t.agents.body}</p>
+    </div>
+    <div class="overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-xl">
+      <div class="flex items-center gap-2 border-b border-white/5 px-4 py-2.5">
+        <span class="h-2.5 w-2.5 rounded-full bg-white/15"></span>
+        <span class="text-xs text-zinc-500">clipboard.txt</span>
+      </div>
+      <pre class="overflow-x-auto p-5 text-[13px] leading-relaxed text-zinc-300"><code style="font-family: var(--font-mono)">{t.agents.sample}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= DOWNLOAD ============================= -->
+<section class="mx-auto max-w-6xl px-5 pb-24">
+  <div class="glow relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent px-6 py-16 text-center">
+    <img src="/icon.png" alt="Pinpoint" width="72" height="72" class="mx-auto rounded-2xl shadow-lg" />
+    <h2 class="mt-6 text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.download.title}</h2>
+    <p class="mx-auto mt-3 max-w-md text-zinc-400">{t.download.body}</p>
+    <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <a href={DOWNLOAD_URL} class="inline-flex items-center gap-2 rounded-xl bg-brand px-7 py-3.5 font-semibold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-600">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.36 2.5c.05 1.05-.36 2.08-1.02 2.83-.7.79-1.84 1.4-2.94 1.32-.07-1.02.4-2.07 1.04-2.78.72-.81 1.96-1.42 2.92-1.37zM19.7 17c-.5 1.15-.74 1.66-1.38 2.68-.9 1.42-2.16 3.18-3.73 3.2-1.4.01-1.76-.91-3.65-.9-1.9.01-2.29.92-3.69.9-1.57-.01-2.77-1.6-3.66-3.02C.9 15.93.64 11.3 2.18 8.86c1.1-1.74 2.83-2.76 4.46-2.76 1.66 0 2.7.91 4.07.91 1.33 0 2.14-.91 4.06-.91 1.45 0 2.99.79 4.09 2.16-3.6 1.97-3.01 7.1.84 8.74z"/></svg>
+        {t.download.cta}
+      </a>
+      <a href={GITHUB_URL} class="text-sm font-medium text-zinc-400 underline-offset-4 transition hover:text-white hover:underline">{t.download.source}</a>
+    </div>
+    <p class="mt-4 text-sm text-zinc-500">{t.download.req}</p>
+  </div>
+</section>
+
+<!-- ============================= FOOTER ============================= -->
+<footer class="border-t border-white/5">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 sm:flex-row">
+    <div class="flex items-center gap-2.5">
+      <img src="/icon.png" alt="" width="22" height="22" class="rounded-md" />
+      <span class="text-sm text-zinc-400">{t.footer.tagline}</span>
+    </div>
+    <div class="flex items-center gap-6 text-sm text-zinc-500">
+      <a href={GITHUB_URL} class="transition hover:text-white">GitHub</a>
+      <span>{t.footer.os}</span>
+      <span>{t.footer.rights}</span>
+    </div>
+  </div>
+</footer>

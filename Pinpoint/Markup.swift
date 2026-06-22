@@ -32,8 +32,8 @@ struct Markup: Identifiable, Equatable, Codable {
 
     var label: String {
         switch kind {
-        case .arrow: return "Flèche"
-        case .rectangle: return "Rectangle"
+        case .arrow: return String(localized: "Arrow")
+        case .rectangle: return String(localized: "Rectangle")
         }
     }
 
