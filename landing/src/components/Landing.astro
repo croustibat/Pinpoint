@@ -72,47 +72,18 @@ const featureIcons = [
     </div>
     <p class="mt-4 text-sm text-zinc-500">{t.hero.req}</p>
 
-    <!-- App mockup -->
-    <div class="mx-auto mt-16 max-w-4xl">
-      <div class="overflow-hidden rounded-2xl border border-white/10 bg-ink-2 shadow-2xl shadow-black/50">
-        <div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-3">
-          <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
-          <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
-          <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
-          <span class="ml-2 text-xs text-zinc-500">Pinpoint</span>
-        </div>
-        <div class="grid gap-0 md:grid-cols-[1.7fr_1fr]">
-          <!-- canvas -->
-          <div class="relative aspect-[16/10] bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">
-            <div class="absolute inset-0 grid-bg opacity-40"></div>
-            <!-- faux UI blocks -->
-            <div class="absolute left-6 top-6 h-3 w-24 rounded bg-white/15"></div>
-            <div class="absolute left-6 top-12 h-2 w-40 rounded bg-white/8"></div>
-            <div class="absolute bottom-8 right-8 h-9 w-40 rounded-lg bg-white/12"></div>
-            <!-- markers -->
-            <div class="absolute" style="left:62%;top:74%">
-              <span class="flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-lg ring-2 ring-white">1</span>
-            </div>
-            <div class="absolute" style="left:12%;top:22%">
-              <span class="flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-sm font-bold text-white shadow-lg ring-2 ring-white">2</span>
-            </div>
-          </div>
-          <!-- side panel -->
-          <div class="flex flex-col gap-3 border-t border-white/5 p-4 text-left md:border-l md:border-t-0">
-            <div class="flex items-start gap-2.5">
-              <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">1</span>
-              <span class="text-sm text-zinc-300">{t.mockup.note1}</span>
-            </div>
-            <div class="flex items-start gap-2.5">
-              <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">2</span>
-              <span class="text-sm text-zinc-300">{t.mockup.note2}</span>
-            </div>
-            <div class="mt-1 rounded-lg border border-white/8 bg-white/5 p-2.5 text-xs leading-relaxed text-zinc-400">{t.mockup.instructions}</div>
-            <div class="mt-auto rounded-lg bg-brand py-2 text-center text-sm font-semibold text-white">⌘C</div>
-          </div>
-        </div>
-      </div>
-      <p class="mt-3 text-xs text-zinc-600">{t.mockup.caption}</p>
+    <!-- App screenshot (the real editor) -->
+    <div class="mx-auto mt-16 max-w-5xl">
+      <img
+        src="/screenshots/editor.webp"
+        alt={t.mockup.caption}
+        width="1800"
+        height="794"
+        loading="eager"
+        fetchpriority="high"
+        class="w-full drop-shadow-[0_24px_70px_rgba(0,0,0,0.6)]"
+      />
+      <p class="mt-6 text-xs text-zinc-600">{t.mockup.caption}</p>
     </div>
   </div>
 </section>
@@ -152,6 +123,46 @@ const featureIcons = [
         </div>
       ))}
     </div>
+  </div>
+</section>
+
+<!-- ============================= TOUR ============================= -->
+<section id="tour" class="mx-auto max-w-6xl px-5 py-24">
+  <div class="text-center">
+    <h2 class="text-3xl font-semibold tracking-tight text-white md:text-4xl">{t.tour.title}</h2>
+    <p class="mx-auto mt-3 max-w-xl text-zinc-400">{t.tour.subtitle}</p>
+  </div>
+  <div class="mt-14 grid items-start gap-8 md:grid-cols-2">
+    <!-- Shelf -->
+    <figure>
+      <div class="relative h-[460px] overflow-hidden rounded-2xl bg-ink-2 ring-1 ring-white/10">
+        <img
+          src="/screenshots/shelf.webp"
+          alt={t.tour.shelf}
+          width="968"
+          height="2542"
+          loading="lazy"
+          class="w-full object-cover object-top"
+        />
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink-2 to-transparent"></div>
+      </div>
+      <figcaption class="mt-5 text-center text-sm text-zinc-500">{t.tour.shelf}</figcaption>
+    </figure>
+    <!-- Settings -->
+    <figure>
+      <div class="relative h-[460px] overflow-hidden rounded-2xl bg-ink-2 ring-1 ring-white/10">
+        <img
+          src="/screenshots/settings.webp"
+          alt={t.tour.settings}
+          width="920"
+          height="784"
+          loading="lazy"
+          class="w-full object-contain object-top"
+        />
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink-2 to-transparent"></div>
+      </div>
+      <figcaption class="mt-5 text-center text-sm text-zinc-500">{t.tour.settings}</figcaption>
+    </figure>
   </div>
 </section>
 
