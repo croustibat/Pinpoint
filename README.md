@@ -1,112 +1,137 @@
 # Pinpoint
 
-Capture ton écran, pose des repères numérotés sur ce qui compte, et copie un
-prompt prêt à coller dans ton agent (Claude Code, Codex…) : image annotée +
-instructions texte qui référencent chaque repère.
+> Point at exactly what you mean.
 
-App macOS native, Swift / SwiftUI + ScreenCaptureKit. Vit dans la barre de menus.
+Pinpoint is a native macOS menu-bar app that captures your screen, lets you drop
+**numbered markers** on what matters, and copies a **ready-to-paste prompt** for
+your AI agent — an annotated image plus instructions that reference every marker.
 
-## v0.1 (MVP)
+Built with Swift / SwiftUI + ScreenCaptureKit. Free & open source.
 
-- Raccourci global **⌘⇧1** (réglable) → **overlay de sélection de région** : l’écran
-  s’assombrit, trace un rectangle (dimensions affichées en live), `Échap` annule.
-  Capture de la seule région choisie, à la résolution native (Retina, multi-écran).
-- Fallback **« Capturer tout l’écran »** (⌘⇧3) dans le menu de la barre de menus.
-- Éditeur : barre d’outils **Repère / Flèche / Rectangle**. Clic pour poser un
-  repère numéroté (glisser pour le déplacer, note par repère) ; glisser pour tracer
-  une flèche ou un rectangle. Les flèches/rectangles sont visuels ; seuls les repères
-  numérotés sont référencés dans le texte agent.
-- Champ « instructions pour l’agent » + texte Markdown structuré (dimensions,
-  position de chaque repère en %)
-- Option **« légende dans l’image »** (réglable) : descriptions des repères +
-  instructions incrustées sous la capture, pour qu’un **seul collage** transmette
-  tout à l’agent (la plupart des UI ne collent que l’image, pas le texte)
-- Accent **vermillon** `#FF4D2E` + **3 styles de repères** réglables (disque plein,
-  pin pointeur, contour léger) appliqués à l’écran **et** à l’export
-- **⌘C** / bouton → copie l’image annotée (PNG) **et** le texte dans le presse-papier
-- **Historique** : sous-menu « Captures récentes » (15 dernières, persistées dans
-  Application Support avec leurs annotations) → rouvre une capture telle qu’elle était
+🔗 **[pinpoint-ashy.vercel.app](https://pinpoint-ashy.vercel.app)** · **[Download the latest release](https://github.com/croustibat/Pinpoint/releases/latest)**
 
-Pistes futures : capture de fenêtre, export fichier, partage. Voir `PROMPTS.md`.
+![The Pinpoint editor — numbered markers on a captured screen, with notes and a ready-to-copy prompt](landing/public/screenshots/editor.webp)
 
-## Build
+## Download
 
-Le projet utilise [XcodeGen](https://github.com/yonaskolb/XcodeGen) pour générer
-le `.xcodeproj` (pas versionné).
+1. Grab the latest **`Pinpoint.dmg`** from the [releases page](https://github.com/croustibat/Pinpoint/releases/latest).
+2. Open it and drag **Pinpoint** into your Applications folder.
+3. Launch it — it lives in your menu bar. Signed with a Developer ID and notarized by Apple.
+
+On your first capture, macOS asks for **Screen Recording** permission
+(System Settings → Privacy & Security → Screen Recording), then quit and
+relaunch Pinpoint once.
+
+**Requirements:** macOS 15 or later · Apple Silicon & Intel.
+
+## Features
+
+- **Region capture** — press **⌘⇧1** (rebindable) → the screen dims; drag a
+  rectangle (live dimensions, `Esc` to cancel). Native resolution, multi-display
+  and Retina aware. A "capture full screen" fallback lives in the menu.
+- **Numbered markers** — click to drop ringed, numbered pins (drag to move, a
+  note per marker). Add arrows and rectangles for emphasis.
+- **Three marker styles** — filled disc, pointer pin, light outline — applied on
+  screen *and* in the export.
+- **A prompt your agent can read** — **⌘C** copies the annotated PNG **and** a
+  structured text: image size, each marker's description and position (in %),
+  then your instructions. Parses cleanly in Claude Code, Codex, and the like.
+- **Legend baked in** (optional) — embeds the marker descriptions + instructions
+  into the image, so a single paste carries everything (most chat UIs drop the
+  clipboard text).
+- **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
+  rename, Quick Look, and reopen any capture with its annotations.
+- **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
+- **Bilingual** — follows your macOS language (English / French).
+- **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
+  Your captures never leave your Mac.
+
+## Build from source
+
+The project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate the
+`.xcodeproj` (not versioned).
 
 ```bash
-brew install xcodegen        # si pas déjà installé
-cd Pinpoint
-xcodegen generate            # crée Pinpoint.xcodeproj
+brew install xcodegen      # if needed
+xcodegen generate          # creates Pinpoint.xcodeproj — run from the repo root
 open Pinpoint.xcodeproj
 ```
 
-Dans Xcode :
+In Xcode:
 
-1. Le *Team* de signature est intégré dans `project.yml` (`DEVELOPMENT_TEAM`), donc
-   la signature est stable — pas besoin de le re-régler après chaque `xcodegen generate`.
-   (Si tu reprends le projet sur une autre machine, remplace ce `DEVELOPMENT_TEAM`
-   par le tien : *Réglages Système ▸ Compte développeur*, ou l'OU de ton certificat
-   *Apple Development*.)
-2. **⌘R** pour lancer.
-3. Au premier déclenchement du raccourci, macOS demande l’autorisation
-   **Enregistrement de l’écran** : accorde-la dans *Réglages Système ▸ Confidentialité
-   et sécurité ▸ Enregistrement de l’écran*, puis **relance l’app**.
-4. Appuie sur **⌘⇧1** → l’écran s’assombrit ; trace un rectangle (ou `Échap` pour
-   annuler) → l’éditeur s’ouvre avec la région capturée.
+1. The signing **Team** is baked into `project.yml` (`DEVELOPMENT_TEAM`), so signing
+   stays stable across `xcodegen generate` runs. On another machine, replace it with
+   your own (System Settings → your developer account, or the OU of your *Apple
+   Development* certificate).
+2. **⌘R** to run.
+3. On the first capture, grant **Screen Recording** (System Settings → Privacy &
+   Security → Screen Recording), then relaunch the app.
 
-> Astuce : grâce au `DEVELOPMENT_TEAM` fixe + au bundle id stable
-> (`app.croustibat.Pinpoint`), macOS mémorise l’autorisation d’un build à l’autre.
-> Si une autorisation reste « bloquée » après un changement d’identité, repars à zéro :
-> `tccutil reset ScreenCapture app.croustibat.Pinpoint`, puis relance et ré-accorde.
+To verify a build without any signing setup:
 
-## Structure
+```bash
+xcodegen generate && xcodebuild -scheme Pinpoint -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+```
+
+> The fixed `DEVELOPMENT_TEAM` + stable bundle id (`app.croustibat.Pinpoint`) let
+> macOS remember the screen-recording grant between builds. If a permission gets
+> stuck after an identity change: `tccutil reset ScreenCapture app.croustibat.Pinpoint`,
+> then relaunch and re-grant.
+
+## Project structure
 
 ```
+project.yml                       # XcodeGen config (deps, bundle id, LSUIElement, version…)
 Pinpoint/
-  project.yml                  # config XcodeGen (deps, bundle id, LSUIElement…)
-  Pinpoint/
-    PinpointApp.swift          # @main, scène Réglages, raccourci par défaut
-    AppDelegate.swift          # status item barre de menus + flow de capture
-    RegionSelectionController.swift # overlay multi-écran + résolution des coordonnées
-    RegionSelectionView.swift  # dessin de l’assombrissement + rectangle + dimensions
-    CaptureRegion.swift        # modèle : display cible + rect (points, top-left) + scale
-    CaptureRecord.swift        # modèle persisté d’une capture (image + annotations + date)
-    CaptureHistory.swift       # store des captures récentes (Application Support + index JSON)
-    ScreenCapture.swift        # ScreenCaptureKit : capture région (sourceRect) ou plein écran
-    Pin.swift                  # modèle d’un repère numéroté
-    Markup.swift               # modèle d’une annotation flèche / rectangle
-    PinStyle.swift             # styles de repères (disque / pointeur / contour) + clé @AppStorage
-    Theme.swift                # palette vermillon (NSColor + Color)
-    EditorWindowController.swift  # fenêtre AppKit qui héberge l’éditeur SwiftUI
-    EditorView.swift           # canvas d’annotation + panneau latéral
-    SettingsWindowController.swift # fenêtre AppKit des réglages (contourne le bug SettingsLink macOS 14+)
-    Exporter.swift             # rendu PNG annoté + texte + copie presse-papier
+  PinpointApp.swift               # @main, Settings scene (Capture / Shelf tabs)
+  AppDelegate.swift               # menu-bar status item + capture flow
+  RegionSelectionController.swift # multi-display overlay + coordinate resolution
+  RegionSelectionView.swift       # dimming + rectangle + live dimensions
+  ScreenCapture.swift             # ScreenCaptureKit: region (sourceRect) or full screen
+  CaptureRegion.swift             # model: target display + rect (points, top-left) + scale
+  CaptureRecord.swift /
+  CaptureHistory.swift            # recent captures (Application Support + JSON index)
+  EditorView.swift                # annotation canvas + side panel
+  EditorWindowController.swift    # AppKit window hosting the SwiftUI editor
+  Pin.swift / Markup.swift        # marker + arrow/rectangle models
+  PinStyle.swift                  # marker styles (disc / pointer / outline)
+  Theme.swift                     # vermillon palette
+  Exporter.swift                  # annotated PNG render + structured text + clipboard
+  SettingsWindowController.swift  # AppKit settings window (works around the macOS 14+ SettingsLink bug)
+  ShelfWindowController.swift     # the shelf window
+  ScreenshotDetailWindowController.swift  # detail window for a shelf item
+  Localizable.xcstrings           # String Catalog (English base, French)
+  Shelf/                          # the screenshot library (Models, Services, Stores, Views)
+landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
 
-## Dépendances
+## Dependencies
 
-- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (Sindre Sorhus) — raccourci global réglable.
+- [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (Sindre Sorhus) — rebindable global shortcuts.
 
-## Release (DMG notarisé)
+## Release (notarized DMG)
 
-L'icône d'app est **générée** depuis le design system :
+The app icon is **generated** from the design system:
 
 ```bash
 swift scripts/generate_icon.swift Pinpoint/Assets.xcassets/AppIcon.appiconset
 ```
 
-Build signé Developer ID + notarisé + DMG via `scripts/release.sh`. Pré-requis
-une seule fois : stocker les credentials de notarisation dans un profil trousseau
+A signed Developer ID build + notarization + DMG is produced by `scripts/release.sh`.
+One-time setup — store the notarization credentials in a keychain profile:
 
 ```bash
 xcrun notarytool store-credentials pinpoint-notary \
-  --apple-id "<ton-apple-id>" --team-id MMJD6CLKNQ \
-  --password "<mot-de-passe-d-app>"          # appleid.apple.com ▸ Sécurité ▸ mots de passe pour app
+  --apple-id "<your-apple-id>" --team-id MMJD6CLKNQ \
+  --password "<app-specific-password>"   # appleid.apple.com → Sign-In & Security → App-Specific Passwords
 ```
 
-puis :
+then:
 
 ```bash
-scripts/release.sh        # → build/dist/Pinpoint.dmg (signé, notarisé, staplé)
+scripts/release.sh   # → build/dist/Pinpoint.dmg (signed, notarized, stapled)
 ```
+
+## License
+
+[MIT](LICENSE) © 2026 Baptiste Bouillot
