@@ -26,9 +26,10 @@ type Content = {
     github: string;
     req: string;
   };
-  mockup: { caption: string; note1: string; note2: string; instructions: string };
+  mockup: { caption: string };
   steps: { title: string; subtitle: string; items: { n: string; t: string; d: string }[] };
   features: { title: string; subtitle: string; items: { t: string; d: string }[] };
+  tour: { title: string; subtitle: string; shelf: string; settings: string };
   agents: { eyebrow: string; title: string; body: string; sample: string };
   download: { title: string; body: string; cta: string; req: string; source: string };
   footer: { tagline: string; rights: string; os: string };
@@ -54,9 +55,6 @@ export const content: Record<Lang, Content> = {
     },
     mockup: {
       caption: 'Editor — drop markers, write a note, copy for your agent',
-      note1: 'Primary CTA button',
-      note2: 'Misaligned icon',
-      instructions: 'Make the CTA full-width on mobile and fix the icon alignment.',
     },
     steps: {
       title: 'From screen to prompt in three steps',
@@ -78,6 +76,12 @@ export const content: Record<Lang, Content> = {
         { t: 'Global shortcuts', d: 'Capture or open the shelf from anywhere — fully rebindable.' },
         { t: 'Native & private', d: 'SwiftUI + ScreenCaptureKit, living in your menu bar. Your captures never leave your Mac.' },
       ],
+    },
+    tour: {
+      title: 'A closer look',
+      subtitle: 'A native menu-bar companion — capture, organize, and tune it to the way you work.',
+      shelf: 'The shelf — every screenshot in one browsable library you can favorite, sort and reopen.',
+      settings: 'Settings — rebind the global shortcuts, pick one of three marker styles, and bake the legend into the image.',
     },
     agents: {
       eyebrow: 'Made for AI agents',
@@ -123,9 +127,6 @@ Make the CTA full-width on mobile and fix the icon alignment.`,
     },
     mockup: {
       caption: 'Éditeur — pose des repères, écris une note, copie pour ton agent',
-      note1: 'Bouton d’action principal',
-      note2: 'Icône mal alignée',
-      instructions: 'Passe le bouton en pleine largeur sur mobile et corrige l’alignement de l’icône.',
     },
     steps: {
       title: 'De l’écran au prompt en trois étapes',
@@ -147,6 +148,12 @@ Make the CTA full-width on mobile and fix the icon alignment.`,
         { t: 'Raccourcis globaux', d: 'Capture ou ouvre l’étagère depuis n’importe où — entièrement reconfigurables.' },
         { t: 'Natif & privé', d: 'SwiftUI + ScreenCaptureKit, dans ta barre de menus. Tes captures ne quittent jamais ton Mac.' },
       ],
+    },
+    tour: {
+      title: 'Le tour du propriétaire',
+      subtitle: 'Un compagnon natif dans la barre de menus — capture, range et règle-le à ta main.',
+      shelf: 'L’étagère — toutes tes captures dans une bibliothèque à parcourir, mettre en favori, trier et rouvrir.',
+      settings: 'Réglages — reconfigure les raccourcis globaux, choisis l’un des trois styles de repère et incruste la légende dans l’image.',
     },
     agents: {
       eyebrow: 'Pensé pour les agents IA',
