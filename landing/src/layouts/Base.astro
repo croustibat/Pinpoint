@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Analytics from '@vercel/analytics/astro';
 import type { Lang } from '../i18n';
 
 interface Props {
@@ -29,6 +30,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:image" content="/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#0a0a0c" />
+
+    <Analytics />
   </head>
   <body class="min-h-screen overflow-x-hidden selection:bg-brand/30">
     <slot />
