@@ -1,5 +1,10 @@
 # Pinpoint
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/croustibat/Pinpoint)](https://github.com/croustibat/Pinpoint/releases/latest)
+[![Platform: macOS 15+](https://img.shields.io/badge/platform-macOS%2015%2B-blue)](https://github.com/croustibat/Pinpoint/releases/latest)
+[![Built with Swift](https://img.shields.io/badge/Swift-SwiftUI-orange?logo=swift&logoColor=white)](https://developer.apple.com/swift/)
+
 > Point at exactly what you mean.
 
 Pinpoint is a native macOS menu-bar app that captures your screen, lets you drop
@@ -11,6 +16,22 @@ Built with Swift / SwiftUI + ScreenCaptureKit. Free & open source.
 🔗 **[pinpoint-ashy.vercel.app](https://pinpoint-ashy.vercel.app)** · **[Download the latest release](https://github.com/croustibat/Pinpoint/releases/latest)**
 
 ![Pinpoint demo — capture a region, drop numbered markers, and copy a ready-to-paste prompt for your agent](docs/demo.gif)
+
+## Why I built this
+
+I pair-program with AI agents all day — Claude Code, Codex — and I kept hitting
+the same wall: paste a screenshot, then type a paragraph to explain *which*
+button or *which* misaligned icon I meant. Worse, most chat UIs keep only the
+image and silently drop the text you copied with it, so half my context never
+arrived.
+
+Humans don't describe pixels to each other — we point. Pinpoint lets you do the
+same with an agent: drop a numbered marker on the thing, and it copies an
+annotated image **plus** a structured prompt that maps every marker to a
+position and a note. No more "the button in the corner — no, the other one."
+
+I built it for myself and use it every day. It's open source because the problem
+isn't mine alone.
 
 ## Download
 
@@ -45,6 +66,21 @@ relaunch Pinpoint once.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
+
+A copied prompt looks like this:
+
+```text
+# Annotated capture — 1280×800 px
+
+An image is attached. Numbered (ringed) badges point to specific elements.
+Markers (position in % of the image, top-left origin):
+
+1. Primary CTA button · ~62 % × 48 %
+2. Misaligned icon · ~12 % × 22 %
+
+## Instructions
+Make the CTA full-width on mobile and fix the icon alignment.
+```
 
 ## Build from source
 
