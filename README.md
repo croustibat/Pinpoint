@@ -10,7 +10,7 @@ Built with Swift / SwiftUI + ScreenCaptureKit. Free & open source.
 
 🔗 **[pinpoint-ashy.vercel.app](https://pinpoint-ashy.vercel.app)** · **[Download the latest release](https://github.com/croustibat/Pinpoint/releases/latest)**
 
-![The Pinpoint editor — numbered markers on a captured screen, with notes and a ready-to-copy prompt](landing/public/screenshots/editor.webp)
+![Pinpoint demo — capture a region, drop numbered markers, and copy a ready-to-paste prompt for your agent](docs/demo.gif)
 
 ## Download
 
