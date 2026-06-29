@@ -1,6 +1,38 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Double-click to edit the title" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Double-cliquez pour modifier le titre" } }
+      }
+    },
+    "Edit in Pinpoint" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Éditer dans Pinpoint" } }
+      }
+    },
+    "Edit title…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modifier le titre…" } }
+      }
+    },
+    "Title" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Titre" } }
+      }
+    },
+    "shelf.openInEditor.error.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint couldn’t read the image file. It may have been moved or deleted." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint n’a pas pu lire le fichier image. Il a peut-être été déplacé ou supprimé." } }
+      }
+    },
+    "shelf.openInEditor.error.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t open this screenshot" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’ouvrir cette capture" } }
+      }
+    },
     "(no description)" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "(sans description)" } }

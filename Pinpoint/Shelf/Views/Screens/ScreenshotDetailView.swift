@@ -14,6 +14,7 @@ struct ScreenshotDetailView: View {
     let onCopyPath: () -> Void
     let onMove: () -> Void
     let onDelete: () -> Void
+    let onOpenInPinpoint: () -> Void
     /// Set when hosted in a plain AppKit window, where `@Environment(\.dismiss)`
     /// is a no-op. Falls back to `dismiss` (used by previews).
     var onClose: (() -> Void)? = nil
@@ -132,6 +133,12 @@ struct ScreenshotDetailView: View {
             Text("Actions")
                 .font(.headline)
 
+            Button("Edit in Pinpoint", systemImage: "pin.fill") {
+                close()
+                onOpenInPinpoint()
+            }
+            .buttonStyle(.borderedProminent)
+
             HStack(spacing: 10) {
                 Button("Quick Look", systemImage: "space", action: onQuickLook)
                 Button("Reveal", systemImage: "finder", action: onReveal)
@@ -214,7 +221,8 @@ struct ScreenshotDetailView_Previews: PreviewProvider {
             onCopyImage: {},
             onCopyPath: {},
             onMove: {},
-            onDelete: {}
+            onDelete: {},
+            onOpenInPinpoint: {}
         )
         .environmentObject(PreviewSampleData.store)
     }
