@@ -18,3 +18,6 @@ Package.resolved
 
 # Throwaway demo page used only to stage hero screenshots
 .capture-demo/
+
+# Throwaway Remotion project for the demo GIF
+.demo-remotion/
