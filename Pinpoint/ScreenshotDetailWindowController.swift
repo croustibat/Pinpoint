@@ -63,6 +63,9 @@ private struct ScreenshotDetailContainer: View {
             onCopyPath: { store.copyPaths([item]) },
             onMove: { store.move(item) },
             onDelete: { store.delete(item) },
+            onOpenInPinpoint: {
+                NotificationCenter.default.post(name: .pinpointOpenInEditor, object: item.url)
+            },
             onClose: onClose
         )
     }

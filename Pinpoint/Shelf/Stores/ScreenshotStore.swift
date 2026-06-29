@@ -19,6 +19,7 @@ final class ScreenshotStore: ObservableObject {
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var followsSystemScreenshotLocation: Bool
     @Published private(set) var favoritePaths: Set<String>
+    @Published private(set) var customTitles: [String: String]
     @Published var lastErrorMessage: String?
 
     private let service = ScreenshotService()
@@ -27,11 +28,13 @@ final class ScreenshotStore: ObservableObject {
     private let watchedFolderBookmarkKey = "watchedFolderBookmark"
     private let followSystemLocationKey = "followSystemScreenshotLocation"
     private let favoritePathsKey = "favoriteScreenshotPaths"
+    private let customTitlesKey = "customScreenshotTitles"
 
     init() {
         let followsSystemScreenshotLocation = defaults.bool(forKey: followSystemLocationKey)
         self.followsSystemScreenshotLocation = followsSystemScreenshotLocation
         self.favoritePaths = Set(defaults.stringArray(forKey: favoritePathsKey) ?? [])
+        self.customTitles = (defaults.dictionary(forKey: customTitlesKey) as? [String: String]) ?? [:]
         self.watchedFolderURL = followsSystemScreenshotLocation
             ? ScreenshotLocationResolver.currentLocation()
             : (Self.loadPersistedFolder() ?? Self.defaultWatchedFolder())
@@ -69,6 +72,7 @@ final class ScreenshotStore: ObservableObject {
         do {
             screenshots = try await service.scanFolder(at: watchedFolderURL)
             pruneMissingFavorites()
+            pruneMissingCustomTitles()
             lastErrorMessage = nil
         } catch {
             screenshots = []
@@ -126,6 +130,7 @@ final class ScreenshotStore: ObservableObject {
             do {
                 let destinationURL = try await service.move(item, to: folderURL)
                 updateFavoritePath(from: item.url.path, to: destinationURL.path)
+                updateCustomTitlePath(from: item.url.path, to: destinationURL.path)
                 await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 await refresh()
             } catch {
@@ -155,6 +160,7 @@ final class ScreenshotStore: ObservableObject {
                 do {
                     let destinationURL = try await service.move(item, to: folderURL)
                     updateFavoritePath(from: item.url.path, to: destinationURL.path)
+                    updateCustomTitlePath(from: item.url.path, to: destinationURL.path)
                     await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 } catch {
                     lastErrorMessage = String(localized: "store.error.move", defaultValue: "Couldn’t move \(item.filename).")
@@ -170,6 +176,7 @@ final class ScreenshotStore: ObservableObject {
             do {
                 let destinationURL = try await service.rename(item, to: newName)
                 updateFavoritePath(from: item.url.path, to: destinationURL.path)
+                updateCustomTitlePath(from: item.url.path, to: destinationURL.path)
                 await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 await refresh()
             } catch {
@@ -253,12 +260,39 @@ final class ScreenshotStore: ObservableObject {
         objectWillChange.send()
     }
 
+    /// The custom display title for an item, if one was set (independent of the
+    /// file name on disk).
+    func customTitle(for item: ScreenshotItem) -> String? {
+        customTitles[item.url.path]
+    }
+
+    /// The title to show in the UI: the custom title if set, otherwise the file
+    /// name.
+    func displayTitle(for item: ScreenshotItem) -> String {
+        let custom = customTitles[item.url.path]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (custom?.isEmpty == false ? custom : nil) ?? item.filename
+    }
+
+    /// Sets a custom display title. An empty title — or one equal to the file
+    /// name — clears it, reverting to the file name. Never touches the file.
+    func setCustomTitle(_ title: String, for item: ScreenshotItem) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == item.filename {
+            customTitles.removeValue(forKey: item.url.path)
+        } else {
+            customTitles[item.url.path] = trimmed
+        }
+        persistCustomTitles()
+        objectWillChange.send()
+    }
+
     func delete(_ items: [ScreenshotItem]) {
         Task {
             for item in items {
                 do {
                     try await service.delete(item)
                     favoritePaths.remove(item.url.path)
+                    customTitles.removeValue(forKey: item.url.path)
                     await ThumbnailService.shared.removeCachedThumbnail(for: item.url)
                 } catch {
                     lastErrorMessage = String(localized: "store.error.update", defaultValue: "Couldn’t update \(item.filename).")
@@ -266,6 +300,7 @@ final class ScreenshotStore: ObservableObject {
             }
 
             persistFavoritePaths()
+            persistCustomTitles()
             await refresh()
         }
     }
@@ -343,11 +378,13 @@ final class ScreenshotStore: ObservableObject {
             } else {
                 updated.removeValue(forKey: url)
                 favoritePaths.remove(url.path)
+                customTitles.removeValue(forKey: url.path)
             }
         }
 
         screenshots = updated.values.sorted { $0.createdAt > $1.createdAt }
         persistFavoritePaths()
+        persistCustomTitles()
         lastErrorMessage = nil
     }
 
@@ -361,6 +398,15 @@ final class ScreenshotStore: ObservableObject {
         persistFavoritePaths()
     }
 
+    private func updateCustomTitlePath(from oldPath: String, to newPath: String) {
+        guard let title = customTitles.removeValue(forKey: oldPath) else {
+            return
+        }
+
+        customTitles[newPath] = title
+        persistCustomTitles()
+    }
+
     private func pruneMissingFavorites() {
         let pruned = favoritePaths.filter { FileManager.default.fileExists(atPath: $0) }
         guard pruned != favoritePaths else {
@@ -371,8 +417,22 @@ final class ScreenshotStore: ObservableObject {
         persistFavoritePaths()
     }
 
+    private func pruneMissingCustomTitles() {
+        let pruned = customTitles.filter { FileManager.default.fileExists(atPath: $0.key) }
+        guard pruned.count != customTitles.count else {
+            return
+        }
+
+        customTitles = pruned
+        persistCustomTitles()
+    }
+
     private func persistFavoritePaths() {
         defaults.set(Array(favoritePaths).sorted(), forKey: favoritePathsKey)
+    }
+
+    private func persistCustomTitles() {
+        defaults.set(customTitles, forKey: customTitlesKey)
     }
 
     private func persistWatchedFolder(_ url: URL) {

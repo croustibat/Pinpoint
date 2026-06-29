@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ShelfView: View {
     var onOpenSettings: () -> Void = {}
+    var onOpenInPinpoint: (ScreenshotItem) -> Void = { _ in }
     var onOpenDetail: (ScreenshotItem) -> Void = { _ in }
 
     @EnvironmentObject private var store: ScreenshotStore
@@ -426,12 +427,15 @@ struct ShelfView: View {
             ForEach(items) { item in
                 ScreenshotCardView(
                     item: item,
+                    title: store.displayTitle(for: item),
                     width: cardWidth,
                     isFavorite: store.isFavorite(item),
                     isSelected: selectedIDs.contains(item.id),
                     isActive: activeItemID == item.id,
                     selectionMode: selectionMode,
                     onActivate: { activeItemID = item.id },
+                    onEditInPinpoint: { onOpenInPinpoint(item) },
+                    onSetTitle: { store.setCustomTitle($0, for: item) },
                     onToggleFavorite: { store.toggleFavorite(item) },
                     onSelect: { toggleSelection(for: item) },
                     onCopyImage: { store.copyImage(item) },

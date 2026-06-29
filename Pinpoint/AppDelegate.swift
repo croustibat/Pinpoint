@@ -5,6 +5,9 @@ import KeyboardShortcuts
 extension Notification.Name {
     /// Posted by the shelf to open Pinpoint's unified settings window.
     static let pinpointOpenSettings = Notification.Name("pinpointOpenSettings")
+    /// Posted by the shelf to reopen one of its screenshots in the annotation
+    /// editor, as if it had just been captured. The file `URL` rides in `object`.
+    static let pinpointOpenInEditor = Notification.Name("pinpointOpenInEditor")
 }
 
 @MainActor
@@ -32,6 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // unified settings window instead.
         center.addObserver(self, selector: #selector(openSettings),
                            name: .pinpointOpenSettings, object: nil)
+        // The shelf's "Edit in Pinpoint" action posts this with a file URL so an
+        // existing screenshot can be annotated through the normal editor flow.
+        center.addObserver(self, selector: #selector(openInEditor(_:)),
+                           name: .pinpointOpenInEditor, object: nil)
         // Menu-bar app (LSUIElement = accessory): become a regular app while a
         // content window is on screen, so it shows in the Dock and ⌘Tab, and
         // drop back to accessory once everything is closed.
@@ -207,6 +214,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// Reopens an existing shelf screenshot in the editor as a fresh capture:
+    /// loads the file, records it in the capture history, and presents the editor.
+    @objc private func openInEditor(_ notification: Notification) {
+        guard let url = notification.object as? URL else { return }
+        guard let image = Self.loadImage(at: url) else {
+            presentImportError()
+            return
+        }
+        let record = CaptureHistory.shared.add(image: image)
+        presentEditor(image: image, recordID: record?.id)
+    }
+
+    /// Loads a bitmap at its native pixel size. `NSImage(contentsOf:)` would honor
+    /// the file's DPI, shrinking Retina screenshots (e.g. ⌘⇧4) to half size; this
+    /// keeps the editor canvas at full resolution, like `CaptureHistory.image(for:)`.
+    private static func loadImage(at url: URL) -> NSImage? {
+        guard let data = try? Data(contentsOf: url),
+              let rep = NSBitmapImageRep(data: data) else { return nil }
+        let image = NSImage(size: NSSize(width: rep.pixelsWide, height: rep.pixelsHigh))
+        image.addRepresentation(rep)
+        return image
+    }
+
     @MainActor
     private func presentEditor(image: NSImage, recordID: UUID?,
                                pins: [Pin] = [], shapes: [Markup] = [], context: String = "") {
@@ -234,6 +264,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         alert.informativeText = String(
             localized: "capture.error.body",
             defaultValue: "\(error.localizedDescription)\n\nMake sure Pinpoint has the “Screen Recording” permission in System Settings ▸ Privacy & Security, then relaunch the app."
+        )
+        alert.alertStyle = .warning
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    @MainActor
+    private func presentImportError() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "shelf.openInEditor.error.title",
+                                   defaultValue: "Couldn’t open this screenshot")
+        alert.informativeText = String(
+            localized: "shelf.openInEditor.error.body",
+            defaultValue: "Pinpoint couldn’t read the image file. It may have been moved or deleted."
         )
         alert.alertStyle = .warning
         NSApp.activate(ignoringOtherApps: true)

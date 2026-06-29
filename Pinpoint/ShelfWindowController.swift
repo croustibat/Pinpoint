@@ -31,6 +31,9 @@ final class ShelfWindowController: NSWindowController {
             onOpenSettings: {
                 NotificationCenter.default.post(name: .pinpointOpenSettings, object: nil)
             },
+            onOpenInPinpoint: { item in
+                NotificationCenter.default.post(name: .pinpointOpenInEditor, object: item.url)
+            },
             onOpenDetail: { [weak self] item in
                 self?.presentDetail(for: item)
             }
