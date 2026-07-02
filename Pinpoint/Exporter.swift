@@ -268,8 +268,15 @@ enum Exporter {
         return result
     }
 
-    /// Puts the (optionally legend-bearing) annotated PNG and the instruction
-    /// text on the general pasteboard.
+    /// Puts the (optionally legend-bearing) annotated PNG on the general
+    /// pasteboard.
+    ///
+    /// When the legend is baked into the image the PNG is self-contained, so we
+    /// deliberately leave the plain instruction text off the pasteboard: a
+    /// terminal (e.g. Claude Code) pastes text and silently drops the image when
+    /// both share a pasteboard item, so the bare string would hide the capture.
+    /// Only when the legend is *not* embedded do we add the text, since then it
+    /// is the sole carrier of the marker descriptions and instructions.
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
                                  style: PinStyle, includeLegend: Bool) {
         let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
@@ -283,6 +290,8 @@ enum Exporter {
             pasteboard.setData(png, forType: .png)
         }
 
-        pasteboard.setString(buildText(pins: pins, context: context, imageSize: base.size), forType: .string)
+        if !includeLegend {
+            pasteboard.setString(buildText(pins: pins, context: context, imageSize: base.size), forType: .string)
+        }
     }
 }
