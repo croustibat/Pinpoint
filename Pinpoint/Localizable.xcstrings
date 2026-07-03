@@ -159,6 +159,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copié !" } }
       }
     },
+    "Crop" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Recadrer" } }
+      }
+    },
     "Copy file path" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le chemin" } }
@@ -247,6 +252,11 @@
     "Drag file" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser le fichier" } }
+      }
+    },
+    "Drag handles to crop · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glissez les poignées pour recadrer · Échap pour annuler" } }
       }
     },
     "drag.files" : {
