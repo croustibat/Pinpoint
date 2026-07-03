@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private var editorController: EditorWindowController?
     private var regionController: RegionSelectionController?
+    private var countdownController: CountdownController?
     private var settingsController: SettingsWindowController?
     private var shelfController: ShelfWindowController?
     private let recentMenu = NSMenu()
@@ -213,6 +214,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Let the overlay fully disappear before the screenshot, so the dim
             // layer isn't part of the captured pixels.
             try? await Task.sleep(nanoseconds: 80_000_000)
+
+            // Pré-délai optionnel : HUD cliquable-transparent pour laisser
+            // l'utilisateur disposer l'UI ou ouvrir un menu. Échap annule.
+            let delay = CaptureDelay.current
+            if delay.seconds > 0 {
+                let screen = NSScreen.screens.first { $0.displayID == region.displayID }
+                let controller = CountdownController()
+                countdownController = controller
+                let completed = await controller.run(seconds: delay.seconds, on: screen)
+                countdownController = nil
+                guard completed else { return } // Échap pendant le décompte
+            }
 
             do {
                 let image = try await ScreenCapture.captureRegion(region)

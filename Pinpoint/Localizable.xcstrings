@@ -43,6 +43,21 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 sélectionnée" } }
       }
     },
+    "3 seconds" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "3 secondes" } }
+      }
+    },
+    "5 seconds" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "5 secondes" } }
+      }
+    },
+    "10 seconds" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "10 secondes" } }
+      }
+    },
     "Add to favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter aux favoris" } }
@@ -106,6 +121,11 @@
     "Capture the whole screen" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturer tout l’écran" } }
+      }
+    },
+    "Capture timer" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Minuteur de capture" } }
       }
     },
     "capture.error.body" : {
@@ -207,6 +227,11 @@
     "Couldn’t update Launch at Login." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de modifier le lancement au démarrage." } }
+      }
+    },
+    "Delay before capture:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Délai avant capture :" } }
       }
     },
     "Delete" : {
@@ -419,7 +444,12 @@
     },
     "No screenshots" : {
       "localizations" : {
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture" } }
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture d’écran" } }
+      }
+    },
+    "Off" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivé" } }
       }
     },
     "Older" : {
@@ -440,6 +470,11 @@
     "Open shelf:" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir l’étagère :" } }
+      }
+    },
+    "Pause before the screenshot so you can arrange UI elements or open a menu." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pause avant la capture pour disposer les éléments ou ouvrir un menu." } }
       }
     },
     "Pinpoint Settings" : {
