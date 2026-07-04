@@ -80,6 +80,11 @@ struct EditorView: View {
 
     private var toolbar: some View {
         HStack(spacing: 10) {
+            // `fixedSize()` locks the segmented picker to its intrinsic
+            // width so it can't be squeezed when the trailing hint grows
+            // (e.g. switching to Rectangle). Without it, a growing hint in
+            // a narrow window shrank the picker and shifted the Crop button
+            // left — see "Drag to draw a rectangle" being the longest hint.
             Picker("Tool", selection: $tool) {
                 ForEach(EditorTool.allCases) { tool in
                     Label(tool.label, systemImage: tool.symbol).tag(tool)
@@ -87,13 +92,18 @@ struct EditorView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 320)
+            .fixedSize()
 
             Spacer()
 
+            // Hint yields first when the row is tight (layoutPriority -1),
+            // truncating instead of pushing the picker/buttons around.
             Text(toolHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(-1)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
