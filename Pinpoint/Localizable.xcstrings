@@ -169,6 +169,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier pour l’agent" } }
       }
     },
+    "Save image…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer l’image…" } }
+      }
+    },
     "Copy image" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier l’image" } }
