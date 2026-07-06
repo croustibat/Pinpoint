@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import KeyboardShortcuts
+import Sparkle
 
 extension Notification.Name {
     /// Posted by the shelf to open Pinpoint's unified settings window.
@@ -18,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settingsController: SettingsWindowController?
     private var shelfController: ShelfWindowController?
     private let recentMenu = NSMenu()
+    /// Sparkle updater. Created (and started) at launch so scheduled background
+    /// checks run; the menu item below also triggers a manual check.
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -93,6 +97,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         recentItem.submenu = recentMenu
         menu.addItem(recentItem)
         menu.addItem(.separator())
+
+        let updatesItem = NSMenuItem(title: String(localized: "Check for updates…"),
+                                     action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+                                     keyEquivalent: "")
+        updatesItem.target = updaterController
+        menu.addItem(updatesItem)
 
         let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
