@@ -372,7 +372,7 @@ struct ShelfView: View {
         case 51, 117:
             deleteFocusedItems()
             return nil
-case 53: // Esc — exit selection mode
+        case 53: // Esc — exit selection mode
             if selectionMode {
                 selectionMode = false
                 selectedIDs.removeAll()
