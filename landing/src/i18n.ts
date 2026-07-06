@@ -31,7 +31,7 @@ type Content = {
   features: { title: string; subtitle: string; items: { t: string; d: string }[] };
   tour: { title: string; subtitle: string; shelf: string; settings: string };
   agents: { eyebrow: string; title: string; body: string; sample: string };
-  download: { title: string; body: string; cta: string; req: string; source: string };
+  download: { title: string; body: string; cta: string; req: string; source: string; brew: string };
   footer: { tagline: string; rights: string; os: string };
 };
 
@@ -104,6 +104,7 @@ Make the CTA full-width on mobile and fix the icon alignment.`,
       cta: 'Download for macOS',
       req: 'macOS 15 or later · Apple Silicon & Intel',
       source: 'Browse the source on GitHub',
+      brew: 'Or install with Homebrew',
     },
     footer: { tagline: 'Capture. Mark. Prompt.', rights: '© 2026 Baptiste Bouillot', os: 'Open source' },
   },
@@ -176,6 +177,7 @@ Passe le bouton en pleine largeur sur mobile et corrige l’alignement de l’ic
       cta: 'Télécharger pour macOS',
       req: 'macOS 15 ou ultérieur · Apple Silicon & Intel',
       source: 'Voir le code source sur GitHub',
+      brew: 'Ou installe avec Homebrew',
     },
     footer: { tagline: 'Capture. Marque. Prompt.', rights: '© 2026 Baptiste Bouillot', os: 'Open source' },
   },

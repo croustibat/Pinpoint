@@ -35,6 +35,18 @@ isn't mine alone.
 
 ## Download
 
+### Homebrew
+
+```sh
+brew install --cask croustibat/tap/pinpoint
+```
+
+On Homebrew 6+ you'll be asked to trust the tap once first — run
+`brew trust croustibat/tap`, then re-run the install. See the
+[tap](https://github.com/croustibat/homebrew-tap) for details.
+
+### Direct download
+
 1. Grab the latest **`Pinpoint.dmg`** from the [releases page](https://github.com/croustibat/Pinpoint/releases/latest).
 2. Open it and drag **Pinpoint** into your Applications folder.
 3. Launch it — it lives in your menu bar. Signed with a Developer ID and notarized by Apple.
@@ -166,6 +178,14 @@ then:
 
 ```bash
 scripts/release.sh   # → build/dist/Pinpoint.dmg (signed, notarized, stapled)
+```
+
+Then publish the release and bump the Homebrew cask:
+
+```bash
+git tag vX.Y.Z && git push origin vX.Y.Z
+gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
+scripts/update-cask.sh   # → pushes the version + sha256 to croustibat/homebrew-tap
 ```
 
 ## License
