@@ -180,13 +180,19 @@ then:
 scripts/release.sh   # → build/dist/Pinpoint.dmg (signed, notarized, stapled)
 ```
 
-Then publish the release and bump the Homebrew cask:
+Then publish the release, bump the Homebrew cask, and update the Sparkle appcast:
 
 ```bash
 git tag vX.Y.Z && git push origin vX.Y.Z
 gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
-scripts/update-cask.sh   # → pushes the version + sha256 to croustibat/homebrew-tap
+scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/homebrew-tap
+scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
+
+Then commit `landing/public/appcast.xml` and redeploy the landing (`vercel deploy --prod`)
+so in-app auto-update (Sparkle) sees the new version. The EdDSA private key lives in
+the release machine's keychain (paired with `SUPublicEDKey` in `project.yml`); create it
+once with Sparkle's `generate_keys`.
 
 ## License
 

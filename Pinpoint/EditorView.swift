@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 /// Annotation tools the user can switch between in the editor.
 enum EditorTool: String, CaseIterable, Identifiable {
@@ -238,6 +240,13 @@ struct EditorView: View {
             .buttonStyle(.borderedProminent)
             .tint(.pinpointVermillon)
             .keyboardShortcut("c", modifiers: [.command])
+
+            Button(action: save) {
+                Label(String(localized: "Save image…"), systemImage: "square.and.arrow.down")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .keyboardShortcut("s", modifiers: [.command])
         }
         .padding(14)
     }
@@ -385,6 +394,21 @@ struct EditorView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withAnimation { didCopy = false }
         }
+    }
+
+    private func save() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.png]
+        panel.nameFieldStringValue = "Pinpoint.png"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        // Full resolution here (no cap): the file is meant to be attached/kept,
+        // unlike the pasteboard image which is downscaled to stay pasteable.
+        guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
+                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else { return }
+        try? png.write(to: url)
+        onPersist(pins, shapes, context)
     }
 
     // MARK: - Geometry

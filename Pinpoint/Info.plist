@@ -24,5 +24,11 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Baptiste Bouillot</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://pinpoint-ashy.vercel.app/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>+9BFwjsyhynA3QpwOytwA3h1E7yy0OJH+R26Xbzkrsw=</string>
 </dict>
 </plist>

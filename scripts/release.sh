@@ -36,8 +36,18 @@ xcodebuild -scheme Pinpoint -configuration Release \
   clean build >/dev/null
 
 echo "▸ Signing with Developer ID + hardened runtime"
-# Sign nested code (frameworks/dylibs) first, then the app bundle.
+# Sign nested code deepest-first, then the app bundle. Sparkle ships a helper
+# app (Updater.app), XPC services and a bare Autoupdate tool that each need
+# their own signature under the hardened runtime, before the framework and app.
 if [ -d "$APP/Contents/Frameworks" ]; then
+  find "$APP/Contents/Frameworks" -depth \( -name "*.xpc" -o -name "*.app" \) -print0 \
+    | while IFS= read -r -d '' item; do
+        codesign --force --options runtime --timestamp --sign "$IDENTITY" "$item"
+      done
+  find "$APP/Contents/Frameworks" -name "Autoupdate" -type f -print0 \
+    | while IFS= read -r -d '' item; do
+        codesign --force --options runtime --timestamp --sign "$IDENTITY" "$item"
+      done
   find "$APP/Contents/Frameworks" -depth \( -name "*.framework" -o -name "*.dylib" \) -print0 \
     | while IFS= read -r -d '' item; do
         codesign --force --options runtime --timestamp --sign "$IDENTITY" "$item"

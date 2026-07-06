@@ -1,13 +1,17 @@
 import AppKit
 
-/// Presents a full-screen dimming overlay (one borderless window spanning all
-/// screens) and lets the user drag a rectangle to pick a capture region.
+/// Presents a full-screen dimming overlay (one borderless window per screen)
+/// and lets the user drag a rectangle to pick a capture region.
 ///
-/// Mirrors `EditorWindowController`: this file owns presentation and the window;
-/// `RegionSelectionView` owns drawing and event handling.
+/// One window per `NSScreen` is required because, with "Displays have separate
+/// Spaces" (the macOS default), a single window spanning the union of all
+/// screens only renders reliably on the primary display.
+///
+/// Mirrors `EditorWindowController`: this file owns presentation and the
+/// windows; `RegionSelectionView` owns drawing and event handling.
 @MainActor
 final class RegionSelectionController {
-    private var window: OverlayWindow?
+    private var windows: [OverlayWindow] = []
     private var continuation: CheckedContinuation<CaptureRegion?, Never>?
 
     /// Shows the overlay and resolves with the chosen region, or `nil` if the
@@ -22,33 +26,49 @@ final class RegionSelectionController {
     // MARK: - Presentation
 
     private func present() {
-        let unionFrame = NSScreen.screens.reduce(CGRect.null) { $0.union($1.frame) }
-        guard !unionFrame.isNull else { finish(nil); return }
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { finish(nil); return }
 
-        let window = OverlayWindow(
-            contentRect: unionFrame,
-            styleMask: .borderless,
-            backing: .buffered,
-            defer: false
-        )
-        window.level = .screenSaver
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = false
-        window.ignoresMouseEvents = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        // The window under the pointer becomes key so Esc works immediately and
+        // owns the hint; the others just dim their screen (AppKit routes a drag
+        // to the window that got the mouseDown, so the anchor screen owns it).
+        let cursor = NSEvent.mouseLocation
+        let keyScreen = screens.first { NSMouseInRect(cursor, $0.frame, false) } ?? NSScreen.main
 
-        let view = RegionSelectionView(frame: NSRect(origin: .zero, size: unionFrame.size))
-        view.onComplete = { [weak self] globalRect, anchor in
-            self?.finish(Self.resolve(globalRect: globalRect, anchor: anchor))
-        }
-        view.onCancel = { [weak self] in self?.finish(nil) }
-        window.contentView = view
-
-        self.window = window
         NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(view)
+
+        for screen in screens {
+            let window = OverlayWindow(
+                contentRect: screen.frame,
+                styleMask: .borderless,
+                backing: .buffered,
+                defer: false
+            )
+            window.level = .screenSaver
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.hasShadow = false
+            window.ignoresMouseEvents = false
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+
+            let view = RegionSelectionView(frame: NSRect(origin: .zero, size: screen.frame.size))
+            view.showsHint = (screen == keyScreen)
+            view.onComplete = { [weak self] globalRect, anchor in
+                self?.finish(Self.resolve(globalRect: globalRect, anchor: anchor))
+            }
+            view.onCancel = { [weak self] in self?.finish(nil) }
+            window.contentView = view
+
+            windows.append(window)
+
+            if screen == keyScreen {
+                window.makeKeyAndOrderFront(nil)
+                window.makeFirstResponder(view)
+            } else {
+                window.orderFront(nil)
+            }
+        }
+
         NSCursor.crosshair.push()
     }
 
@@ -56,8 +76,8 @@ final class RegionSelectionController {
         guard let continuation else { return }
         self.continuation = nil
         NSCursor.pop()
-        window?.orderOut(nil)
-        window = nil
+        for window in windows { window.orderOut(nil) }
+        windows.removeAll()
         continuation.resume(returning: region)
     }
 

@@ -10,6 +10,9 @@ final class RegionSelectionView: NSView {
     var onComplete: ((CGRect, CGPoint) -> Void)?
     /// Called when the user cancels (Esc, or a click without a real drag).
     var onCancel: (() -> Void)?
+    /// Whether to draw the "drag a rectangle" hint. With one view per screen,
+    /// only the view under the pointer sets this, so the hint shows just once.
+    var showsHint: Bool = true
 
     private var anchor: CGPoint?  // view-local
     private var current: CGPoint? // view-local
@@ -74,7 +77,7 @@ final class RegionSelectionView: NSView {
 
         guard let sel = selectionRect?.intersection(bounds), sel.width > 0, sel.height > 0 else {
             bounds.fill()
-            drawHint()
+            if showsHint { drawHint() }
             return
         }
 

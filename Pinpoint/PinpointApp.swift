@@ -25,15 +25,33 @@ struct PinpointApp: App {
 /// onglets pilotent le même `ScreenshotStore` partagé que la fenêtre Étagère.
 struct SettingsView: View {
     var body: some View {
-        TabView {
-            CaptureSettingsView()
-                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+        VStack(spacing: 0) {
+            TabView {
+                CaptureSettingsView()
+                    .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
 
-            ShelfSettingsView()
-                .environmentObject(ScreenshotStore.shared)
-                .tabItem { Label("Shelf", systemImage: "tray.full") }
+                ShelfSettingsView()
+                    .environmentObject(ScreenshotStore.shared)
+                    .tabItem { Label("Shelf", systemImage: "tray.full") }
+            }
+
+            Divider()
+            Text(Self.versionString)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .padding(.vertical, 6)
         }
-        .frame(width: 460, height: 340)
+        .frame(width: 460, height: 366)
+    }
+
+    /// Marketing version + build read from the bundle, e.g. "Pinpoint 0.3.0 (3)".
+    /// Selectable so it can be copied into a bug report.
+    private static var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "Pinpoint \(short) (\(build))"
     }
 }
 

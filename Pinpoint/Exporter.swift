@@ -268,8 +268,49 @@ enum Exporter {
         return result
     }
 
+    /// Longest-edge cap (pixels) for the image placed on the pasteboard. Captures
+    /// are stored at native Retina resolution, which makes the full-size PNG too
+    /// large to paste into some targets (Claude, GitHub). The agent doesn't need
+    /// that detail — the text carries each marker's position — so the clipboard
+    /// image is downscaled to fit, while "Save image…" keeps full resolution.
+    static let clipboardMaxDimension: CGFloat = 2000
+
+    /// PNG data for the annotated image (with legend when `includeLegend`),
+    /// optionally downscaled so its longest edge is at most `maxDimension` pixels.
+    /// Pass `nil` for full native resolution.
+    static func pngData(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
+                        style: PinStyle, includeLegend: Bool, maxDimension: CGFloat?) -> Data? {
+        let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
+                                style: style, includeLegend: includeLegend)
+        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        let output = maxDimension.flatMap { downscaled(rep, maxDimension: $0) } ?? rep
+        return output.representation(using: .png, properties: [:])
+    }
+
+    /// Returns `rep` shrunk so its longest pixel edge is `maxDimension`, or `rep`
+    /// itself when it already fits. Works in pixels so the cap is exact regardless
+    /// of the drawing context's scale.
+    private static func downscaled(_ rep: NSBitmapImageRep, maxDimension: CGFloat) -> NSBitmapImageRep? {
+        let longest = CGFloat(max(rep.pixelsWide, rep.pixelsHigh))
+        guard longest > maxDimension else { return rep }
+        let factor = maxDimension / longest
+        let width = Int((CGFloat(rep.pixelsWide) * factor).rounded())
+        let height = Int((CGFloat(rep.pixelsHigh) * factor).rounded())
+        guard let dst = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return rep }
+        dst.size = NSSize(width: width, height: height)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: dst)
+        NSGraphicsContext.current?.imageInterpolation = .high
+        rep.draw(in: NSRect(x: 0, y: 0, width: width, height: height))
+        NSGraphicsContext.restoreGraphicsState()
+        return dst
+    }
+
     /// Puts the (optionally legend-bearing) annotated PNG on the general
-    /// pasteboard.
+    /// pasteboard, downscaled to `clipboardMaxDimension` so it stays pasteable.
     ///
     /// When the legend is baked into the image the PNG is self-contained, so we
     /// deliberately leave the plain instruction text off the pasteboard: a
@@ -279,14 +320,11 @@ enum Exporter {
     /// is the sole carrier of the marker descriptions and instructions.
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
                                  style: PinStyle, includeLegend: Bool) {
-        let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
-                                style: style, includeLegend: includeLegend)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
-        if let tiff = image.tiffRepresentation,
-           let rep = NSBitmapImageRep(data: tiff),
-           let png = rep.representation(using: .png, properties: [:]) {
+        if let png = pngData(base: base, pins: pins, shapes: shapes, context: context,
+                             style: style, includeLegend: includeLegend, maxDimension: clipboardMaxDimension) {
             pasteboard.setData(png, forType: .png)
         }
 
