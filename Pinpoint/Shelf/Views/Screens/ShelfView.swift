@@ -339,6 +339,12 @@ struct ShelfView: View {
             return nil
         }
 
+        if commandPressed, event.charactersIgnoringModifiers?.lowercased() == "a" {
+            selectionMode = true
+            selectedIDs = Set(visibleItems.map(\.id))
+            return nil
+        }
+
         if event.charactersIgnoringModifiers?.lowercased() == "f" {
             toggleFavoriteFocusedItems()
             return nil
@@ -366,6 +372,13 @@ struct ShelfView: View {
         case 51, 117:
             deleteFocusedItems()
             return nil
+case 53: // Esc — exit selection mode
+            if selectionMode {
+                selectionMode = false
+                selectedIDs.removeAll()
+                return nil
+            }
+            return event
         default:
             return event
         }
