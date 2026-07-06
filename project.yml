@@ -10,6 +10,9 @@ packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: "2.2.0"
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.9.0"
 
 targets:
   Pinpoint:
@@ -19,6 +22,7 @@ targets:
       - Pinpoint
     dependencies:
       - package: KeyboardShortcuts
+      - package: Sparkle
     info:
       path: Pinpoint/Info.plist
       properties:
@@ -32,6 +36,12 @@ targets:
         # Menu-bar only app: no Dock icon, no main window.
         LSUIElement: true
         NSHumanReadableCopyright: "© 2026 Baptiste Bouillot"
+        # Sparkle auto-update. The appcast is hosted on the landing site; the
+        # public EdDSA key pairs with the private key held in the release
+        # machine's keychain (used by scripts/update-appcast.sh to sign updates).
+        SUFeedURL: https://pinpoint-ashy.vercel.app/appcast.xml
+        SUPublicEDKey: "+9BFwjsyhynA3QpwOytwA3h1E7yy0OJH+R26Xbzkrsw="
+        SUEnableAutomaticChecks: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.croustibat.Pinpoint

@@ -119,6 +119,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capturée le" } }
       }
     },
+    "Check for updates…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher les mises à jour…" } }
+      }
+    },
     "Choose a folder…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Choisir un dossier…" } }
