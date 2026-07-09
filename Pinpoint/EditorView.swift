@@ -149,7 +149,7 @@ struct EditorView: View {
 
                 // Numbered pins.
                 ForEach($pins) { $pin in
-                    let anchor = absolutePoint(pin.position, in: fitted)
+                    let anchor = clampedMarkerAnchor(absolutePoint(pin.position, in: fitted), in: fitted)
                     PinMarker(number: pin.number, style: pinStyle, selected: pin.id == selectedPinID)
                         .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle))
                         .gesture(pinDrag($pin, in: fitted))
@@ -437,6 +437,25 @@ struct EditorView: View {
 
     private func absolutePoint(_ p: CGPoint, in fitted: CGRect) -> CGPoint {
         CGPoint(x: fitted.minX + p.x * fitted.width, y: fitted.minY + p.y * fitted.height)
+    }
+
+    /// Nudges a marker's anchor so its badge stays fully within the fitted image
+    /// even when the point is near an edge. Only affects where the badge is
+    /// drawn — `pin.position` is untouched — and mirrors `Exporter`'s clamping so
+    /// the editor and the exported image agree.
+    private func clampedMarkerAnchor(_ anchor: CGPoint, in fitted: CGRect) -> CGPoint {
+        let side = PinMarker.headDiameter / 2 + 2  // circle half-width incl. ring
+        let x = min(max(anchor.x, fitted.minX + side), max(fitted.minX + side, fitted.maxX - side))
+        switch pinStyle {
+        case .disc, .outline:
+            let y = min(max(anchor.y, fitted.minY + side), max(fitted.minY + side, fitted.maxY - side))
+            return CGPoint(x: x, y: y)
+        case .pointer:
+            // The 28×42 marker sits with its tip at the anchor, extending upward.
+            let top = fitted.minY + PinMarker.pointerHeight
+            let y = min(max(anchor.y, top), max(top, fitted.maxY))
+            return CGPoint(x: x, y: y)
+        }
     }
 
     private func absoluteRect(_ r: CGRect, in fitted: CGRect) -> CGRect {
