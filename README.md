@@ -189,10 +189,12 @@ scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/home
 scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
 
-Then commit `landing/public/appcast.xml` and redeploy the landing (`vercel deploy --prod`)
-so in-app auto-update (Sparkle) sees the new version. The EdDSA private key lives in
-the release machine's keychain (paired with `SUPublicEDKey` in `project.yml`); create it
-once with Sparkle's `generate_keys`.
+Add the release to the changelog (`landing/src/changelog.ts` — new entry at the top,
+mark it `latest`), then commit it together with `landing/public/appcast.xml` and redeploy
+the landing (`vercel deploy --prod`) so in-app auto-update (Sparkle) sees the new version
+and [`/changelog`](https://pinpoint-ashy.vercel.app/changelog) shows it. The EdDSA private
+key lives in the release machine's keychain (paired with `SUPublicEDKey` in `project.yml`);
+create it once with Sparkle's `generate_keys`.
 
 ## License
 
