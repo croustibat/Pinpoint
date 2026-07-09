@@ -25,7 +25,10 @@ enum Exporter {
                 x: pin.position.x * size.width,
                 y: (1 - pin.position.y) * size.height
             )
-            drawMarker(number: pin.number, anchor: anchor, radius: radius, style: style)
+            // Keep the badge fully inside the image when the point is near an
+            // edge; the exact point is still carried by the % in the text.
+            let drawAnchor = clampedMarkerAnchor(anchor, radius: radius, style: style, in: size)
+            drawMarker(number: pin.number, anchor: drawAnchor, radius: radius, style: style)
         }
 
         result.unlockFocus()
@@ -79,6 +82,26 @@ enum Exporter {
             path.line(to: right)
             path.stroke()
         }
+    }
+
+    /// Shifts `anchor` so the marker's badge stays fully within `size` (image
+    /// space, y up). For the pointer the tip is at the anchor and the head sits
+    /// above it (+y); disc/outline are centred on the anchor. Mirrors the
+    /// clamping done on screen in `EditorView` so export and editor agree.
+    private static func clampedMarkerAnchor(_ anchor: CGPoint, radius: CGFloat, style: PinStyle, in size: CGSize) -> CGPoint {
+        let side = radius + max(2, radius * 0.16)  // half-width incl. ring
+        let x = clamp(anchor.x, side, size.width - side)
+        switch style {
+        case .disc, .outline:
+            return CGPoint(x: x, y: clamp(anchor.y, side, size.height - side))
+        case .pointer:
+            // The head reaches anchor.y + 3·radius upward; the tip is the low point.
+            return CGPoint(x: x, y: clamp(anchor.y, 0, size.height - radius * 3))
+        }
+    }
+
+    private static func clamp(_ v: CGFloat, _ lo: CGFloat, _ hi: CGFloat) -> CGFloat {
+        max(lo, min(v, max(lo, hi)))
     }
 
     /// Draws a numbered marker at `anchor` (image space) in the chosen style.

@@ -16,7 +16,7 @@ export const otherLang: Record<Lang, { code: Lang; href: string }> = {
 
 type Content = {
   meta: { title: string; description: string };
-  nav: { features: string; how: string; agents: string; github: string; download: string };
+  nav: { features: string; how: string; agents: string; changelog: string; github: string; download: string };
   hero: {
     eyebrow: string;
     titleA: string;
@@ -42,7 +42,7 @@ export const content: Record<Lang, Content> = {
       description:
         'A macOS menu-bar app that captures your screen, drops numbered markers on what matters, and copies a ready-to-paste prompt for your AI agent. Free & open source.',
     },
-    nav: { features: 'Features', how: 'How it works', agents: 'For agents', github: 'GitHub', download: 'Download' },
+    nav: { features: 'Features', how: 'How it works', agents: 'For agents', changelog: 'Changelog', github: 'GitHub', download: 'Download' },
     hero: {
       eyebrow: 'macOS menu-bar app — free & open source',
       titleA: 'Point at exactly',
@@ -115,7 +115,7 @@ Make the CTA full-width on mobile and fix the icon alignment.`,
       description:
         'Une app de barre de menus macOS qui capture ton écran, pose des repères numérotés sur ce qui compte, et copie un prompt prêt à coller pour ton agent IA. Gratuite & open source.',
     },
-    nav: { features: 'Fonctions', how: 'Comment ça marche', agents: 'Pour les agents', github: 'GitHub', download: 'Télécharger' },
+    nav: { features: 'Fonctions', how: 'Comment ça marche', agents: 'Pour les agents', changelog: 'Changelog', github: 'GitHub', download: 'Télécharger' },
     hero: {
       eyebrow: 'App de barre de menus macOS — gratuite & open source',
       titleA: 'Désigne exactement',
