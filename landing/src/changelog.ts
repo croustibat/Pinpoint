@@ -14,9 +14,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.5.0',
+    date: '2026-07-09',
+    latest: true,
+    changes: [
+      { type: 'fixed', text: 'Markers placed near an edge are no longer clipped in the exported image — the badge is kept fully inside the picture.' },
+      { type: 'added', text: 'Shelf: ⌘A selects all screenshots and Esc exits selection mode.' },
+      { type: 'fixed', text: 'The editor’s tool picker no longer shifts around in narrow windows.' },
+    ],
+  },
+  {
     version: '0.4.0',
     date: '2026-07-06',
-    latest: true,
     changes: [
       { type: 'added', text: 'Automatic updates — a new “Check for updates…” menu item plus background checks, so new releases install in one click.' },
       { type: 'fixed', text: 'Multi-monitor capture: the selection overlay now dims and works on every display, not just the primary one.' },
