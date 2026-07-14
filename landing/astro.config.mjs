@@ -5,7 +5,7 @@ import { defineConfig } from 'astro/config';
 // rolldown-based Vite.
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://pinpoint.app',
+  site: 'https://pinpoint-ashy.vercel.app',
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'fr'],
