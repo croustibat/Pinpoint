@@ -58,6 +58,7 @@ struct SettingsView: View {
 struct CaptureSettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
+    @AppStorage(CaptureDelay.storageKey) private var captureDelay: CaptureDelay = .off
 
     var body: some View {
         Form {
@@ -72,6 +73,16 @@ struct CaptureSettingsView: View {
                     }
                 }
                 Text(pinStyle.caption)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+            }
+            Section("Capture timer") {
+                Picker("Delay before capture:", selection: $captureDelay) {
+                    ForEach(CaptureDelay.allCases) { delay in
+                        Text(delay.label).tag(delay)
+                    }
+                }
+                Text("Pause before the screenshot so you can arrange UI elements or open a menu.")
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
