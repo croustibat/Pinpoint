@@ -31,7 +31,7 @@ final class CaptureHistory {
     /// PNG couldn't be written).
     @discardableResult
     func add(image: NSImage) -> CaptureRecord? {
-        guard let png = pngData(from: image) else { return nil }
+        guard let png = Self.pngData(from: image) else { return nil }
         let id = UUID()
         let fileName = "\(id.uuidString).png"
         do {
@@ -62,6 +62,24 @@ final class CaptureHistory {
         records[index].pins = pins
         records[index].shapes = shapes
         records[index].context = context
+        saveIndex()
+    }
+
+    /// Replaces the raw image of an existing record (e.g. after a crop). The
+    /// filename is kept stable; only the PNG bytes and the pixel dimensions
+    /// change, so the capture reopens at its new native size.
+    func replaceImage(id: UUID, image: NSImage) {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        guard let png = Self.pngData(from: image) else { return }
+        // Only mutate the record if the PNG actually landed on disk, otherwise
+        // the index would advertise dimensions that don't match the file.
+        do {
+            try png.write(to: directory.appendingPathComponent(records[index].imageFileName))
+        } catch {
+            return
+        }
+        records[index].width = Int(image.size.width.rounded())
+        records[index].height = Int(image.size.height.rounded())
         saveIndex()
     }
 
@@ -110,7 +128,9 @@ final class CaptureHistory {
         records.removeLast(records.count - maxEntries)
     }
 
-    private func pngData(from image: NSImage) -> Data? {
+    /// Encodes an NSImage as PNG. Static so callers outside this type (e.g. the
+    /// editor writing a cropped image next to a Shelf file) reuse the same path.
+    static func pngData(from image: NSImage) -> Data? {
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else { return nil }
         return rep.representation(using: .png, properties: [:])

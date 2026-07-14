@@ -8,9 +8,10 @@ struct CaptureRecord: Codable, Identifiable, Equatable {
     let date: Date
     /// PNG file name within the history directory.
     let imageFileName: String
-    /// Pixel dimensions of the capture (used to rebuild the NSImage at native size).
-    let width: Int
-    let height: Int
+    /// Pixel dimensions of the capture (used to rebuild the NSImage at native
+    /// size). `var` so a crop can replace the image without a new record.
+    var width: Int
+    var height: Int
     var pins: [Pin]
     var shapes: [Markup]
     var context: String

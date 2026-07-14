@@ -226,6 +226,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Reopens an existing shelf screenshot in the editor as a fresh capture:
     /// loads the file, records it in the capture history, and presents the editor.
+    /// The source URL is threaded through so a crop writes back to the shelf as a
+    /// new `-cropped.png` next to the original.
     @objc private func openInEditor(_ notification: Notification) {
         guard let url = notification.object as? URL else { return }
         guard let image = Self.loadImage(at: url) else {
@@ -233,7 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         let record = CaptureHistory.shared.add(image: image)
-        presentEditor(image: image, recordID: record?.id)
+        presentEditor(image: image, recordID: record?.id, sourceURL: url)
     }
 
     /// Loads a bitmap at its native pixel size. `NSImage(contentsOf:)` would honor
@@ -247,17 +249,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return image
     }
 
+    /// Writes `image` as a new `<stem>-cropped.png` beside `source`, so cropping a
+    /// shelf screenshot preserves the original and produces a sibling the shelf
+    /// watcher picks up automatically. Collision-safe (`-cropped-2`, `-cropped-3`…).
+    /// Best-effort: silent no-op on encode/write failure (the capture-history copy
+    /// is the source of truth; this is a convenience mirror for the shelf).
+    private static func writeCroppedFile(from image: NSImage, nextTo source: URL) {
+        guard let png = CaptureHistory.pngData(from: image) else { return }
+        let dest = uniqueCroppedURL(nextTo: source)
+        try? png.write(to: dest, options: .atomic)
+    }
+
+    /// `<stem>-cropped.png` beside `source`, or `-cropped-2.png`, `-cropped-3.png`…
+    /// if the name is taken. The caller writes via `try?`, so a non-writable
+    /// directory is a silent no-op rather than a thrown error.
+    private static func uniqueCroppedURL(nextTo source: URL) -> URL {
+        let dir = source.deletingLastPathComponent()
+        let stem = source.deletingPathExtension().lastPathComponent
+        func candidate(_ n: Int) -> URL {
+            let suffix = n == 1 ? "-cropped" : "-cropped-\(n)"
+            return dir.appendingPathComponent("\(stem)\(suffix).png")
+        }
+        var n = 1
+        while FileManager.default.fileExists(atPath: candidate(n).path) {
+            n += 1
+        }
+        return candidate(n)
+    }
+
     @MainActor
-    private func presentEditor(image: NSImage, recordID: UUID?,
+    private func presentEditor(image: NSImage, recordID: UUID?, sourceURL: URL? = nil,
                                pins: [Pin] = [], shapes: [Markup] = [], context: String = "") {
         let controller = EditorWindowController(
             image: image,
             initialPins: pins,
             initialShapes: shapes,
             initialContext: context,
-            onPersist: { pins, shapes, context in
+            sourceURL: sourceURL,
+            onPersist: { pins, shapes, context, image in
                 guard let recordID else { return }
                 CaptureHistory.shared.update(id: recordID, pins: pins, shapes: shapes, context: context)
+                CaptureHistory.shared.replaceImage(id: recordID, image: image)
+                if let sourceURL {
+                    Self.writeCroppedFile(from: image, nextTo: sourceURL)
+                }
             }
         )
         editorController = controller
