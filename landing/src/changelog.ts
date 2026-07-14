@@ -10,13 +10,28 @@ export interface ChangelogEntry {
   date: string;
   latest?: boolean;
   changes: { type: ChangeType; text: string }[];
+  /** Optional credit line (e.g. an external contributor), linked to `href`. */
+  credit?: { text: string; href: string };
 }
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.6.0',
+    date: '2026-07-14',
+    latest: true,
+    changes: [
+      { type: 'added', text: 'Crop tool in the editor — trim a capture with eight handles and a rule-of-thirds grid; existing markers and arrows are remapped into the cropped frame.' },
+      { type: 'added', text: 'Optional capture timer — a 3, 5, or 10-second countdown before the shot so you can arrange your UI or open a menu; press Esc to cancel.' },
+      { type: 'added', text: 'A “What’s New…” item in the menu bar opens this changelog, so you can always see what each release added.' },
+    ],
+    credit: {
+      text: 'Crop tool and capture timer contributed by @ganuong11 — thank you! 🙏',
+      href: 'https://github.com/ganuong11',
+    },
+  },
+  {
     version: '0.5.0',
     date: '2026-07-09',
-    latest: true,
     changes: [
       { type: 'fixed', text: 'Markers placed near an edge are no longer clipped in the exported image — the badge is kept fully inside the picture.' },
       { type: 'added', text: 'Shelf: ⌘A selects all screenshots and Esc exits selection mode.' },

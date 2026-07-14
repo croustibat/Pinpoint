@@ -26,11 +26,16 @@ enum EditorTool: String, CaseIterable, Identifiable {
 }
 
 struct EditorView: View {
-    let image: NSImage
+    /// The editor's base image. Mutable: a crop replaces it in place. Kept at
+    /// native pixel size (`.size` == pixels) so export renders at full res.
+    @State private var image: NSImage
+    /// When the editor was opened from a Shelf file, the source URL so a crop
+    /// can be written back as a new `-cropped.png` alongside it.
+    private let sourceURL: URL?
     var onClose: () -> Void
-    /// Called with the current annotation state so it can be persisted to
-    /// history (on copy and when the editor closes).
-    var onPersist: ([Pin], [Markup], String) -> Void
+    /// Called with the current annotation state and base image so they can be
+    /// persisted to history (on copy and when the editor closes).
+    var onPersist: ([Pin], [Markup], String, NSImage) -> Void
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
@@ -45,15 +50,22 @@ struct EditorView: View {
     @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
 
+    // Crop mode state. `cropRect` is normalized (0...1, top-left origin), same
+    // convention as pins/markups.
+    @State private var isCropping = false
+    @State private var cropRect: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+
     init(
         image: NSImage,
         initialPins: [Pin] = [],
         initialShapes: [Markup] = [],
         initialContext: String = "",
-        onPersist: @escaping ([Pin], [Markup], String) -> Void = { _, _, _ in },
+        sourceURL: URL? = nil,
+        onPersist: @escaping ([Pin], [Markup], String, NSImage) -> Void = { _, _, _, _ in },
         onClose: @escaping () -> Void
     ) {
-        self.image = image
+        _image = State(initialValue: image)
+        self.sourceURL = sourceURL
         self.onPersist = onPersist
         self.onClose = onClose
         _pins = State(initialValue: initialPins)
@@ -75,43 +87,69 @@ struct EditorView: View {
                 .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
         }
         .frame(minWidth: 680, minHeight: 440)
-        .onDisappear { onPersist(pins, shapes, context) }
+        .onDisappear { onPersist(pins, shapes, context, image) }
     }
 
     // MARK: - Toolbar
 
     private var toolbar: some View {
         HStack(spacing: 10) {
-            // `fixedSize()` locks the segmented picker to its intrinsic
-            // width so it can't be squeezed when the trailing hint grows
-            // (e.g. switching to Rectangle). Without it, a growing hint in
-            // a narrow window shrank the picker and shifted the Crop button
-            // left — see "Drag to draw a rectangle" being the longest hint.
-            Picker("Tool", selection: $tool) {
-                ForEach(EditorTool.allCases) { tool in
-                    Label(tool.label, systemImage: tool.symbol).tag(tool)
+            if isCropping {
+                // Crop mode owns the toolbar: Cancel/Replace replace the picker.
+                Button(String(localized: "Cancel"), action: cancelCrop)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .keyboardShortcut(.escape, modifiers: [])
+
+                Spacer()
+
+                Button(String(localized: "Done"), action: applyCrop)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.pinpointVermillon)
+                    .keyboardShortcut(.return, modifiers: [])
+            } else {
+                // `fixedSize()` locks the segmented picker to its intrinsic
+                // width so it can't be squeezed when the trailing hint grows
+                // (e.g. switching to Rectangle). Without it, a growing hint in
+                // a narrow window shrank the picker and shifted the Crop button
+                // left — see "Drag to draw a rectangle" being the longest hint.
+                Picker("Tool", selection: $tool) {
+                    ForEach(EditorTool.allCases) { tool in
+                        Label(tool.label, systemImage: tool.symbol).tag(tool)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+
+                Button {
+                    enterCropMode()
+                } label: {
+                    Label(String(localized: "Crop"), systemImage: "crop")
+                }
+                .buttonStyle(.bordered)
+                .help(String(localized: "Crop"))
+
+                Spacer()
+
+                // Hint yields first when the row is tight (layoutPriority -1),
+                // truncating instead of pushing the picker/buttons around.
+                Text(toolHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(-1)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-
-            Spacer()
-
-            // Hint yields first when the row is tight (layoutPriority -1),
-            // truncating instead of pushing the picker/buttons around.
-            Text(toolHint)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .layoutPriority(-1)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
     }
 
     private var toolHint: String {
+        if isCropping {
+            return String(localized: "Drag handles to crop · Esc to cancel")
+        }
         switch tool {
         case .pin: return String(localized: "Click to drop a marker")
         case .arrow: return String(localized: "Drag to draw an arrow")
@@ -153,7 +191,13 @@ struct EditorView: View {
                     PinMarker(number: pin.number, style: pinStyle, selected: pin.id == selectedPinID)
                         .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle))
                         .gesture(pinDrag($pin, in: fitted))
-                        .allowsHitTesting(tool == .pin)
+                        .allowsHitTesting(tool == .pin && !isCropping)
+                }
+
+                // Crop overlay sits on top and owns interaction while active.
+                if isCropping {
+                    CropOverlay(cropRect: $cropRect, fitted: fitted)
+                        .allowsHitTesting(true)
                 }
             }
             .contentShape(Rectangle())
@@ -178,10 +222,12 @@ struct EditorView: View {
     }
 
     /// One drag gesture for the whole canvas, branching on the active tool. A
-    /// zero-distance drag also captures plain clicks (used to drop pins).
+    /// zero-distance drag also captures plain clicks (used to drop pins). No-ops
+    /// while cropping — the CropOverlay owns interaction in that mode.
     private func canvasGesture(in fitted: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                guard !isCropping else { return }
                 switch tool {
                 case .pin:
                     break
@@ -191,6 +237,7 @@ struct EditorView: View {
                 }
             }
             .onEnded { value in
+                guard !isCropping else { return }
                 switch tool {
                 case .pin:
                     addPin(at: value.location, in: fitted)
@@ -399,7 +446,7 @@ struct EditorView: View {
     private func copy() {
         Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
                                   style: pinStyle, includeLegend: includeLegend)
-        onPersist(pins, shapes, context)
+        onPersist(pins, shapes, context, image)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withAnimation { didCopy = false }
@@ -418,7 +465,94 @@ struct EditorView: View {
         guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
                                          style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else { return }
         try? png.write(to: url)
-        onPersist(pins, shapes, context)
+        onPersist(pins, shapes, context, image)
+    }
+
+    // MARK: - Crop
+
+    private func enterCropMode() {
+        cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        selectedPinID = nil
+        selectedShapeID = nil
+        withAnimation(.easeInOut(duration: 0.15)) { isCropping = true }
+    }
+
+    private func cancelCrop() {
+        withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+    }
+
+    /// Applies the current crop rect to the base image and remaps annotations
+    /// into the cropped frame. No-op if the rect covers ~the whole image.
+    private func applyCrop() {
+        let c = cropRect
+        // Treat as no-op when within epsilon of the full image, so the user can
+        // hit Done on the default rect without an identity crop round-trip.
+        if abs(c.minX) < 0.001 && abs(c.minY) < 0.001
+            && abs(c.width - 1) < 0.001 && abs(c.height - 1) < 0.001 {
+            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            return
+        }
+        guard c.width > 0, c.height > 0,
+              let base = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            return
+        }
+
+        // Normalized (top-left) → pixel rect (CGImage is also top-left → no flip).
+        let W = CGFloat(base.width)
+        let H = CGFloat(base.height)
+        let px = CGRect(
+            x: floor(c.minX * W),
+            y: floor(c.minY * H),
+            width:  ceil(c.width  * W),
+            height: ceil(c.height * H)
+        ).intersection(CGRect(x: 0, y: 0, width: W, height: H))
+        guard px.width > 1, px.height > 1,
+              let cropped = base.cropping(to: px) else {
+            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            return
+        }
+
+        let newImage = NSImage(
+            cgImage: cropped,
+            size: NSSize(width: cropped.width, height: cropped.height)   // size == pixels
+        )
+
+        // Remap each annotation into the cropped frame: normalized coords scale
+        // by (p − origin)/size. Drop anything that no longer lands inside.
+        let origin = CGPoint(x: c.minX, y: c.minY)
+        let size   = CGSize(width: c.width, height: c.height)
+        func remap(_ p: CGPoint) -> CGPoint {
+            CGPoint(x: (p.x - origin.x) / size.width, y: (p.y - origin.y) / size.height)
+        }
+        func inside(_ p: CGPoint) -> Bool {
+            (0...1).contains(p.x) && (0...1).contains(p.y)
+        }
+
+        var newPins: [Pin] = []
+        for pin in pins {
+            let q = remap(pin.position)
+            guard inside(q) else { continue }
+            newPins.append(Pin(id: pin.id, number: pin.number, position: q, note: pin.note))
+        }
+        var newShapes: [Markup] = []
+        for shape in shapes {
+            let s = remap(shape.start)
+            let e = remap(shape.end)
+            // Keep a markup iff at least one defining point survives the crop.
+            // Midpoint-or-endpoint rule; straddlers keep what's inside.
+            guard inside(s) || inside(e) || inside(CGPoint(x: (s.x+e.x)/2, y: (s.y+e.y)/2)) else { continue }
+            newShapes.append(
+                Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e))
+            )
+        }
+
+        image = newImage
+        pins = newPins
+        shapes = newShapes
+        selectedPinID = nil
+        selectedShapeID = nil
+        withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
     }
 
     // MARK: - Geometry
@@ -478,6 +612,197 @@ struct EditorView: View {
             y: (container.height - size.height) / 2
         )
         return CGRect(origin: origin, size: size)
+    }
+}
+
+/// Modal crop overlay rendered above the editor canvas. The crop rect is
+/// normalized (0...1, top-left origin); `fitted` is the on-screen image rect.
+/// Eight handles (4 corners + 4 edge midpoints) resize the rect; dragging
+/// inside moves it. Free aspect ratio. Min size 5% per axis enforced.
+///
+/// Handle and interior drags track the previous translation in `@State`
+/// (`lastMove`/`lastResize`) and apply only the incremental delta —
+/// `DragGesture.translation` is cumulative from drag start, so applying it
+/// directly against the mutating rect would accelerate (double-count earlier
+/// deltas).
+struct CropOverlay: View {
+    @Binding var cropRect: CGRect
+    let fitted: CGRect
+
+    private let handleSize: CGFloat = 11
+    private let minDim: CGFloat = 0.05
+
+    // Previous translation for the in-progress interior/handle drag. Reset on
+    // drag end; without this, DragGesture's cumulative translation would
+    // double-count earlier deltas against the mutating cropRect.
+    @State private var lastMove: CGSize = .zero
+    @State private var lastResize: CGSize = .zero
+
+    var body: some View {
+        let r = absoluteRect(cropRect)
+        ZStack(alignment: .topLeading) {
+            // Dimmed exterior: 4 strips around the crop rect (even-odd mask).
+            Color.black.opacity(0.45)
+                .mask(
+                    Path { p in
+                        p.addRect(fitted)
+                        p.addRect(r)
+                    }
+                    .fill(style: FillStyle(eoFill: true))
+                )
+                .allowsHitTesting(false)
+
+            // Border + thirds grid inside the crop rect.
+            ZStack {
+                Rectangle().stroke(Color.pinpointVermillon, lineWidth: 2)
+                thirds
+            }
+            .frame(width: r.width, height: r.height)
+            .position(x: r.midX, y: r.midY)
+            .allowsHitTesting(false)
+
+            // Interior drag → move the whole rect (clamped to the image). The
+            // DragGesture translation is cumulative from drag start, so we keep
+            // the previous translation in @State and apply only the delta
+            // (otherwise the rect accelerates). Reset on drag end.
+            Color.clear
+                .contentShape(Rectangle())
+                .frame(width: max(0, r.width - handleSize), height: max(0, r.height - handleSize))
+                .position(x: r.midX, y: r.midY)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { v in
+                            let dx = (v.translation.width - lastMove.width) / fitted.width
+                            let dy = (v.translation.height - lastMove.height) / fitted.height
+                            move(dx: dx, dy: dy)
+                            lastMove = v.translation
+                        }
+                        .onEnded { _ in lastMove = .zero }
+                )
+
+            // 8 handles.
+            ForEach(Handle.allCases) { h in
+                handleView(h, in: r)
+            }
+        }
+    }
+
+    /// Two thirds lines each way, thin and semi-transparent.
+    private var thirds: some View {
+        Canvas { ctx, size in
+            var path = Path()
+            for i in 1...2 {
+                let x = size.width * CGFloat(i) / 3
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: size.height))
+                let y = size.height * CGFloat(i) / 3
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            ctx.stroke(path, with: .color(.white.opacity(0.5)), lineWidth: 1)
+        }
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private func handleView(_ h: Handle, in r: CGRect) -> some View {
+        let p = h.point(in: r)
+        ZStack {
+            Circle().fill(Color.white)
+            Circle().stroke(Color.pinpointVermillon, lineWidth: 2)
+        }
+        .frame(width: handleSize, height: handleSize)
+        .position(p)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { v in
+                    // Translation is cumulative from drag start; apply only the
+                    // delta since the previous event (see interior drag above).
+                    let dx = (v.translation.width - lastResize.width) / fitted.width
+                    let dy = (v.translation.height - lastResize.height) / fitted.height
+                    resize(h, dx: dx, dy: dy)
+                    lastResize = v.translation
+                }
+                .onEnded { _ in lastResize = .zero }
+        )
+    }
+
+    // MARK: - Crop-rect mutation
+
+    /// Moves the whole rect by a normalized delta, clamped to the image.
+    private func move(dx: CGFloat, dy: CGFloat) {
+        var r = cropRect
+        r.origin.x = min(max(0, r.origin.x + dx), max(0, 1 - r.width))
+        r.origin.y = min(max(0, r.origin.y + dy), max(0, 1 - r.height))
+        cropRect = r
+    }
+
+    /// Resizes the rect by a normalized delta applied to the edges the given
+    /// handle owns (a corner moves two edges, an edge handle moves one). Builds
+    /// the new rect from explicit x/y/width/height so it stays valid (CGRect's
+    /// minX/maxX are read-only). Enforces `minDim` and clamps to the image.
+    private func resize(_ handle: Handle, dx: CGFloat, dy: CGFloat) {
+        var x = cropRect.minX
+        var y = cropRect.minY
+        var w = cropRect.width
+        var h = cropRect.height
+
+        switch handle {
+        case .topLeft, .left, .bottomLeft:
+            let nx = min(max(0, x + dx), x + w - minDim)
+            w += x - nx
+            x = nx
+        default: break
+        }
+        switch handle {
+        case .topRight, .right, .bottomRight:
+            w = max(minDim, min(x + w + dx, 1) - x)
+        default: break
+        }
+        switch handle {
+        case .topLeft, .top, .topRight:
+            let ny = min(max(0, y + dy), y + h - minDim)
+            h += y - ny
+            y = ny
+        default: break
+        }
+        switch handle {
+        case .bottomLeft, .bottom, .bottomRight:
+            h = max(minDim, min(y + h + dy, 1) - y)
+        default: break
+        }
+
+        cropRect = CGRect(x: x, y: y, width: w, height: h)
+    }
+
+    // MARK: - Geometry
+
+    private func absoluteRect(_ r: CGRect) -> CGRect {
+        CGRect(
+            x: fitted.minX + r.minX * fitted.width,
+            y: fitted.minY + r.minY * fitted.height,
+            width: r.width * fitted.width,
+            height: r.height * fitted.height
+        )
+    }
+
+    /// The 8 resize handles. `point(in:)` places each on screen.
+    private enum Handle: String, CaseIterable, Identifiable {
+        case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left
+        var id: String { rawValue }
+
+        func point(in r: CGRect) -> CGPoint {
+            switch self {
+            case .topLeft:     return CGPoint(x: r.minX, y: r.minY)
+            case .top:         return CGPoint(x: r.midX, y: r.minY)
+            case .topRight:    return CGPoint(x: r.maxX, y: r.minY)
+            case .right:       return CGPoint(x: r.maxX, y: r.midY)
+            case .bottomRight: return CGPoint(x: r.maxX, y: r.maxY)
+            case .bottom:      return CGPoint(x: r.midX, y: r.maxY)
+            case .bottomLeft:  return CGPoint(x: r.minX, y: r.maxY)
+            case .left:        return CGPoint(x: r.minX, y: r.midY)
+            }
+        }
     }
 }
 

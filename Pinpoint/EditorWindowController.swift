@@ -10,7 +10,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
         initialPins: [Pin] = [],
         initialShapes: [Markup] = [],
         initialContext: String = "",
-        onPersist: @escaping ([Pin], [Markup], String) -> Void = { _, _, _ in }
+        sourceURL: URL? = nil,
+        onPersist: @escaping ([Pin], [Markup], String, NSImage) -> Void = { _, _, _, _ in }
     ) {
         // Size the window to the image, capped to a comfortable on-screen size.
         let maxSize = NSSize(width: 1100, height: 760)
@@ -38,6 +39,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
             initialPins: initialPins,
             initialShapes: initialShapes,
             initialContext: initialContext,
+            sourceURL: sourceURL,
             onPersist: onPersist
         ) { [weak window] in
             window?.close()
