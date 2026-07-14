@@ -652,6 +652,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossier surveillé" } }
       }
     },
+    "What’s New…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouveautés…" } }
+      }
+    },
     "White ring + drop shadow." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anneau blanc + ombre portée." } }

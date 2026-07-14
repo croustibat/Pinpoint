@@ -81,6 +81,18 @@ const fmt = (iso: string) =>
                 </li>
               ))}
             </ul>
+            {entry.credit && (
+              <p class="mt-4 text-sm text-zinc-400">
+                <a
+                  href={entry.credit.href}
+                  target="_blank"
+                  rel="noopener"
+                  class="text-brand transition hover:underline"
+                >
+                  {entry.credit.text}
+                </a>
+              </p>
+            )}
           </section>
         ))
       }
