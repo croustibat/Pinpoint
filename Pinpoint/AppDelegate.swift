@@ -105,6 +105,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updatesItem.target = updaterController
         menu.addItem(updatesItem)
 
+        let changelogItem = NSMenuItem(title: String(localized: "What’s New…"), action: #selector(openChangelog), keyEquivalent: "")
+        changelogItem.target = self
+        menu.addItem(changelogItem)
+
         let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -177,6 +181,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 presentCaptureError(error)
             }
         }
+    }
+
+    /// Opens the public changelog (landing page) so users can see what each
+    /// release added. Kept as a plain URL rather than an in-app window — the
+    /// changelog lives on the site next to the download/appcast.
+    @objc private func openChangelog() {
+        guard let url = URL(string: "https://pinpoint.app/changelog") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func openSettings() {
