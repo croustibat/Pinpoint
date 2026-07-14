@@ -187,7 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// release added. Kept as a plain URL rather than an in-app window — the
     /// changelog lives on the site next to the download/appcast.
     @objc private func openChangelog() {
-        guard let url = URL(string: "https://pinpoint.app/changelog") else { return }
+        guard let url = URL(string: "https://pinpoint-ashy.vercel.app/changelog") else { return }
         NSWorkspace.shared.open(url)
     }
 
