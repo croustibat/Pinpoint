@@ -78,6 +78,16 @@ struct EditorView: View {
     @State private var isCropping = false
     @State private var cropRect: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
 
+    // MARK: Undo/redo state
+    @State private var history = EditorHistory()
+    /// Pre-gesture state captured on a pin drag's first event, recorded once on
+    /// release: a drag emits an event per frame, and each one must not become
+    /// its own undo entry.
+    @State private var dragUndoSnapshot: EditorSnapshot?
+    /// Pre-edit state captured when a text field takes focus, recorded when it
+    /// gives it up. See `flushTextEdit()` for why typing is coalesced this way.
+    @State private var textEditSnapshot: EditorSnapshot?
+
     init(
         image: NSImage,
         initialPins: [Pin] = [],
@@ -111,6 +121,12 @@ struct EditorView: View {
         }
         .frame(minWidth: 680, minHeight: 440)
         .onDisappear { onPersist(pins, shapes, context, image) }
+        // A text field changing hands closes one typing session and opens the
+        // next. See `flushTextEdit()`.
+        .onChange(of: focusedField) { _, newValue in
+            flushTextEdit()
+            if newValue != nil { textEditSnapshot = snapshot() }
+        }
         .alert(
             String(localized: "Export failed"),
             isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
@@ -163,6 +179,28 @@ struct EditorView: View {
                 .buttonStyle(.bordered)
                 .help(String(localized: "Crop"))
 
+                Divider().frame(height: 18)
+
+                // Visible undo/redo, deliberately without key equivalents of
+                // their own: those live on the hidden buttons below, which step
+                // aside while a text field is being edited. These stay clickable
+                // at all times so the history is reachable mid-typing too.
+                Button(action: undo) {
+                    Label(String(localized: "Undo"), systemImage: "arrow.uturn.backward")
+                }
+                .buttonStyle(.bordered)
+                .labelStyle(.iconOnly)
+                .disabled(!history.canUndo)
+                .help(undoHelp)
+
+                Button(action: redo) {
+                    Label(String(localized: "Redo"), systemImage: "arrow.uturn.forward")
+                }
+                .buttonStyle(.bordered)
+                .labelStyle(.iconOnly)
+                .disabled(!history.canRedo)
+                .help(redoHelp)
+
                 Spacer()
 
                 // Hint yields first when the row is tight (layoutPriority -1),
@@ -189,6 +227,13 @@ struct EditorView: View {
             .joined(separator: " · ")
     }
 
+    /// The toolbar buttons carry no key equivalent themselves (the hidden ones
+    /// do), so their tooltips are what advertise ⌘Z / ⇧⌘Z. Built as plain
+    /// strings, like `toolPickerHelp`, to keep the key glyphs out of the
+    /// localized value.
+    private var undoHelp: String { String(localized: "Undo") + " ⌘Z" }
+    private var redoHelp: String { String(localized: "Redo") + " ⇧⌘Z" }
+
     /// Invisible buttons that exist only to own key equivalents: a segmented
     /// `Picker` can't carry one per segment, and the canvas can't reliably hold
     /// keyboard focus for an `.onKeyPress`. Rendered inside the picker's
@@ -210,6 +255,17 @@ struct EditorView: View {
             Button("") { deleteSelection() }
                 .keyboardShortcut(.deleteForward, modifiers: [])
                 .disabled(focusedField != nil || !hasSelection)
+
+            // ⌘Z / ⇧⌘Z. Disabled while a text field has focus so the key
+            // equivalent goes unclaimed and AppKit's own field-editor undo
+            // handles it — one stack at a time, never two competing ones.
+            Button("") { undo() }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(focusedField != nil || !history.canUndo)
+
+            Button("") { redo() }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(focusedField != nil || !history.canRedo)
         }
         .opacity(0)
         .allowsHitTesting(false)
@@ -277,18 +333,31 @@ struct EditorView: View {
 
     /// Drag-to-move a pin. Translation-based so grabbing anywhere on the marker
     /// (e.g. the head of a pointer whose anchor is the tip) never makes it jump.
+    ///
+    /// The whole gesture is one undo entry: the pre-drag state is captured on
+    /// the first event and recorded on release. A plain click (this gesture has
+    /// no minimum distance) moves nothing, so it records nothing.
     private func pinDrag(_ pin: Binding<Pin>, in fitted: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                if dragStartPosition == nil {
+                    flushTextEdit()
+                    dragUndoSnapshot = snapshot()
+                    dragStartPosition = pin.wrappedValue.position
+                }
                 selectPin(pin.wrappedValue.id)
                 let base = dragStartPosition ?? pin.wrappedValue.position
-                if dragStartPosition == nil { dragStartPosition = base }
                 pin.wrappedValue.position = clamp01(CGPoint(
                     x: base.x + value.translation.width / fitted.width,
                     y: base.y + value.translation.height / fitted.height
                 ))
             }
-            .onEnded { _ in dragStartPosition = nil }
+            .onEnded { _ in
+                dragStartPosition = nil
+                guard let before = dragUndoSnapshot else { return }
+                dragUndoSnapshot = nil
+                if snapshot() != before { history.record(before) }
+            }
     }
 
     /// One drag gesture for the whole canvas, branching on the active tool. A
@@ -466,9 +535,14 @@ struct EditorView: View {
     private func addPin(at location: CGPoint, in fitted: CGRect) {
         let p = normalize(location, in: fitted)
         guard (0...1).contains(p.x), (0...1).contains(p.y) else { return }
-        let pin = Pin(number: pins.count + 1, position: p)
-        pins.append(pin)
-        selectPin(pin.id)
+        // Drawing on the canvas ends any typing session, so ⌘Z (and ⌫) go back
+        // to acting on the annotations instead of on the field editor.
+        focusedField = nil
+        withUndo {
+            let pin = Pin(number: pins.count + 1, position: p)
+            pins.append(pin)
+            selectPin(pin.id)
+        }
     }
 
     private func updateDraft(kind: Markup.Kind, value: DragGesture.Value, in fitted: CGRect) {
@@ -489,8 +563,11 @@ struct EditorView: View {
         shape.end = clamp01(normalize(value.location, in: fitted))
         // Ignore accidental micro-drags.
         guard hypot(shape.end.x - shape.start.x, shape.end.y - shape.start.y) > 0.01 else { return }
-        shapes.append(shape)
-        selectShape(shape.id)
+        focusedField = nil   // see `addPin`
+        withUndo {
+            shapes.append(shape)
+            selectShape(shape.id)
+        }
     }
 
     private func selectPin(_ id: Pin.ID) {
@@ -520,15 +597,19 @@ struct EditorView: View {
     }
 
     private func removePin(_ pin: Pin) {
-        pins.removeAll { $0.id == pin.id }
-        // Renumber so the list stays 1..n.
-        for index in pins.indices { pins[index].number = index + 1 }
-        if selectedPinID == pin.id { selectedPinID = nil }
+        withUndo {
+            pins.removeAll { $0.id == pin.id }
+            // Renumber so the list stays 1..n.
+            for index in pins.indices { pins[index].number = index + 1 }
+            if selectedPinID == pin.id { selectedPinID = nil }
+        }
     }
 
     private func removeShape(_ shape: Markup) {
-        shapes.removeAll { $0.id == shape.id }
-        if selectedShapeID == shape.id { selectedShapeID = nil }
+        withUndo {
+            shapes.removeAll { $0.id == shape.id }
+            if selectedShapeID == shape.id { selectedShapeID = nil }
+        }
     }
 
     private func copy() {
@@ -567,6 +648,90 @@ struct EditorView: View {
         onPersist(pins, shapes, context, image)
     }
 
+    // MARK: - Undo / redo
+
+    private func snapshot() -> EditorSnapshot {
+        EditorSnapshot(
+            image: image,
+            pins: pins,
+            shapes: shapes,
+            context: context,
+            selectedPinID: selectedPinID,
+            selectedShapeID: selectedShapeID
+        )
+    }
+
+    /// Runs an editing action as one undo step.
+    ///
+    /// The pre-action state is compared to the post-action state and only
+    /// recorded if the document actually changed, so every caller can keep its
+    /// own guards and early returns without also having to reason about the
+    /// history. Not re-entrant: wrap the innermost mutation only, or a single
+    /// user action lands on the stack twice (`deleteSelection` delegates to
+    /// `removePin`/`removeShape`, which are the wrapped ones).
+    private func withUndo(_ body: () -> Void) {
+        flushTextEdit()
+        let before = snapshot()
+        body()
+        guard snapshot() != before else { return }
+        history.record(before)
+    }
+
+    /// Closes the current typing session, if any, and folds it into one undo
+    /// entry.
+    ///
+    /// Marker notes and the instructions field are edited through AppKit text
+    /// controls that already own a per-keystroke undo stack. Rather than run a
+    /// second stack against them, the editor stays out of the way while a field
+    /// has focus (⌘Z goes to the field editor) and records the whole editing
+    /// session as a single entry once focus moves on — so ⌘Z outside a field
+    /// steps over "typed a note", not over one character at a time.
+    private func flushTextEdit() {
+        guard let before = textEditSnapshot else { return }
+        let now = snapshot()
+        // A session interrupted by another undoable action restarts from the
+        // state that action is about to build on, so the two never overlap.
+        textEditSnapshot = focusedField != nil ? now : nil
+        if now != before { history.record(before) }
+    }
+
+    /// Both steps are inert while cropping: the crop overlay is modal and has
+    /// its own Cancel, and `cropRect` isn't part of the history.
+    private func undo() {
+        guard !isCropping else { return }
+        flushTextEdit()
+        let current = snapshot()
+        guard let previous = history.undo(current: current) else { return }
+        restore(previous)
+    }
+
+    private func redo() {
+        guard !isCropping else { return }
+        flushTextEdit()
+        let current = snapshot()
+        guard let next = history.redo(current: current) else { return }
+        restore(next)
+    }
+
+    private func restore(_ state: EditorSnapshot) {
+        // Drop anything half-finished: a snapshot never contains a live draft
+        // or an in-flight drag.
+        draft = nil
+        dragStartPosition = nil
+        dragUndoSnapshot = nil
+
+        image = state.image
+        pins = state.pins
+        shapes = state.shapes
+        context = state.context
+        // Selection travels with the snapshot, but is re-validated against the
+        // restored arrays: it must never point at something that isn't there.
+        selectedPinID = state.pins.contains { $0.id == state.selectedPinID } ? state.selectedPinID : nil
+        selectedShapeID = state.shapes.contains { $0.id == state.selectedShapeID } ? state.selectedShapeID : nil
+        // The restored text is the baseline for whatever gets typed next.
+        textEditSnapshot = focusedField != nil ? snapshot() : nil
+    }
+
     // MARK: - Crop
 
     private func enterCropMode() {
@@ -580,9 +745,16 @@ struct EditorView: View {
         withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
     }
 
+    /// Undoable wrapper around `performCrop()`. `isCropping` isn't part of a
+    /// snapshot, so the early-outs below — identity crop, unreadable image —
+    /// change nothing and record nothing.
+    private func applyCrop() {
+        withUndo { performCrop() }
+    }
+
     /// Applies the current crop rect to the base image and remaps annotations
     /// into the cropped frame. No-op if the rect covers ~the whole image.
-    private func applyCrop() {
+    private func performCrop() {
         let c = cropRect
         // Treat as no-op when within epsilon of the full image, so the user can
         // hit Done on the default rect without an identity crop round-trip.
