@@ -17,6 +17,8 @@ final class ScreenshotStore: ObservableObject {
     @Published var searchQuery = ""
     @Published private(set) var watchedFolderURL: URL
     @Published private(set) var isLoading = false
+    /// `false` once a scan failed — folder deleted, unmounted, or unreadable.
+    @Published private(set) var watchedFolderIsReadable = true
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var followsSystemScreenshotLocation: Bool
     @Published private(set) var favoritePaths: Set<String>
@@ -77,6 +79,19 @@ final class ScreenshotStore: ObservableObject {
         value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
+    /// True when at least one filter — date, favorites, or search — is narrowing
+    /// the library, so an empty shelf can point at the filters rather than at
+    /// the folder.
+    var hasActiveFilters: Bool {
+        selectedDateFilter != .all || showsFavoritesOnly || normalizedSearchQuery != nil
+    }
+
+    func resetFilters() {
+        selectedDateFilter = .all
+        showsFavoritesOnly = false
+        searchQuery = ""
+    }
+
     var groupedScreenshots: [(section: ScreenshotSection, items: [ScreenshotItem])] {
         ScreenshotSection.allCases.compactMap { section in
             let items = filteredScreenshots.filter { ScreenshotSection.section(for: $0.createdAt) == section }
@@ -100,9 +115,11 @@ final class ScreenshotStore: ObservableObject {
             screenshots = try await service.scanFolder(at: watchedFolderURL)
             pruneMissingFavorites()
             pruneMissingCustomTitles()
+            watchedFolderIsReadable = true
             lastErrorMessage = nil
         } catch {
             screenshots = []
+            watchedFolderIsReadable = false
             lastErrorMessage = String(localized: "store.error.read", defaultValue: "Couldn’t read \(watchedFolderURL.lastPathComponent).")
         }
     }
