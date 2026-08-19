@@ -35,6 +35,13 @@ enum EditorTool: String, CaseIterable, Identifiable {
     }
 }
 
+/// The editor's text inputs, tracked so keyboard shortcuts can stand down
+/// while the user is typing.
+private enum EditorField: Hashable {
+    case note(Pin.ID)
+    case context
+}
+
 struct EditorView: View {
     /// The editor's base image. Mutable: a crop replaces it in place. Kept at
     /// native pixel size (`.size` == pixels) so export renders at full res.
@@ -59,6 +66,9 @@ struct EditorView: View {
     @State private var draft: Markup?
     @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
+    /// Which text field is being edited, if any. Only used to step aside: the
+    /// Delete key equivalent is disabled while typing so ⌫ keeps editing text.
+    @FocusState private var focusedField: EditorField?
 
     // Crop mode state. `cropRect` is normalized (0...1, top-left origin), same
     // convention as pins/markups.
@@ -169,7 +179,8 @@ struct EditorView: View {
     }
 
     /// Invisible buttons that exist only to own key equivalents: a segmented
-    /// `Picker` can't carry one per segment. Rendered inside the picker's
+    /// `Picker` can't carry one per segment, and the canvas can't reliably hold
+    /// keyboard focus for an `.onKeyPress`. Rendered inside the picker's
     /// background with hit-testing off.
     private var hiddenShortcuts: some View {
         ZStack {
@@ -177,6 +188,17 @@ struct EditorView: View {
                 Button("") { tool = item }
                     .keyboardShortcut(item.shortcut, modifiers: .command)
             }
+
+            // ⌫ / ⌦ remove the selected marker or annotation. Disabled while a
+            // text field has focus — a disabled button doesn't claim its key
+            // equivalent, so ⌫ keeps deleting characters while typing.
+            Button("") { deleteSelection() }
+                .keyboardShortcut(.delete, modifiers: [])
+                .disabled(focusedField != nil || !hasSelection)
+
+            Button("") { deleteSelection() }
+                .keyboardShortcut(.deleteForward, modifiers: [])
+                .disabled(focusedField != nil || !hasSelection)
         }
         .opacity(0)
         .allowsHitTesting(false)
@@ -321,6 +343,7 @@ struct EditorView: View {
             Text("Instructions for the agent")
                 .font(.headline)
             TextEditor(text: $context)
+                .focused($focusedField, equals: .context)
                 .font(.body)
                 .frame(minHeight: 70, maxHeight: 120)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
@@ -383,6 +406,7 @@ struct EditorView: View {
 
             TextField("Describe this marker…", text: pin.note)
                 .textFieldStyle(.roundedBorder)
+                .focused($focusedField, equals: .note(pin.wrappedValue.id))
 
             Button {
                 removePin(pin.wrappedValue)
@@ -466,6 +490,22 @@ struct EditorView: View {
     private func selectShape(_ id: Markup.ID) {
         selectedShapeID = id
         selectedPinID = nil
+    }
+
+    private var hasSelection: Bool {
+        selectedPinID != nil || selectedShapeID != nil
+    }
+
+    /// Removes whatever is currently selected, from wherever it was selected —
+    /// canvas or side panel. `removePin` already renumbers the remaining
+    /// markers, and both removers clear the selection they consumed.
+    private func deleteSelection() {
+        guard !isCropping else { return }
+        if let id = selectedPinID, let pin = pins.first(where: { $0.id == id }) {
+            removePin(pin)
+        } else if let id = selectedShapeID, let shape = shapes.first(where: { $0.id == id }) {
+            removeShape(shape)
+        }
     }
 
     private func removePin(_ pin: Pin) {
