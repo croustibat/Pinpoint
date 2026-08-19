@@ -17,15 +17,18 @@ final class ScreenshotDetailWindowController: NSWindowController, NSWindowDelega
             backing: .buffered,
             defer: false
         )
-        window.title = item.filename
+        window.title = store.displayTitle(for: item)
         window.isReleasedWhenClosed = false
 
         super.init(window: window)
         window.delegate = self
 
-        let root = ScreenshotDetailContainer(item: item, store: store) { [weak window] in
-            window?.close()
-        }
+        let root = ScreenshotDetailContainer(
+            item: item,
+            store: store,
+            onTitleChange: { [weak window] title in window?.title = title },
+            onClose: { [weak window] in window?.close() }
+        )
         .environmentObject(store)
         window.contentView = NSHostingView(rootView: root)
         window.center()
@@ -44,11 +47,20 @@ final class ScreenshotDetailWindowController: NSWindowController, NSWindowDelega
 private struct ScreenshotDetailContainer: View {
     @ObservedObject var store: ScreenshotStore
     let item: ScreenshotItem
+    /// Keeps the window title in sync when the display title is edited from the
+    /// shelf while this window is open.
+    let onTitleChange: (String) -> Void
     let onClose: () -> Void
 
-    init(item: ScreenshotItem, store: ScreenshotStore, onClose: @escaping () -> Void) {
+    init(
+        item: ScreenshotItem,
+        store: ScreenshotStore,
+        onTitleChange: @escaping (String) -> Void,
+        onClose: @escaping () -> Void
+    ) {
         self.item = item
         self.store = store
+        self.onTitleChange = onTitleChange
         self.onClose = onClose
     }
 
@@ -68,5 +80,8 @@ private struct ScreenshotDetailContainer: View {
             },
             onClose: onClose
         )
+        .onChange(of: store.displayTitle(for: item)) { _, newTitle in
+            onTitleChange(newTitle)
+        }
     }
 }

@@ -23,6 +23,23 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .rectangle: return "rectangle"
         }
     }
+
+    /// Used with ⌘. A bare digit or letter would be swallowed by the marker
+    /// note fields and the instructions editor while typing.
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .pin: return "1"
+        case .arrow: return "2"
+        case .rectangle: return "3"
+        }
+    }
+}
+
+/// The editor's text inputs, tracked so keyboard shortcuts can stand down
+/// while the user is typing.
+private enum EditorField: Hashable {
+    case note(Pin.ID)
+    case context
 }
 
 struct EditorView: View {
@@ -49,6 +66,12 @@ struct EditorView: View {
     @State private var draft: Markup?
     @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
+    /// Non-nil while an export failure is being shown. Copy and save used to
+    /// swallow their errors and still report success.
+    @State private var exportError: String?
+    /// Which text field is being edited, if any. Only used to step aside: the
+    /// Delete key equivalent is disabled while typing so ⌫ keeps editing text.
+    @FocusState private var focusedField: EditorField?
 
     // Crop mode state. `cropRect` is normalized (0...1, top-left origin), same
     // convention as pins/markups.
@@ -88,6 +111,14 @@ struct EditorView: View {
         }
         .frame(minWidth: 680, minHeight: 440)
         .onDisappear { onPersist(pins, shapes, context, image) }
+        .alert(
+            String(localized: "Export failed"),
+            isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+        ) {
+            Button(String(localized: "OK"), role: .cancel) { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
+        }
     }
 
     // MARK: - Toolbar
@@ -121,6 +152,8 @@ struct EditorView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
+                .help(toolPickerHelp)
+                .background(hiddenShortcuts)
 
                 Button {
                     enterCropMode()
@@ -144,6 +177,43 @@ struct EditorView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// One tooltip for the whole picker: a segmented control's segments carry no
+    /// tooltip of their own on macOS, so the picker advertises every tool and
+    /// its key equivalent at once. Built from the localized labels, so it can't
+    /// drift from what the segments show.
+    private var toolPickerHelp: String {
+        EditorTool.allCases
+            .map { "\($0.label) ⌘\($0.shortcut.character)" }
+            .joined(separator: " · ")
+    }
+
+    /// Invisible buttons that exist only to own key equivalents: a segmented
+    /// `Picker` can't carry one per segment, and the canvas can't reliably hold
+    /// keyboard focus for an `.onKeyPress`. Rendered inside the picker's
+    /// background with hit-testing off.
+    private var hiddenShortcuts: some View {
+        ZStack {
+            ForEach(EditorTool.allCases) { item in
+                Button("") { tool = item }
+                    .keyboardShortcut(item.shortcut, modifiers: .command)
+            }
+
+            // ⌫ / ⌦ remove the selected marker or annotation. Disabled while a
+            // text field has focus — a disabled button doesn't claim its key
+            // equivalent, so ⌫ keeps deleting characters while typing.
+            Button("") { deleteSelection() }
+                .keyboardShortcut(.delete, modifiers: [])
+                .disabled(focusedField != nil || !hasSelection)
+
+            Button("") { deleteSelection() }
+                .keyboardShortcut(.deleteForward, modifiers: [])
+                .disabled(focusedField != nil || !hasSelection)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     private var toolHint: String {
@@ -284,6 +354,7 @@ struct EditorView: View {
             Text("Instructions for the agent")
                 .font(.headline)
             TextEditor(text: $context)
+                .focused($focusedField, equals: .context)
                 .font(.body)
                 .frame(minHeight: 70, maxHeight: 120)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
@@ -346,6 +417,7 @@ struct EditorView: View {
 
             TextField("Describe this marker…", text: pin.note)
                 .textFieldStyle(.roundedBorder)
+                .focused($focusedField, equals: .note(pin.wrappedValue.id))
 
             Button {
                 removePin(pin.wrappedValue)
@@ -431,6 +503,22 @@ struct EditorView: View {
         selectedPinID = nil
     }
 
+    private var hasSelection: Bool {
+        selectedPinID != nil || selectedShapeID != nil
+    }
+
+    /// Removes whatever is currently selected, from wherever it was selected —
+    /// canvas or side panel. `removePin` already renumbers the remaining
+    /// markers, and both removers clear the selection they consumed.
+    private func deleteSelection() {
+        guard !isCropping else { return }
+        if let id = selectedPinID, let pin = pins.first(where: { $0.id == id }) {
+            removePin(pin)
+        } else if let id = selectedShapeID, let shape = shapes.first(where: { $0.id == id }) {
+            removeShape(shape)
+        }
+    }
+
     private func removePin(_ pin: Pin) {
         pins.removeAll { $0.id == pin.id }
         // Renumber so the list stays 1..n.
@@ -444,8 +532,11 @@ struct EditorView: View {
     }
 
     private func copy() {
-        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
-                                  style: pinStyle, includeLegend: includeLegend)
+        guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
+                                        style: pinStyle, includeLegend: includeLegend) else {
+            exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
+            return
+        }
         onPersist(pins, shapes, context, image)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
@@ -463,8 +554,16 @@ struct EditorView: View {
         // Full resolution here (no cap): the file is meant to be attached/kept,
         // unlike the pasteboard image which is downscaled to stay pasteable.
         guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
-                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else { return }
-        try? png.write(to: url)
+                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else {
+            exportError = String(localized: "The annotated image couldn’t be rendered.")
+            return
+        }
+        do {
+            try png.write(to: url)
+        } catch {
+            exportError = error.localizedDescription
+            return
+        }
         onPersist(pins, shapes, context, image)
     }
 

@@ -229,6 +229,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de copier les fichiers sélectionnés." } }
       }
     },
+    "Export failed" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Échec de l’export" } }
+      }
+    },
     "Couldn’t save the watched folder." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’enregistrer le dossier surveillé." } }
@@ -511,9 +516,19 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture d’écran" } }
       }
     },
+    "Nothing was written to the clipboard. The annotated image couldn’t be rendered." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien n’a été écrit dans le presse-papiers. L’image annotée n’a pas pu être générée." } }
+      }
+    },
     "Off" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivé" } }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
       }
     },
     "Older" : {
@@ -721,6 +736,11 @@
     "The tip marks the exact pixel." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "La pointe désigne le pixel exact." } }
+      }
+    },
+    "The annotated image couldn’t be rendered." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "L’image annotée n’a pas pu être générée." } }
       }
     },
     "This month" : {

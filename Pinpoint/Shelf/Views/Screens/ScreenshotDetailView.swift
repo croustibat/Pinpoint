@@ -59,13 +59,14 @@ struct ScreenshotDetailView: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.filename)
+                Text(store.displayTitle(for: item))
                     .font(.title3.weight(.semibold))
                     .lineLimit(1)
 
-                Text(item.url.deletingLastPathComponent().lastPathComponent)
+                Text(headerSubtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -84,6 +85,14 @@ struct ScreenshotDetailView: View {
             .help("Close")
         }
         .padding(16)
+    }
+
+    /// The containing folder, prefixed with the file name whenever a custom
+    /// title took its place in the heading so it stays visible somewhere.
+    private var headerSubtitle: String {
+        let folder = item.url.deletingLastPathComponent().lastPathComponent
+        guard store.displayTitle(for: item) != item.filename else { return folder }
+        return "\(item.filename) · \(folder)"
     }
 
     private func close() {
