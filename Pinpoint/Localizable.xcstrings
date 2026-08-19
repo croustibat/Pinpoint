@@ -605,6 +605,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Captures récentes" } }
       }
     },
+    "Redo" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rétablir" } }
+      }
+    },
     "Remove from favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer des favoris" } }
@@ -761,6 +766,11 @@
     "Tool" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Outil" } }
+      }
+    },
+    "Undo" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } }
       }
     },
     "Unknown" : {
