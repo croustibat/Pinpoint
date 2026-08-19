@@ -160,6 +160,7 @@ final class RegionSelectionView: NSView {
         gesture = .none
         pressPoint = nil
         lastDragPoint = nil
+        defer { announceSelection() }
 
         switch finished {
         case .drawing:
@@ -210,6 +211,7 @@ final class RegionSelectionView: NSView {
         guard isAdjusting, case .none = gesture, let selection else { return }
         self.selection = SelectionHandle.moved(selection, dx: dx, dy: dy, in: bounds)
         needsDisplay = true
+        announceSelection()
     }
 
     /// Hands the settled selection over in global coordinates. Silent when
@@ -221,6 +223,43 @@ final class RegionSelectionView: NSView {
         let anchor = globalAnchor
             ?? window.convertPoint(toScreen: CGPoint(x: selection.midX, y: selection.midY))
         onComplete?(globalRect, anchor)
+    }
+
+    // MARK: - Accessibility
+
+    /// The overlay is one element as far as VoiceOver is concerned: it has no
+    /// subviews, everything it shows is drawn by hand, and the one thing worth
+    /// announcing is how big the rectangle currently is.
+    override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+
+    override func accessibilityLabel() -> String? {
+        String(localized: "a11y.region.selection", defaultValue: "Region selection")
+    }
+
+    override func accessibilityValue() -> Any? {
+        guard let selection else {
+            return String(localized: "a11y.region.empty", defaultValue: "No region selected yet")
+        }
+        return String(
+            localized: "a11y.region.size",
+            defaultValue: "\(Int(selection.width.rounded())) by \(Int(selection.height.rounded()))"
+        )
+    }
+
+    /// The same sentence the on-screen hint carries, so the keyboard steps are
+    /// reachable without reading the badge.
+    override func accessibilityHelp() -> String? {
+        isAdjusting
+            ? String(localized: "Drag or nudge with arrows · ↵ to capture · Esc to cancel")
+            : String(localized: "Drag a rectangle · Esc to cancel")
+    }
+
+    /// Announces the new size once a gesture settles. Deliberately not called
+    /// per drag event: VoiceOver would read a new figure every frame.
+    private func announceSelection() {
+        NSAccessibility.post(element: self, notification: .valueChanged)
     }
 
     // MARK: - Cursor
@@ -317,7 +356,7 @@ final class RegionSelectionView: NSView {
     private func drawDimensions(_ sel: CGRect) {
         let text = "\(Int(sel.width.rounded())) × \(Int(sel.height.rounded()))" as NSString
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold),
             .foregroundColor: NSColor.white
         ]
         let textSize = text.size(withAttributes: attrs)
@@ -328,7 +367,9 @@ final class RegionSelectionView: NSView {
         if origin.y < bounds.minY + 4 { origin.y = sel.minY + 8 } // no room below → inside
         let rect = CGRect(origin: origin, size: badge)
 
-        NSColor.black.withAlphaComponent(0.75).setFill()
+        // Nearly opaque: the badge sits over whatever the user is framing, and
+        // white-on-translucent-black was only legible over dark content.
+        NSColor.black.withAlphaComponent(0.88).setFill()
         NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
         text.draw(at: CGPoint(x: rect.minX + padX, y: rect.minY + padY), withAttributes: attrs)
     }
@@ -337,7 +378,7 @@ final class RegionSelectionView: NSView {
         let text = string as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .medium),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.9)
+            .foregroundColor: NSColor.white
         ]
         let textSize = text.size(withAttributes: attrs)
         let padX: CGFloat = 14, padY: CGFloat = 8
@@ -348,7 +389,9 @@ final class RegionSelectionView: NSView {
             width: badge.width,
             height: badge.height
         )
-        NSColor.black.withAlphaComponent(0.55).setFill()
+        // Same reasoning as the dimensions badge: 55 % black under 90 % white
+        // left the hint hard to read over a light window.
+        NSColor.black.withAlphaComponent(0.82).setFill()
         NSBezierPath(roundedRect: rect, xRadius: 10, yRadius: 10).fill()
         text.draw(at: CGPoint(x: rect.minX + padX, y: rect.minY + padY), withAttributes: attrs)
     }
