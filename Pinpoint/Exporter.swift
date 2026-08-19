@@ -12,12 +12,14 @@ enum Exporter {
         base.draw(in: NSRect(origin: .zero, size: size),
                   from: .zero, operation: .copy, fraction: 1.0)
 
-        let lineWidth = max(3, size.width * 0.004)
+        // Drawn at 1:1 into the image's own pixel grid, so the metrics need
+        // no scaling here. `EditorView` builds the same metrics with the
+        // canvas' scale factor, which is what makes the preview WYSIWYG.
+        let metrics = MarkupMetrics(imageWidth: size.width)
         for shape in shapes {
-            drawMarkup(shape, in: size, lineWidth: lineWidth)
+            drawMarkup(shape, in: size, metrics: metrics)
         }
 
-        let radius = max(16, size.width * 0.014)
         for pin in pins {
             // Pin position is the marked point (top-left origin); NSImage
             // drawing is bottom-left, so flip y.
@@ -27,16 +29,17 @@ enum Exporter {
             )
             // Keep the badge fully inside the image when the point is near an
             // edge; the exact point is still carried by the % in the text.
-            let drawAnchor = clampedMarkerAnchor(anchor, radius: radius, style: style, in: size)
-            drawMarker(number: pin.number, anchor: drawAnchor, radius: radius, style: style)
+            let drawAnchor = clampedMarkerAnchor(anchor, metrics: metrics, style: style, in: size)
+            drawMarker(number: pin.number, anchor: drawAnchor, metrics: metrics, style: style)
         }
 
         result.unlockFocus()
         return result
     }
 
-    private static func drawMarkup(_ shape: Markup, in size: CGSize, lineWidth: CGFloat) {
+    private static func drawMarkup(_ shape: Markup, in size: CGSize, metrics: MarkupMetrics) {
         NSColor.pinpointVermillon.setStroke()
+        let lineWidth = metrics.lineWidth
 
         // Normalized (top-left origin) → image space (bottom-left origin).
         func px(_ p: CGPoint) -> CGPoint {
@@ -52,7 +55,8 @@ enum Exporter {
                 width: r.width * size.width,
                 height: r.height * size.height
             )
-            let path = NSBezierPath(roundedRect: rect, xRadius: lineWidth, yRadius: lineWidth)
+            let path = NSBezierPath(roundedRect: rect,
+                                    xRadius: metrics.cornerRadius, yRadius: metrics.cornerRadius)
             path.lineWidth = lineWidth
             path.stroke()
 
@@ -67,8 +71,8 @@ enum Exporter {
             path.line(to: end)
 
             let angle = atan2(end.y - start.y, end.x - start.x)
-            let headLength = max(14, size.width * 0.018)
-            let spread = CGFloat.pi / 6.5
+            let headLength = metrics.arrowHeadLength
+            let spread = MarkupMetrics.arrowHeadSpread
 
             let leftAngle = angle - spread
             let rightAngle = angle + spread
@@ -88,15 +92,15 @@ enum Exporter {
     /// space, y up). For the pointer the tip is at the anchor and the head sits
     /// above it (+y); disc/outline are centred on the anchor. Mirrors the
     /// clamping done on screen in `EditorView` so export and editor agree.
-    private static func clampedMarkerAnchor(_ anchor: CGPoint, radius: CGFloat, style: PinStyle, in size: CGSize) -> CGPoint {
-        let side = radius + max(2, radius * 0.16)  // half-width incl. ring
+    private static func clampedMarkerAnchor(_ anchor: CGPoint, metrics: MarkupMetrics, style: PinStyle, in size: CGSize) -> CGPoint {
+        let side = metrics.badgeHalfSide  // half-width incl. ring
         let x = clamp(anchor.x, side, size.width - side)
         switch style {
         case .disc, .outline:
             return CGPoint(x: x, y: clamp(anchor.y, side, size.height - side))
         case .pointer:
-            // The head reaches anchor.y + 3·radius upward; the tip is the low point.
-            return CGPoint(x: x, y: clamp(anchor.y, 0, size.height - radius * 3))
+            // The head reaches anchor.y + pointerHeight upward; the tip is the low point.
+            return CGPoint(x: x, y: clamp(anchor.y, 0, size.height - metrics.pointerHeight))
         }
     }
 
@@ -107,9 +111,10 @@ enum Exporter {
     /// Draws a numbered marker at `anchor` (image space) in the chosen style.
     /// `anchor` is the marker centre for disc/outline and the tip for pointer —
     /// matching the on-screen `PinMarker` so the export looks identical.
-    private static func drawMarker(number: Int, anchor: CGPoint, radius: CGFloat, style: PinStyle) {
+    private static func drawMarker(number: Int, anchor: CGPoint, metrics: MarkupMetrics, style: PinStyle) {
         let vermillon = NSColor.pinpointVermillon
-        let ringWidth = max(2, radius * 0.16)
+        let radius = metrics.pinRadius
+        let ringWidth = metrics.ringWidth
 
         switch style {
         case .disc:
@@ -120,7 +125,7 @@ enum Exporter {
             NSColor.white.setStroke()
             circle.lineWidth = ringWidth
             circle.stroke()
-            drawNumber(number, center: anchor, radius: radius, color: .white)
+            drawNumber(number, center: anchor, fontSize: metrics.numberFontSize, color: .white)
 
         case .outline:
             let rect = NSRect(x: anchor.x - radius, y: anchor.y - radius, width: radius * 2, height: radius * 2)
@@ -132,11 +137,11 @@ enum Exporter {
             vermillon.setStroke()
             ring.lineWidth = ringWidth
             ring.stroke()
-            drawNumber(number, center: anchor, radius: radius, color: vermillon)
+            drawNumber(number, center: anchor, fontSize: metrics.numberFontSize, color: vermillon)
 
         case .pointer:
             // Tip at the anchor; head above it (image space y grows upward).
-            let headCenter = CGPoint(x: anchor.x, y: anchor.y + radius * 2.0)
+            let headCenter = CGPoint(x: anchor.x, y: anchor.y + metrics.pointerHeadOffset)
             let baseY = headCenter.y - radius * 0.55
             let halfWidth = radius * 0.7
 
@@ -155,13 +160,13 @@ enum Exporter {
             NSColor.white.setStroke()
             head.lineWidth = ringWidth
             head.stroke()
-            drawNumber(number, center: headCenter, radius: radius, color: .white)
+            drawNumber(number, center: headCenter, fontSize: metrics.numberFontSize, color: .white)
         }
     }
 
-    private static func drawNumber(_ number: Int, center: CGPoint, radius: CGFloat, color: NSColor) {
+    private static func drawNumber(_ number: Int, center: CGPoint, fontSize: CGFloat, color: NSColor) {
         let label = "\(number)" as NSString
-        let font = NSFont.systemFont(ofSize: radius * 1.05, weight: .bold)
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: color
