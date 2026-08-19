@@ -15,9 +15,17 @@ final class RegionSelectionController {
     private var continuation: CheckedContinuation<CaptureRegion?, Never>?
 
     /// Shows the overlay and resolves with the chosen region, or `nil` if the
-    /// user cancelled (Esc, or a click without a meaningful drag).
+    /// user cancelled (Esc, or a click without a meaningful drag) — or if screen
+    /// recording isn't allowed.
+    ///
+    /// The permission is checked *before* anything is put on screen: otherwise the
+    /// user drags a region, waits out the countdown, and only then hits a failed
+    /// capture. A `nil` here unwinds the whole flow (no overlay, no timer) and the
+    /// explanatory alert has already been shown by `ScreenCapture`.
     func selectRegion() async -> CaptureRegion? {
-        await withCheckedContinuation { continuation in
+        guard await ScreenCapture.ensurePermission() else { return nil }
+
+        return await withCheckedContinuation { continuation in
             self.continuation = continuation
             present()
         }

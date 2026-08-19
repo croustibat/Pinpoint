@@ -487,6 +487,30 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pause avant la capture pour disposer les éléments ou ouvrir un menu." } }
       }
     },
+    "permission.screenRecording.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Captures stay blocked until Pinpoint is allowed to record the screen. Open System Settings ▸ Privacy & Security ▸ Screen Recording, turn Pinpoint on, then relaunch the app." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les captures resteront impossibles tant que Pinpoint n’est pas autorisé à enregistrer l’écran. Ouvrez Réglages Système ▸ Confidentialité et sécurité ▸ Enregistrement de l’écran, activez Pinpoint, puis relancez l’application." } }
+      }
+    },
+    "permission.screenRecording.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint isn’t allowed to record the screen." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint n’est pas autorisé à enregistrer l’écran." } }
+      }
+    },
+    "permission.screenRecording.openSettings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les Réglages Système" } }
+      }
+    },
+    "permission.screenRecording.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t record the screen" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint ne peut pas enregistrer l’écran" } }
+      }
+    },
     "Pinpoint Settings" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages Pinpoint" } }

@@ -329,6 +329,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor
     private func presentCaptureError(_ error: Error) {
+        // Missing screen-recording permission: the preflight already presented the
+        // dedicated alert (with the System Settings link), so don't stack a second.
+        guard !ScreenCapture.isPermissionError(error) else { return }
+
         let alert = NSAlert()
         alert.messageText = String(localized: "Capture failed")
         alert.informativeText = String(
