@@ -320,10 +320,34 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure la légende dans l’image" } }
       }
     },
+    "export.coordinates" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Positions are given in pixels from the top-left corner (0, 0), then as a percentage of the image size." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les positions sont données en pixels depuis le coin haut-gauche (0, 0), puis en pourcentage de la taille de l’image." } }
+      }
+    },
     "export.header" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "# Annotated capture — %lld×%lld px" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "# Capture annotée — %lld×%lld px" } }
+      }
+    },
+    "export.markers.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… correspondent aux numéros dessinés sur l’image ; le code entre crochets est un identifiant stable de ce repère." } }
+      }
+    },
+    "export.shapes.heading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shapes" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Formes" } }
+      }
+    },
+    "export.shapes.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unnumbered outlines drawn on the image: rectangles are listed top-left → bottom-right, arrows tail → tip, followed by the size of their bounding box." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tracés non numérotés dessinés sur l’image : les rectangles sont donnés haut-gauche → bas-droite, les flèches base → pointe, suivis de la taille de leur boîte englobante." } }
       }
     },
     "Favorites" : {

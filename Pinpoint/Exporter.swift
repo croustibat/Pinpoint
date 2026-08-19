@@ -176,32 +176,70 @@ enum Exporter {
         label.draw(in: textRect, withAttributes: attrs)
     }
 
-    /// Builds the agent-ready text block referencing each numbered pin.
+    /// Builds the agent-ready text block referencing each annotation.
     ///
-    /// Markdown-structured so an AI agent can parse it: image dimensions, each
-    /// marker with its description and approximate position (percentage of the
-    /// image, top-left origin) so the agent can locate it even without reading
-    /// the pixels, then the user's instructions in their own section.
-    static func buildText(pins: [Pin], context: String, imageSize: CGSize) -> String {
+    /// Markdown-structured so an AI agent can parse it: image dimensions, then
+    /// one line per numbered marker and one per shape (arrow/rectangle), each
+    /// with a stable ID and its position both in pixels and in percent of the
+    /// image (top-left origin), so the agent can locate every annotation
+    /// without reading the pixels — then the user's instructions in their own
+    /// section.
+    static func buildText(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize) -> String {
         let width = Int(imageSize.width.rounded())
         let height = Int(imageSize.height.rounded())
+        let orderedPins = pins.sorted { $0.number < $1.number }
 
         var lines: [String] = []
-        lines.append(String(localized: "export.header", defaultValue: "# Annotated capture — \(width)×\(height) px"))
+        // POSIX locale so the dimensions stay raw digits: the user's locale would
+        // group them ("2 560×1 440"), which is noise for the agent reading this.
+        lines.append(String(localized: "export.header",
+                            defaultValue: "# Annotated capture — \(width)×\(height) px",
+                            locale: Locale(identifier: "en_US_POSIX")))
         lines.append("")
 
-        if pins.isEmpty {
+        if orderedPins.isEmpty {
             lines.append(String(localized: "An image is attached (no markers placed)."))
         } else {
             lines.append(String(localized: "An image is attached. Numbered (ringed) badges point to specific elements."))
-            lines.append(String(localized: "Markers (position in % of the image, top-left origin):"))
+        }
+        if !orderedPins.isEmpty || !shapes.isEmpty {
+            lines.append(String(localized: "export.coordinates", defaultValue: "Positions are given in pixels from the top-left corner (0, 0), then as a percentage of the image size."))
+        }
+
+        if !orderedPins.isEmpty {
             lines.append("")
-            for pin in pins.sorted(by: { $0.number < $1.number }) {
+            lines.append("## " + String(localized: "Markers"))
+            lines.append(String(localized: "export.markers.legend", defaultValue: "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker."))
+            lines.append("")
+            for pin in orderedPins {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
                 let description = note.isEmpty ? String(localized: "(no description)") : note
-                let xPct = Int((pin.position.x * 100).rounded())
-                let yPct = Int((pin.position.y * 100).rounded())
-                lines.append("\(pin.number). \(description) · ~\(xPct) % × \(yPct) %")
+                lines.append("- M\(pin.number) [\(pin.id.shortToken)] · \(description) — "
+                             + "\(pixels(pin.position, in: imageSize)) px · \(percent(pin.position))")
+            }
+        }
+
+        if !shapes.isEmpty {
+            lines.append("")
+            lines.append("## " + String(localized: "export.shapes.heading", defaultValue: "Shapes"))
+            lines.append(String(localized: "export.shapes.legend", defaultValue: "Unnumbered outlines drawn on the image: rectangles are listed top-left → bottom-right, arrows tail → tip, followed by the size of their bounding box."))
+            lines.append("")
+            for (index, shape) in shapes.enumerated() {
+                let box = shape.rect
+                let from: CGPoint, to: CGPoint
+                switch shape.kind {
+                case .rectangle:
+                    from = CGPoint(x: box.minX, y: box.minY)
+                    to = CGPoint(x: box.maxX, y: box.maxY)
+                case .arrow:
+                    from = shape.start
+                    to = shape.end
+                }
+                let boxWidth = Int((box.width * imageSize.width).rounded())
+                let boxHeight = Int((box.height * imageSize.height).rounded())
+                lines.append("- S\(index + 1) [\(shape.id.shortToken)] · \(shape.label) — "
+                             + "\(pixels(from, in: imageSize)) → \(pixels(to, in: imageSize)) px · "
+                             + "\(percent(from)) → \(percent(to)) · \(boxWidth)×\(boxHeight) px")
             }
         }
 
@@ -212,6 +250,16 @@ enum Exporter {
             lines.append(ctx)
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// `(1075, 259)` — a normalized point in the image's pixel grid, top-left origin.
+    private static func pixels(_ point: CGPoint, in size: CGSize) -> String {
+        "(\(Int((point.x * size.width).rounded())), \(Int((point.y * size.height).rounded())))"
+    }
+
+    /// `(42 %, 18 %)` — the same point as a share of the image's width and height.
+    private static func percent(_ point: CGPoint) -> String {
+        "(\(Int((point.x * 100).rounded())) %, \(Int((point.y * 100).rounded())) %)"
     }
 
     /// The image to share with an agent: the annotated capture, optionally with
@@ -352,7 +400,8 @@ enum Exporter {
         }
 
         if !includeLegend {
-            pasteboard.setString(buildText(pins: pins, context: context, imageSize: base.size), forType: .string)
+            pasteboard.setString(buildText(pins: pins, shapes: shapes, context: context, imageSize: base.size),
+                                 forType: .string)
         }
     }
 }

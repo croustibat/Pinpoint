@@ -9,3 +9,13 @@ struct Pin: Identifiable, Equatable, Codable {
     var position: CGPoint
     var note: String = ""
 }
+
+extension UUID {
+    /// Short, readable form of the identifier (first 6 hex characters), used to
+    /// give every annotation a stable ID in the agent-ready text: it survives
+    /// the renumbering that follows a deletion, so two exports of the same
+    /// session refer to the same marker by the same code.
+    var shortToken: String {
+        String(uuidString.prefix(6)).lowercased()
+    }
+}
