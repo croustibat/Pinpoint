@@ -154,6 +154,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider l’historique" } }
       }
     },
+    "Clear search" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la recherche" } }
+      }
+    },
     "Clear selection" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la sélection" } }
@@ -346,6 +351,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Disque plein" } }
       }
     },
+    "Folder unavailable" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossier introuvable" } }
+      }
+    },
     "Follow the macOS screenshot location" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
@@ -432,14 +442,29 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer la sélection" } }
       }
     },
+    "Move this screenshot to the Trash?" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer cette capture dans la corbeille ?" } }
+      }
+    },
     "Move to folder" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer vers un dossier" } }
       }
     },
+    "Move to Trash" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer dans la corbeille" } }
+      }
+    },
     "Newest" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus récent" } }
+      }
+    },
+    "No matching screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture correspondante" } }
       }
     },
     "No recent captures" : {
@@ -450,6 +475,11 @@
     "No screen available for capture." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun écran disponible pour la capture." } }
+      }
+    },
+    "No screenshot matches the current search and filters." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture ne correspond à la recherche et aux filtres actuels." } }
       }
     },
     "No screenshots" : {
@@ -527,6 +557,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer la capture" } }
       }
     },
+    "Reset filters" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réinitialiser les filtres" } }
+      }
+    },
     "Reveal" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher" } }
@@ -540,6 +575,11 @@
     "Save" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer" } }
+      }
+    },
+    "Search screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher des captures" } }
       }
     },
     "Select" : {
@@ -561,6 +601,24 @@
     "Shelf" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Étagère" } }
+      }
+    },
+    "shelf.delete.confirm.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing is erased until you empty the Trash." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien n’est effacé tant que la corbeille n’est pas vidée." } }
+      }
+    },
+    "shelf.delete.confirm.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move %lld screenshots to the Trash?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer %lld captures dans la corbeille ?" } }
+      }
+    },
+    "shelf.empty.missingFolder.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t read %@ anymore. It may have been moved, renamed, or unmounted." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint n’arrive plus à lire %@. Le dossier a peut-être été déplacé, renommé ou démonté." } }
       }
     },
     "Shelf…" : {

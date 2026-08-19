@@ -14,8 +14,11 @@ final class ScreenshotStore: ObservableObject {
     @Published var selectedDateFilter: ScreenshotDateFilter = .all
     @Published var selectedSortOrder: ScreenshotSortOrder = .newestFirst
     @Published var showsFavoritesOnly = false
+    @Published var searchQuery = ""
     @Published private(set) var watchedFolderURL: URL
     @Published private(set) var isLoading = false
+    /// `false` once a scan failed — folder deleted, unmounted, or unreadable.
+    @Published private(set) var watchedFolderIsReadable = true
     @Published private(set) var launchAtLoginEnabled = false
     @Published private(set) var followsSystemScreenshotLocation: Bool
     @Published private(set) var favoritePaths: Set<String>
@@ -42,12 +45,51 @@ final class ScreenshotStore: ObservableObject {
     }
 
     var filteredScreenshots: [ScreenshotItem] {
+        let needle = normalizedSearchQuery
         let filtered = screenshots.filter { item in
             let matchesDate = selectedDateFilter.matches(item)
             let matchesFavorites = showsFavoritesOnly == false || isFavorite(item)
-            return matchesDate && matchesFavorites
+            let matchesSearch = needle.map { matches($0, in: item) } ?? true
+            return matchesDate && matchesFavorites && matchesSearch
         }
         return selectedSortOrder.sort(filtered)
+    }
+
+    /// The search query folded once per filtering pass, or `nil` when the field
+    /// is empty (every item matches).
+    private var normalizedSearchQuery: String? {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            return nil
+        }
+
+        return Self.foldedForSearch(trimmed)
+    }
+
+    /// Matches an already folded needle against the display title (custom title
+    /// or file name) and the file name on disk.
+    private func matches(_ needle: String, in item: ScreenshotItem) -> Bool {
+        [displayTitle(for: item), item.filename].contains { haystack in
+            Self.foldedForSearch(haystack).contains(needle)
+        }
+    }
+
+    /// Case- and diacritic-insensitive folding so `resume` matches `Résumé`.
+    private static func foldedForSearch(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    /// True when at least one filter — date, favorites, or search — is narrowing
+    /// the library, so an empty shelf can point at the filters rather than at
+    /// the folder.
+    var hasActiveFilters: Bool {
+        selectedDateFilter != .all || showsFavoritesOnly || normalizedSearchQuery != nil
+    }
+
+    func resetFilters() {
+        selectedDateFilter = .all
+        showsFavoritesOnly = false
+        searchQuery = ""
     }
 
     var groupedScreenshots: [(section: ScreenshotSection, items: [ScreenshotItem])] {
@@ -73,9 +115,11 @@ final class ScreenshotStore: ObservableObject {
             screenshots = try await service.scanFolder(at: watchedFolderURL)
             pruneMissingFavorites()
             pruneMissingCustomTitles()
+            watchedFolderIsReadable = true
             lastErrorMessage = nil
         } catch {
             screenshots = []
+            watchedFolderIsReadable = false
             lastErrorMessage = String(localized: "store.error.read", defaultValue: "Couldn’t read \(watchedFolderURL.lastPathComponent).")
         }
     }
