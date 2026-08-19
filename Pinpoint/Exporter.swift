@@ -341,18 +341,26 @@ enum Exporter {
     /// both share a pasteboard item, so the bare string would hide the capture.
     /// Only when the legend is *not* embedded do we add the text, since then it
     /// is the sole carrier of the marker descriptions and instructions.
+    /// Returns `false` when nothing reached the pasteboard — rendering failed or
+    /// every write was rejected — so callers don't report a copy that never
+    /// happened.
+    @discardableResult
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                                 style: PinStyle, includeLegend: Bool) {
+                                 style: PinStyle, includeLegend: Bool) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
+        var wrote = false
         if let png = pngData(base: base, pins: pins, shapes: shapes, context: context,
                              style: style, includeLegend: includeLegend, maxDimension: clipboardMaxDimension) {
-            pasteboard.setData(png, forType: .png)
+            wrote = pasteboard.setData(png, forType: .png)
         }
 
         if !includeLegend {
-            pasteboard.setString(buildText(pins: pins, context: context, imageSize: base.size), forType: .string)
+            let text = buildText(pins: pins, context: context, imageSize: base.size)
+            wrote = pasteboard.setString(text, forType: .string) || wrote
         }
+
+        return wrote
     }
 }

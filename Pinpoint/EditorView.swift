@@ -66,6 +66,9 @@ struct EditorView: View {
     @State private var draft: Markup?
     @State private var dragStartPosition: CGPoint?
     @State private var didCopy = false
+    /// Non-nil while an export failure is being shown. Copy and save used to
+    /// swallow their errors and still report success.
+    @State private var exportError: String?
     /// Which text field is being edited, if any. Only used to step aside: the
     /// Delete key equivalent is disabled while typing so ⌫ keeps editing text.
     @FocusState private var focusedField: EditorField?
@@ -108,6 +111,14 @@ struct EditorView: View {
         }
         .frame(minWidth: 680, minHeight: 440)
         .onDisappear { onPersist(pins, shapes, context, image) }
+        .alert(
+            String(localized: "Export failed"),
+            isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+        ) {
+            Button(String(localized: "OK"), role: .cancel) { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
+        }
     }
 
     // MARK: - Toolbar
@@ -521,8 +532,11 @@ struct EditorView: View {
     }
 
     private func copy() {
-        Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
-                                  style: pinStyle, includeLegend: includeLegend)
+        guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
+                                        style: pinStyle, includeLegend: includeLegend) else {
+            exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
+            return
+        }
         onPersist(pins, shapes, context, image)
         withAnimation { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
@@ -540,8 +554,16 @@ struct EditorView: View {
         // Full resolution here (no cap): the file is meant to be attached/kept,
         // unlike the pasteboard image which is downscaled to stay pasteable.
         guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
-                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else { return }
-        try? png.write(to: url)
+                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else {
+            exportError = String(localized: "The annotated image couldn’t be rendered.")
+            return
+        }
+        do {
+            try png.write(to: url)
+        } catch {
+            exportError = error.localizedDescription
+            return
+        }
         onPersist(pins, shapes, context, image)
     }
 
