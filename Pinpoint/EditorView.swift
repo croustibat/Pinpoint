@@ -23,6 +23,16 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .rectangle: return "rectangle"
         }
     }
+
+    /// Used with ⌘. A bare digit or letter would be swallowed by the marker
+    /// note fields and the instructions editor while typing.
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .pin: return "1"
+        case .arrow: return "2"
+        case .rectangle: return "3"
+        }
+    }
 }
 
 struct EditorView: View {
@@ -121,6 +131,8 @@ struct EditorView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
+                .help(toolPickerHelp)
+                .background(hiddenShortcuts)
 
                 Button {
                     enterCropMode()
@@ -144,6 +156,31 @@ struct EditorView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// One tooltip for the whole picker: a segmented control's segments carry no
+    /// tooltip of their own on macOS, so the picker advertises every tool and
+    /// its key equivalent at once. Built from the localized labels, so it can't
+    /// drift from what the segments show.
+    private var toolPickerHelp: String {
+        EditorTool.allCases
+            .map { "\($0.label) ⌘\($0.shortcut.character)" }
+            .joined(separator: " · ")
+    }
+
+    /// Invisible buttons that exist only to own key equivalents: a segmented
+    /// `Picker` can't carry one per segment. Rendered inside the picker's
+    /// background with hit-testing off.
+    private var hiddenShortcuts: some View {
+        ZStack {
+            ForEach(EditorTool.allCases) { item in
+                Button("") { tool = item }
+                    .keyboardShortcut(item.shortcut, modifiers: .command)
+            }
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     private var toolHint: String {

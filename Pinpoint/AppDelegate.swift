@@ -89,7 +89,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(fullScreenItem)
         menu.addItem(.separator())
 
-        let shelfItem = NSMenuItem(title: String(localized: "Shelf…"), action: #selector(openShelf), keyEquivalent: "")
+        // Mirrors the global ⌘⇧2 shortcut (see `KeyboardShortcuts.Name.openShelf`),
+        // the same way the capture items advertise ⌘⇧1 / ⌘⇧3.
+        let shelfItem = NSMenuItem(title: String(localized: "Shelf…"), action: #selector(openShelf), keyEquivalent: "2")
+        shelfItem.keyEquivalentModifierMask = [.command, .shift]
         shelfItem.target = self
         menu.addItem(shelfItem)
 
