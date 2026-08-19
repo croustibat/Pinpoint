@@ -50,6 +50,56 @@ private enum ArrowEnd: CaseIterable {
     func point(of shape: Markup) -> CGPoint {
         self == .tail ? shape.start : shape.end
     }
+
+    /// VoiceOver name of the handle that drags this end.
+    var accessibilityLabel: String {
+        switch self {
+        case .tail: return String(localized: "a11y.handle.arrow.tail", defaultValue: "Arrow tail handle")
+        case .tip: return String(localized: "a11y.handle.arrow.tip", defaultValue: "Arrow tip handle")
+        }
+    }
+}
+
+/// The eight box-handle positions, named for VoiceOver.
+///
+/// `SelectionHandle` (the shape handles) and `CropOverlay.Handle` are two
+/// separate enums covering the same eight spots; both map onto this one so the
+/// wording is written once and the two surfaces can't drift apart.
+private enum HandleSpot {
+    case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left
+
+    var name: String {
+        switch self {
+        case .topLeft: return String(localized: "a11y.handle.topLeft", defaultValue: "top-left corner")
+        case .top: return String(localized: "a11y.handle.top", defaultValue: "top edge")
+        case .topRight: return String(localized: "a11y.handle.topRight", defaultValue: "top-right corner")
+        case .right: return String(localized: "a11y.handle.right", defaultValue: "right edge")
+        case .bottomRight: return String(localized: "a11y.handle.bottomRight", defaultValue: "bottom-right corner")
+        case .bottom: return String(localized: "a11y.handle.bottom", defaultValue: "bottom edge")
+        case .bottomLeft: return String(localized: "a11y.handle.bottomLeft", defaultValue: "bottom-left corner")
+        case .left: return String(localized: "a11y.handle.left", defaultValue: "left edge")
+        }
+    }
+
+    /// "Resize handle, top-left corner".
+    var resizeLabel: String {
+        String(localized: "a11y.handle.resize", defaultValue: "Resize handle, \(name)")
+    }
+}
+
+private extension SelectionHandle {
+    var spot: HandleSpot {
+        switch self {
+        case .topLeft: return .topLeft
+        case .top: return .top
+        case .topRight: return .topRight
+        case .right: return .right
+        case .bottomRight: return .bottomRight
+        case .bottom: return .bottom
+        case .bottomLeft: return .bottomLeft
+        case .left: return .left
+        }
+    }
 }
 
 struct EditorView: View {
@@ -82,6 +132,13 @@ struct EditorView: View {
     /// Which text field is being edited, if any. Only used to step aside: the
     /// Delete key equivalent is disabled while typing so ⌫ keeps editing text.
     @FocusState private var focusedField: EditorField?
+
+    /// System-wide "Reduce motion". Every animated state change in the editor
+    /// goes through `withMotion`, which drops the animation when this is on.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Side of the numbered badge in the side panel. Scaled with the caption
+    /// text it wraps, so a larger Dynamic Type size doesn't clip the number.
+    @ScaledMetric(relativeTo: .caption) private var pinBadgeSide: CGFloat = 22
 
     // Crop mode state. `cropRect` is normalized (0...1, top-left origin), same
     // convention as pins/markups.
@@ -186,6 +243,9 @@ struct EditorView: View {
                 .labelsHidden()
                 .fixedSize()
                 .help(toolPickerHelp)
+                // No `accessibilityLabel` here: `labelsHidden()` only takes the
+                // picker's title off screen, VoiceOver still reads it, and a
+                // second label is appended to it rather than replacing it.
                 .background(hiddenShortcuts)
 
                 Button {
@@ -323,13 +383,20 @@ struct EditorView: View {
                     .frame(width: fitted.width, height: fitted.height)
                     .position(x: fitted.midX, y: fitted.midY)
                     .shadow(radius: 8, y: 2)
+                    .accessibilityLabel(String(localized: "a11y.canvas.image", defaultValue: "Screenshot being annotated"))
 
                 // Committed markups. Drawing and interaction are two layers:
                 // every shape draws first and takes no clicks, then the
                 // manipulable ones take them on top, so a handle is never
                 // buried under the outline of a shape drawn after it.
                 ForEach(shapes) { shape in
+                    // The drawing layer is what VoiceOver reads: it carries
+                    // every shape, where the grab bands below only exist for
+                    // the ones the active tool can manipulate.
                     markupView(shape, in: fitted, selected: shape.id == selectedShapeID)
+                        .accessibilityElement()
+                        .accessibilityLabel(accessibilityLabel(for: shape))
+                        .accessibilityAddTraits(shape.id == selectedShapeID ? .isSelected : [])
                 }
                 .allowsHitTesting(false)
 
@@ -338,7 +405,11 @@ struct EditorView: View {
                 // of the layer entirely rather than hit-test-disabled inside it,
                 // so switching tools mid-hover takes their cursor with them.
                 ForEach(shapes.filter(isManipulable)) { shape in
+                    // Pure hit-test surface: the drawing layer above already
+                    // announces the shape, and two elements for one annotation
+                    // would only make VoiceOver say it twice.
                     shapeGrabBand(shape, in: fitted)
+                        .accessibilityHidden(true)
                 }
                 if let shape = selectedShape, isManipulable(shape) {
                     shapeHandles(shape, in: fitted)
@@ -358,6 +429,11 @@ struct EditorView: View {
                         .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle))
                         .gesture(pinDrag($pin, in: fitted))
                         .allowsHitTesting(tool == .pin && !isCropping)
+                        .accessibilityElement()
+                        .accessibilityLabel(accessibilityLabel(for: pin))
+                        .accessibilityValue(accessibilityPosition(of: pin))
+                        .accessibilityHint(String(localized: "a11y.marker.hint", defaultValue: "Drag to move this marker"))
+                        .accessibilityAddTraits(pin.id == selectedPinID ? .isSelected : [])
                 }
 
                 // Crop overlay sits on top and owns interaction while active.
@@ -368,6 +444,38 @@ struct EditorView: View {
             }
             .contentShape(Rectangle())
             .gesture(canvasGesture(in: fitted))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(String(localized: "a11y.canvas", defaultValue: "Annotation canvas"))
+        }
+    }
+
+    // MARK: - Accessibility wording
+
+    /// What VoiceOver reads for a marker: its number and the note, or a plain
+    /// statement that it has none yet — "Marker 3" alone would leave the
+    /// listener wondering whether the description failed to load.
+    private func accessibilityLabel(for pin: Pin) -> String {
+        let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard note.isEmpty == false else {
+            return String(localized: "a11y.marker.untitled", defaultValue: "Marker \(pin.number), no description")
+        }
+        return String(localized: "a11y.marker", defaultValue: "Marker \(pin.number): \(note)")
+    }
+
+    /// Where the marker sits, as whole percentages of the image. Spelled out in
+    /// words rather than with a percent sign, which VoiceOver reads unevenly
+    /// depending on the voice.
+    private func accessibilityPosition(of pin: Pin) -> String {
+        let x = Int((pin.position.x * 100).rounded())
+        let y = Int((pin.position.y * 100).rounded())
+        return String(localized: "a11y.marker.position",
+                      defaultValue: "\(x) percent from the left, \(y) percent from the top")
+    }
+
+    private func accessibilityLabel(for shape: Markup) -> String {
+        switch shape.kind {
+        case .arrow: return String(localized: "a11y.shape.arrow", defaultValue: "Arrow annotation")
+        case .rectangle: return String(localized: "a11y.shape.rectangle", defaultValue: "Rectangle annotation")
         }
     }
 
@@ -530,13 +638,17 @@ struct EditorView: View {
         switch shape.kind {
         case .arrow:
             ForEach(ArrowEnd.allCases, id: \.self) { end in
-                handleDot(at: absolutePoint(end.point(of: shape), in: fitted), cursor: .crosshair)
+                handleDot(at: absolutePoint(end.point(of: shape), in: fitted),
+                          cursor: .crosshair,
+                          label: end.accessibilityLabel)
                     .gesture(arrowEndDrag(shape, end: end, in: fitted))
             }
         case .rectangle:
             let r = absoluteRect(shape.rect, in: fitted)
             ForEach(SelectionHandle.allCases, id: \.self) { handle in
-                handleDot(at: handle.point(in: r, orientation: .yDown), cursor: handle.cursor)
+                handleDot(at: handle.point(in: r, orientation: .yDown),
+                          cursor: handle.cursor,
+                          label: handle.spot.resizeLabel)
                     .gesture(rectangleResizeDrag(shape, handle: handle, in: fitted))
             }
         }
@@ -544,7 +656,7 @@ struct EditorView: View {
 
     /// One handle dot, styled like the crop overlay's so the two read as the
     /// same control. The outer frame is the grab area, the inner one the dot.
-    private func handleDot(at point: CGPoint, cursor: NSCursor) -> some View {
+    private func handleDot(at point: CGPoint, cursor: NSCursor, label: String) -> some View {
         ZStack {
             Circle().fill(Color.white)
             Circle().stroke(Color.pinpointVermillon, lineWidth: 2)
@@ -554,6 +666,8 @@ struct EditorView: View {
         .contentShape(Rectangle())
         .position(point)
         .hoverCursor(cursor)
+        .accessibilityElement()
+        .accessibilityLabel(label)
     }
 
     // MARK: Shape gestures
@@ -681,9 +795,11 @@ struct EditorView: View {
 
             Text("Instructions for the agent")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
             TextEditor(text: $context)
                 .focused($focusedField, equals: .context)
                 .font(.body)
+                .accessibilityLabel(String(localized: "Instructions for the agent"))
                 .frame(minHeight: 70, maxHeight: 120)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
 
@@ -711,6 +827,7 @@ struct EditorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Markers")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             if pins.isEmpty {
                 Text("Click the image to drop a numbered marker.")
@@ -728,6 +845,7 @@ struct EditorView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Annotations")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             ForEach(shapes) { shape in
                 shapeRow(shape)
@@ -736,16 +854,27 @@ struct EditorView: View {
     }
 
     private func pinRow(_ pin: Binding<Pin>) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("\(pin.wrappedValue.number)")
+        let number = pin.wrappedValue.number
+        let isSelected = pin.wrappedValue.id == selectedPinID
+        let deleteLabel = String(localized: "a11y.marker.delete", defaultValue: "Delete marker \(number)")
+
+        return HStack(alignment: .top, spacing: 8) {
+            Text("\(number)")
                 .font(.caption.bold())
                 .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
+                .frame(width: pinBadgeSide, height: pinBadgeSide)
                 .background(Circle().fill(Color.pinpointVermillon))
+                // The number is repeated in the field's label right after it,
+                // so VoiceOver reads it once instead of twice.
+                .accessibilityHidden(true)
 
             TextField("Describe this marker…", text: pin.note)
                 .textFieldStyle(.roundedBorder)
                 .focused($focusedField, equals: .note(pin.wrappedValue.id))
+                // Without this the placeholder is the label, and every field in
+                // the list announces itself identically.
+                .accessibilityLabel(String(localized: "a11y.marker.note",
+                                           defaultValue: "Description of marker \(number)"))
 
             Button {
                 removePin(pin.wrappedValue)
@@ -754,20 +883,43 @@ struct EditorView: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
+            .accessibilityLabel(deleteLabel)
+            .help(deleteLabel)
         }
         .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(pin.wrappedValue.id == selectedPinID ? Color.pinpointVermillon.opacity(0.12) : Color.clear)
-        )
+        .background(rowSelectionBackground(isSelected))
         .onTapGesture { selectPin(pin.wrappedValue.id) }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // `onTapGesture` is a mouse affordance and nothing else; the same
+        // selection has to be reachable from VoiceOver's actions menu.
+        .accessibilityAction { selectPin(pin.wrappedValue.id) }
+    }
+
+    /// Highlight for the selected row of the side panel.
+    ///
+    /// A 12 % tint on its own barely separated from the panel background, and
+    /// carried the whole "this one is selected" message in hue alone. The fill
+    /// is stronger now and an outline says the same thing as a shape, so the
+    /// row still reads as selected without relying on colour perception.
+    private func rowSelectionBackground(_ isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(isSelected ? Color.pinpointVermillon.opacity(0.20) : Color.clear)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.pinpointVermillon.opacity(isSelected ? 0.75 : 0), lineWidth: 1.5)
+            )
     }
 
     private func shapeRow(_ shape: Markup) -> some View {
-        HStack(spacing: 8) {
+        let isSelected = shape.id == selectedShapeID
+        let deleteLabel = String(localized: "a11y.shape.delete", defaultValue: "Delete this annotation")
+
+        return HStack(spacing: 8) {
             Image(systemName: shape.symbol)
                 .foregroundStyle(Color.pinpointVermillon)
-                .frame(width: 22, height: 22)
+                .frame(width: pinBadgeSide, height: pinBadgeSide)
+                .accessibilityHidden(true)
 
             Text(shape.label)
 
@@ -780,13 +932,15 @@ struct EditorView: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
+            .accessibilityLabel(deleteLabel)
+            .help(deleteLabel)
         }
         .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(shape.id == selectedShapeID ? Color.pinpointVermillon.opacity(0.12) : Color.clear)
-        )
+        .background(rowSelectionBackground(isSelected))
         .onTapGesture { selectShape(shape.id) }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAction { selectShape(shape.id) }
     }
 
     // MARK: - Actions
@@ -878,9 +1032,9 @@ struct EditorView: View {
             return
         }
         onPersist(pins, shapes, context, image)
-        withAnimation { didCopy = true }
+        withMotion { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-            withAnimation { didCopy = false }
+            withMotion { didCopy = false }
         }
     }
 
@@ -908,6 +1062,14 @@ struct EditorView: View {
     }
 
     // MARK: - Undo / redo
+
+    /// Runs `body` animated, or plainly when the system asks for reduced
+    /// motion. Every animated state change in the editor goes through this, so
+    /// honouring the setting stays one decision instead of one per call site —
+    /// and the animations themselves are left intact for everyone else.
+    private func withMotion<Result>(_ animation: Animation = .default, _ body: () -> Result) -> Result {
+        reduceMotion ? body() : withAnimation(animation, body)
+    }
 
     private func snapshot() -> EditorSnapshot {
         EditorSnapshot(
@@ -998,11 +1160,11 @@ struct EditorView: View {
         cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
         selectedPinID = nil
         selectedShapeID = nil
-        withAnimation(.easeInOut(duration: 0.15)) { isCropping = true }
+        withMotion(.easeInOut(duration: 0.15)) { isCropping = true }
     }
 
     private func cancelCrop() {
-        withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+        withMotion(.easeInOut(duration: 0.15)) { isCropping = false }
     }
 
     /// Undoable wrapper around `performCrop()`. `isCropping` isn't part of a
@@ -1020,12 +1182,12 @@ struct EditorView: View {
         // hit Done on the default rect without an identity crop round-trip.
         if abs(c.minX) < 0.001 && abs(c.minY) < 0.001
             && abs(c.width - 1) < 0.001 && abs(c.height - 1) < 0.001 {
-            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            withMotion(.easeInOut(duration: 0.15)) { isCropping = false }
             return
         }
         guard c.width > 0, c.height > 0,
               let base = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            withMotion(.easeInOut(duration: 0.15)) { isCropping = false }
             return
         }
 
@@ -1040,7 +1202,7 @@ struct EditorView: View {
         ).intersection(CGRect(x: 0, y: 0, width: W, height: H))
         guard px.width > 1, px.height > 1,
               let cropped = base.cropping(to: px) else {
-            withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+            withMotion(.easeInOut(duration: 0.15)) { isCropping = false }
             return
         }
 
@@ -1083,7 +1245,7 @@ struct EditorView: View {
         shapes = newShapes
         selectedPinID = nil
         selectedShapeID = nil
-        withAnimation(.easeInOut(duration: 0.15)) { isCropping = false }
+        withMotion(.easeInOut(duration: 0.15)) { isCropping = false }
     }
 
     // MARK: - Geometry
@@ -1182,6 +1344,7 @@ struct CropOverlay: View {
                     .fill(style: FillStyle(eoFill: true))
                 )
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
 
             // Border + thirds grid inside the crop rect.
             ZStack {
@@ -1191,6 +1354,7 @@ struct CropOverlay: View {
             .frame(width: r.width, height: r.height)
             .position(x: r.midX, y: r.midY)
             .allowsHitTesting(false)
+            .accessibilityHidden(true)
 
             // Interior drag → move the whole rect (clamped to the image). The
             // DragGesture translation is cumulative from drag start, so we keep
@@ -1210,12 +1374,16 @@ struct CropOverlay: View {
                         }
                         .onEnded { _ in lastMove = .zero }
                 )
+                .accessibilityLabel(String(localized: "a11y.crop.move",
+                                           defaultValue: "Drag to move the crop area"))
 
             // 8 handles.
             ForEach(Handle.allCases) { h in
                 handleView(h, in: r)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(String(localized: "a11y.crop.overlay", defaultValue: "Crop area"))
     }
 
     /// Two thirds lines each way, thin and semi-transparent.
@@ -1244,6 +1412,7 @@ struct CropOverlay: View {
         }
         .frame(width: handleSize, height: handleSize)
         .position(p)
+        .accessibilityLabel(h.spot.resizeLabel)
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { v in
@@ -1321,6 +1490,21 @@ struct CropOverlay: View {
     private enum Handle: String, CaseIterable, Identifiable {
         case topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left
         var id: String { rawValue }
+
+        /// The shared VoiceOver naming, so a crop handle and a rectangle handle
+        /// in the same corner are announced the same way.
+        var spot: HandleSpot {
+            switch self {
+            case .topLeft: return .topLeft
+            case .top: return .top
+            case .topRight: return .topRight
+            case .right: return .right
+            case .bottomRight: return .bottomRight
+            case .bottom: return .bottom
+            case .bottomLeft: return .bottomLeft
+            case .left: return .left
+            }
+        }
 
         func point(in r: CGRect) -> CGPoint {
             switch self {

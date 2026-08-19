@@ -61,6 +61,7 @@ struct ShelfView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Shelf")
                         .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
 
                     Text(store.watchedFolderURL.lastPathComponent)
                         .font(.caption)
@@ -88,6 +89,8 @@ struct ShelfView: View {
                     Image(systemName: "gearshape")
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel(settingsLabel)
+                .help(settingsLabel)
 
                 Button {
                     Task { await store.refresh() }
@@ -95,6 +98,8 @@ struct ShelfView: View {
                     Image(systemName: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel(refreshLabel)
+                .help(refreshLabel)
             }
 
             searchField
@@ -116,6 +121,10 @@ struct ShelfView: View {
                     Label(store.selectedDateFilter.title, systemImage: "calendar")
                 }
                 .menuStyle(.borderlessButton)
+                // The menu shows the active filter and nothing else, so on its
+                // own VoiceOver announces "All" with no hint of what it filters.
+                .accessibilityLabel(String(localized: "a11y.shelf.dateFilter", defaultValue: "Date filter"))
+                .accessibilityValue(store.selectedDateFilter.title)
 
                 Button {
                     store.showsFavoritesOnly.toggle()
@@ -125,6 +134,7 @@ struct ShelfView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Show favorites only")
+                .accessibilityAddTraits(store.showsFavoritesOnly ? .isSelected : [])
 
                 Spacer()
 
@@ -144,6 +154,8 @@ struct ShelfView: View {
                     Label(store.selectedSortOrder.title, systemImage: "arrow.up.arrow.down")
                 }
                 .menuStyle(.borderlessButton)
+                .accessibilityLabel(String(localized: "a11y.shelf.sortOrder", defaultValue: "Sort order"))
+                .accessibilityValue(store.selectedSortOrder.title)
             }
             .font(.subheadline)
 
@@ -161,11 +173,16 @@ struct ShelfView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
             TextField("Search screenshots", text: $store.searchQuery)
                 .textFieldStyle(.plain)
                 .focused($isSearchFieldFocused)
                 .onSubmit { isSearchFieldFocused = false }
+                // A plain text field takes its placeholder as label only while
+                // it is empty; naming it explicitly keeps it a search field
+                // once something has been typed into it.
+                .accessibilityLabel(String(localized: "Search screenshots"))
 
             if store.searchQuery.isEmpty == false {
                 Button {
@@ -177,6 +194,7 @@ struct ShelfView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Clear search")
+                .accessibilityLabel(Text("Clear search"))
             }
         }
         .font(.subheadline)
@@ -215,7 +233,13 @@ struct ShelfView: View {
                         }
 
                         if store.selectedDateFilter != .all {
+                            // No section headers in this mode, so the grid
+                            // itself carries the "how many are we looking at"
+                            // that `SectionHeaderView` provides otherwise.
                             screenshotGrid(items: store.filteredScreenshots, columns: columns, cardWidth: cardWidth)
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(String(localized: "a11y.shelf.results",
+                                                           defaultValue: "\(store.filteredScreenshots.count) screenshots shown"))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -272,6 +296,28 @@ struct ShelfView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(emptyStateAccessibilityLabel)
+    }
+
+    /// Which of the three empty states is showing, in one sentence. VoiceOver
+    /// lands on the group before its contents, and "empty" on its own doesn't
+    /// say whether it's the folder, the filters, or the shelf itself.
+    private var emptyStateAccessibilityLabel: String {
+        if store.watchedFolderIsReadable == false {
+            return String(localized: "Folder unavailable")
+        }
+        return store.hasActiveFilters
+            ? String(localized: "No matching screenshots")
+            : String(localized: "No screenshots")
+    }
+
+    private var settingsLabel: String {
+        String(localized: "a11y.shelf.settings", defaultValue: "Open settings")
+    }
+
+    private var refreshLabel: String {
+        String(localized: "a11y.shelf.refresh", defaultValue: "Refresh the shelf")
     }
 
     private var selectedItems: [ScreenshotItem] {
@@ -300,6 +346,7 @@ struct ShelfView: View {
                     Image(systemName: "space")
                 }
                 .help("Quick Look")
+                .accessibilityLabel(Text("Quick Look"))
                 .keyboardShortcut(.space, modifiers: [])
 
                 Button {
@@ -308,6 +355,7 @@ struct ShelfView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .help("Copy files")
+                .accessibilityLabel(Text("Copy files"))
                 .keyboardShortcut("c")
 
                 Button {
@@ -319,6 +367,7 @@ struct ShelfView: View {
                     Image(systemName: "folder")
                 }
                 .help("Move selection")
+                .accessibilityLabel(Text("Move selection"))
 
                 Menu {
                     Button(allSelectedItemsAreFavorites ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"), systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
@@ -345,6 +394,7 @@ struct ShelfView: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .help("More actions")
+                .accessibilityLabel(Text("More actions"))
 
                 Button(role: .destructive) {
                     requestDeletion(of: selectedItems)
@@ -352,6 +402,7 @@ struct ShelfView: View {
                     Image(systemName: "trash")
                 }
                 .help("Delete selection")
+                .accessibilityLabel(Text("Delete selection"))
                 .keyboardShortcut(.delete, modifiers: [])
 
                 Button {
@@ -360,6 +411,7 @@ struct ShelfView: View {
                     Image(systemName: "xmark")
                 }
                 .help("Clear selection")
+                .accessibilityLabel(Text("Clear selection"))
             }
             .buttonStyle(.bordered)
         }
@@ -677,6 +729,7 @@ private struct RenameScreenshotView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Rename screenshot")
                 .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
 
             TextField("File name", text: $newName)
                 .textFieldStyle(.roundedBorder)

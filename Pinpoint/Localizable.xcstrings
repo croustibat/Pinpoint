@@ -58,6 +58,222 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "10 secondes" } }
       }
     },
+    "a11y.canvas" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Annotation canvas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone d’annotation" } }
+      }
+    },
+    "a11y.canvas.image" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot being annotated" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capture en cours d’annotation" } }
+      }
+    },
+    "a11y.card.notSelected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not selected" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Non sélectionnée" } }
+      }
+    },
+    "a11y.card.selected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Selected" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélectionnée" } }
+      }
+    },
+    "a11y.card.thumbnail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview of %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aperçu de %@" } }
+      }
+    },
+    "a11y.crop.move" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag to move the crop area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser pour déplacer la zone de recadrage" } }
+      }
+    },
+    "a11y.crop.overlay" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crop area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone de recadrage" } }
+      }
+    },
+    "a11y.handle.arrow.tail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow tail handle" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de départ de la flèche" } }
+      }
+    },
+    "a11y.handle.arrow.tip" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow tip handle" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de pointe de la flèche" } }
+      }
+    },
+    "a11y.handle.bottom" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord bas" } }
+      }
+    },
+    "a11y.handle.bottomLeft" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom-left corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin bas-gauche" } }
+      }
+    },
+    "a11y.handle.bottomRight" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom-right corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin bas-droit" } }
+      }
+    },
+    "a11y.handle.left" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "left edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord gauche" } }
+      }
+    },
+    "a11y.handle.resize" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Resize handle, %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de redimensionnement, %@" } }
+      }
+    },
+    "a11y.handle.right" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "right edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord droit" } }
+      }
+    },
+    "a11y.handle.top" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord haut" } }
+      }
+    },
+    "a11y.handle.topLeft" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top-left corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin haut-gauche" } }
+      }
+    },
+    "a11y.handle.topRight" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top-right corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin haut-droit" } }
+      }
+    },
+    "a11y.marker" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Marker %1$lld: %2$@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repère %1$lld : %2$@" } }
+      }
+    },
+    "a11y.marker.delete" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete marker %lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer le repère %lld" } }
+      }
+    },
+    "a11y.marker.hint" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag to move this marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser pour déplacer ce repère" } }
+      }
+    },
+    "a11y.marker.note" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description of marker %lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Description du repère %lld" } }
+      }
+    },
+    "a11y.marker.position" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld percent from the left, %2$lld percent from the top" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld pour cent depuis la gauche, %2$lld pour cent depuis le haut" } }
+      }
+    },
+    "a11y.marker.untitled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Marker %lld, no description" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repère %lld, sans description" } }
+      }
+    },
+    "a11y.region.empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No region selected yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune région sélectionnée" } }
+      }
+    },
+    "a11y.region.selection" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Region selection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélection de région" } }
+      }
+    },
+    "a11y.region.size" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld by %2$lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld sur %2$lld" } }
+      }
+    },
+    "a11y.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$lld screenshots" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$lld captures" } }
+      }
+    },
+    "a11y.shape.arrow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annotation flèche" } }
+      }
+    },
+    "a11y.shape.delete" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer cette annotation" } }
+      }
+    },
+    "a11y.shape.rectangle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rectangle annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annotation rectangle" } }
+      }
+    },
+    "a11y.shelf.dateFilter" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Date filter" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Filtre par date" } }
+      }
+    },
+    "a11y.shelf.refresh" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh the shelf" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Actualiser l’étagère" } }
+      }
+    },
+    "a11y.shelf.results" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld screenshots shown" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld captures affichées" } }
+      }
+    },
+    "a11y.shelf.settings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les réglages" } }
+      }
+    },
+    "a11y.shelf.sortOrder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sort order" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ordre de tri" } }
+      }
+    },
     "Add to favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter aux favoris" } }
