@@ -314,6 +314,10 @@ struct EditorView: View {
     private var canvas: some View {
         GeometryReader { geo in
             let fitted = fittedRect(imageSize: image.size, in: geo.size)
+            // Sizes every annotation against the capture, then down to the
+            // fitted rect — so what the canvas shows is what the export draws
+            // (#48). One instance per layout pass, shared by every layer below.
+            let metrics = MarkupMetrics(imageSize: image.size, fitted: fitted)
             ZStack(alignment: .topLeading) {
                 Color(nsColor: .windowBackgroundColor)
 
@@ -329,7 +333,7 @@ struct EditorView: View {
                 // manipulable ones take them on top, so a handle is never
                 // buried under the outline of a shape drawn after it.
                 ForEach(shapes) { shape in
-                    markupView(shape, in: fitted, selected: shape.id == selectedShapeID)
+                    markupView(shape, in: fitted, metrics: metrics, selected: shape.id == selectedShapeID)
                 }
                 .allowsHitTesting(false)
 
@@ -338,7 +342,7 @@ struct EditorView: View {
                 // of the layer entirely rather than hit-test-disabled inside it,
                 // so switching tools mid-hover takes their cursor with them.
                 ForEach(shapes.filter(isManipulable)) { shape in
-                    shapeGrabBand(shape, in: fitted)
+                    shapeGrabBand(shape, in: fitted, metrics: metrics)
                 }
                 if let shape = selectedShape, isManipulable(shape) {
                     shapeHandles(shape, in: fitted)
@@ -346,16 +350,24 @@ struct EditorView: View {
 
                 // Live preview while drawing.
                 if let draft {
-                    markupView(draft, in: fitted, selected: true)
+                    markupView(draft, in: fitted, metrics: metrics, selected: true)
                         .allowsHitTesting(false)
                         .opacity(0.9)
                 }
 
                 // Numbered pins.
                 ForEach($pins) { $pin in
-                    let anchor = clampedMarkerAnchor(absolutePoint(pin.position, in: fitted), in: fitted)
-                    PinMarker(number: pin.number, style: pinStyle, selected: pin.id == selectedPinID)
-                        .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle))
+                    let anchor = clampedMarkerAnchor(absolutePoint(pin.position, in: fitted),
+                                                     in: fitted, metrics: metrics)
+                    let markerSize = PinMarker.size(pinStyle, metrics: metrics)
+                    PinMarker(number: pin.number, metrics: metrics, style: pinStyle,
+                              selected: pin.id == selectedPinID)
+                        // The badge is centred inside its grab area, so the
+                        // anchor offset keeps measuring the same distance.
+                        .frame(width: max(Self.pinGrabSize, markerSize.width),
+                               height: max(Self.pinGrabSize, markerSize.height))
+                        .contentShape(Rectangle())
+                        .position(x: anchor.x, y: anchor.y + PinMarker.anchorYOffset(pinStyle, metrics: metrics))
                         .gesture(pinDrag($pin, in: fitted))
                         .allowsHitTesting(tool == .pin && !isCropping)
                 }
@@ -427,12 +439,15 @@ struct EditorView: View {
     }
 
     @ViewBuilder
-    private func markupView(_ shape: Markup, in fitted: CGRect, selected: Bool) -> some View {
-        let width: CGFloat = selected ? 5 : 3.5
+    private func markupView(_ shape: Markup, in fitted: CGRect, metrics: MarkupMetrics,
+                            selected: Bool) -> some View {
+        // The stroke the export will use, thickened while selected — that part
+        // is an editor affordance and never reaches the exported image.
+        let width = metrics.lineWidth * (selected ? Self.selectedStrokeBoost : 1)
         switch shape.kind {
         case .rectangle:
             let r = absoluteRect(shape.rect, in: fitted)
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: metrics.cornerRadius)
                 .stroke(Color.pinpointVermillon, lineWidth: width)
                 .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
                 .frame(width: r.width, height: r.height)
@@ -440,7 +455,8 @@ struct EditorView: View {
         case .arrow:
             ArrowShape(
                 start: absolutePoint(shape.start, in: fitted),
-                end: absolutePoint(shape.end, in: fitted)
+                end: absolutePoint(shape.end, in: fitted),
+                headLength: metrics.arrowHeadLength
             )
             .stroke(Color.pinpointVermillon, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
@@ -450,7 +466,29 @@ struct EditorView: View {
     // MARK: - Shape manipulation
 
     /// Width of the invisible band that makes a shape's outline clickable.
+    /// A floor, not the whole story: `grabBandWidth(_:)` widens it when the
+    /// stroke it has to cover is wider still.
     private static let shapeGrabBand: CGFloat = 14
+
+    /// The grab band actually used, never narrower than the outline it covers —
+    /// a small capture blown up to fill the canvas draws strokes far thicker
+    /// than 14 pt, and a band thinner than its own outline would leave the
+    /// middle of the stroke unclickable.
+    private static func grabBandWidth(_ metrics: MarkupMetrics) -> CGFloat {
+        max(shapeGrabBand, metrics.lineWidth * 2)
+    }
+
+    /// Floor on a marker's grab area. Badges scale with the preview now, so a
+    /// large capture in a small window draws them genuinely small: the dot
+    /// stays faithful to the export while the area you can grab it by doesn't
+    /// shrink past what a pointer can hit — the same split `shapeHandleSize` /
+    /// `shapeHandleHitSize` already make for handles.
+    private static let pinGrabSize: CGFloat = 24
+
+    /// How much heavier a selected shape's outline is drawn. Editor-only: the
+    /// export always renders `MarkupMetrics.lineWidth`.
+    private static let selectedStrokeBoost: CGFloat = 1.4
+
     /// Visible diameter of a manipulation handle, and the larger square that
     /// actually takes the click — the dots are small, the grab area is not
     /// (`RegionSelectionView` is equally generous with its 10pt tolerance).
@@ -487,15 +525,16 @@ struct EditorView: View {
     /// interior: a rectangle annotation is mostly hole, and clicking through it
     /// has to keep dropping markers and drawing new shapes.
     @ViewBuilder
-    private func shapeGrabBand(_ shape: Markup, in fitted: CGRect) -> some View {
+    private func shapeGrabBand(_ shape: Markup, in fitted: CGRect, metrics: MarkupMetrics) -> some View {
+        let band = Self.grabBandWidth(metrics)
         Group {
             switch shape.kind {
             case .rectangle:
                 let r = absoluteRect(shape.rect, in: fitted)
                 Color.clear
                     .frame(width: r.width, height: r.height)
-                    .contentShape(OutlineHitShape(base: RoundedRectangle(cornerRadius: 4),
-                                                  width: Self.shapeGrabBand))
+                    .contentShape(OutlineHitShape(base: RoundedRectangle(cornerRadius: metrics.cornerRadius),
+                                                  width: band))
                     .position(x: r.midX, y: r.midY)
             case .arrow:
                 // Sized to the arrow's bounding box, band included, and the
@@ -504,15 +543,22 @@ struct EditorView: View {
                 // shape keeps the hover cursor off the rest of the canvas.
                 let a = absolutePoint(shape.start, in: fitted)
                 let b = absolutePoint(shape.end, in: fitted)
+                // The head splays out sideways from the tip, so the box is
+                // grown by its length as well as by the band — otherwise a
+                // scaled-up arrowhead would stick out of the view holding its
+                // own hit shape. `contentShape` still narrows the clickable
+                // area back down to the outline itself.
+                let margin = band + metrics.arrowHeadLength
                 let box = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
                                  width: abs(b.x - a.x), height: abs(b.y - a.y))
-                    .insetBy(dx: -Self.shapeGrabBand, dy: -Self.shapeGrabBand)
+                    .insetBy(dx: -margin, dy: -margin)
                 Color.clear
                     .frame(width: box.width, height: box.height)
                     .contentShape(OutlineHitShape(
                         base: ArrowShape(start: CGPoint(x: a.x - box.minX, y: a.y - box.minY),
-                                         end: CGPoint(x: b.x - box.minX, y: b.y - box.minY)),
-                        width: Self.shapeGrabBand
+                                         end: CGPoint(x: b.x - box.minX, y: b.y - box.minY),
+                                         headLength: metrics.arrowHeadLength),
+                        width: band
                     ))
                     .position(x: box.midX, y: box.midY)
             }
@@ -1108,16 +1154,17 @@ struct EditorView: View {
     /// even when the point is near an edge. Only affects where the badge is
     /// drawn — `pin.position` is untouched — and mirrors `Exporter`'s clamping so
     /// the editor and the exported image agree.
-    private func clampedMarkerAnchor(_ anchor: CGPoint, in fitted: CGRect) -> CGPoint {
-        let side = PinMarker.headDiameter / 2 + 2  // circle half-width incl. ring
+    private func clampedMarkerAnchor(_ anchor: CGPoint, in fitted: CGRect,
+                                     metrics: MarkupMetrics) -> CGPoint {
+        let side = metrics.badgeHalfSide  // circle half-width incl. ring
         let x = min(max(anchor.x, fitted.minX + side), max(fitted.minX + side, fitted.maxX - side))
         switch pinStyle {
         case .disc, .outline:
             let y = min(max(anchor.y, fitted.minY + side), max(fitted.minY + side, fitted.maxY - side))
             return CGPoint(x: x, y: y)
         case .pointer:
-            // The 28×42 marker sits with its tip at the anchor, extending upward.
-            let top = fitted.minY + PinMarker.pointerHeight
+            // The marker sits with its tip at the anchor, extending upward.
+            let top = fitted.minY + metrics.pointerHeight
             let y = min(max(anchor.y, top), max(top, fitted.maxY))
             return CGPoint(x: x, y: y)
         }
@@ -1343,6 +1390,10 @@ struct CropOverlay: View {
 struct ArrowShape: Shape {
     var start: CGPoint
     var end: CGPoint
+    /// Length of the two strokes forming the head. Supplied by the caller from
+    /// `MarkupMetrics` rather than fixed here, so the preview's arrowhead is
+    /// the one the export draws — see #48.
+    var headLength: CGFloat
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -1350,8 +1401,7 @@ struct ArrowShape: Shape {
         path.addLine(to: end)
 
         let angle = atan2(end.y - start.y, end.x - start.x)
-        let headLength: CGFloat = 16
-        let spread = CGFloat.pi / 6.5
+        let spread = MarkupMetrics.arrowHeadSpread
 
         let leftAngle = angle - spread
         let rightAngle = angle + spread
@@ -1416,6 +1466,10 @@ private extension View {
 
 /// Map-pin silhouette filling its rect: a circular head at the top tapering to
 /// a tip at the bottom-centre. Used for the `.pointer` marker style.
+///
+/// Everything is derived from the rect, so the caller sets the proportions: a
+/// rect of `2r × 3r` puts the head's centre `2r` above the tip, which is what
+/// `Exporter` draws for the same style.
 struct PinShape: Shape {
     func path(in rect: CGRect) -> Path {
         let diameter = rect.width
@@ -1436,18 +1490,28 @@ struct PinShape: Shape {
 }
 
 /// The numbered marker, rendered in one of the three design-system styles.
+///
+/// Sized entirely from `MarkupMetrics`, which is what makes it the same badge
+/// `Exporter.drawMarker` renders: it used to be a fixed 28 pt disc, so the
+/// export of a small capture came out proportionally much heavier than the
+/// preview that produced it (#48).
 struct PinMarker: View {
     let number: Int
+    let metrics: MarkupMetrics
     var style: PinStyle = .disc
     var selected: Bool = false
 
-    static let headDiameter: CGFloat = 28
-    static let pointerHeight: CGFloat = 42
-
     /// Vertical offset to apply when positioning the marker so its anchor lands
     /// on the marked point: centred for disc/outline, tip-anchored for pointer.
-    static func anchorYOffset(_ style: PinStyle) -> CGFloat {
-        style == .pointer ? -(pointerHeight / 2) : 0
+    static func anchorYOffset(_ style: PinStyle, metrics: MarkupMetrics) -> CGFloat {
+        style == .pointer ? -(metrics.pointerHeight / 2) : 0
+    }
+
+    /// The marker's laid-out size — its footprint on the canvas, which is also
+    /// the grab area `EditorView` starts from before applying its own floor.
+    static func size(_ style: PinStyle, metrics: MarkupMetrics) -> CGSize {
+        CGSize(width: metrics.pinRadius * 2,
+               height: style == .pointer ? metrics.pointerHeight : metrics.pinRadius * 2)
     }
 
     var body: some View {
@@ -1458,16 +1522,23 @@ struct PinMarker: View {
         }
     }
 
+    private var headDiameter: CGFloat { metrics.pinRadius * 2 }
+
+    /// The ring around the badge, drawn heavier while selected. The extra
+    /// weight is an editor affordance only — the export always strokes
+    /// `metrics.ringWidth`.
+    private var ringWidth: CGFloat { metrics.ringWidth * (selected ? 1.4 : 1) }
+
     private var numberText: some View {
-        Text("\(number)").font(.system(size: 14, weight: .bold))
+        Text("\(number)").font(.system(size: metrics.numberFontSize, weight: .bold))
     }
 
     private var disc: some View {
         numberText
             .foregroundStyle(.white)
-            .frame(width: Self.headDiameter, height: Self.headDiameter)
+            .frame(width: headDiameter, height: headDiameter)
             .background(Circle().fill(Color.pinpointVermillon))
-            .overlay(Circle().stroke(.white, lineWidth: selected ? 3.5 : 2.5))
+            .overlay(Circle().stroke(.white, lineWidth: ringWidth))
             .overlay(Circle().stroke(.black.opacity(0.18), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
     }
@@ -1475,9 +1546,9 @@ struct PinMarker: View {
     private var outline: some View {
         numberText
             .foregroundStyle(Color.pinpointVermillon)
-            .frame(width: Self.headDiameter, height: Self.headDiameter)
-            .overlay(Circle().stroke(.white, lineWidth: selected ? 5 : 4))
-            .overlay(Circle().stroke(Color.pinpointVermillon, lineWidth: selected ? 3 : 2))
+            .frame(width: headDiameter, height: headDiameter)
+            .overlay(Circle().stroke(.white, lineWidth: ringWidth * 1.7))
+            .overlay(Circle().stroke(Color.pinpointVermillon, lineWidth: ringWidth))
             .shadow(color: .black.opacity(0.25), radius: 1.5, y: 0.5)
     }
 
@@ -1487,12 +1558,12 @@ struct PinMarker: View {
                 .fill(Color.pinpointVermillon)
                 .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
             Circle()
-                .stroke(.white, lineWidth: selected ? 3 : 2)
-                .frame(width: Self.headDiameter, height: Self.headDiameter)
+                .stroke(.white, lineWidth: ringWidth)
+                .frame(width: headDiameter, height: headDiameter)
             numberText
                 .foregroundStyle(.white)
-                .frame(width: Self.headDiameter, height: Self.headDiameter)
+                .frame(width: headDiameter, height: headDiameter)
         }
-        .frame(width: Self.headDiameter, height: Self.pointerHeight)
+        .frame(width: headDiameter, height: metrics.pointerHeight)
     }
 }
