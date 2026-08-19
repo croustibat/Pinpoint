@@ -154,6 +154,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider l’historique" } }
       }
     },
+    "Clear search" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la recherche" } }
+      }
+    },
     "Clear selection" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la sélection" } }
@@ -540,6 +545,11 @@
     "Save" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer" } }
+      }
+    },
+    "Search screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher des captures" } }
       }
     },
     "Select" : {

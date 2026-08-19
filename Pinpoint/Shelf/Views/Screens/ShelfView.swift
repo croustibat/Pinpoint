@@ -12,6 +12,7 @@ struct ShelfView: View {
     @State private var selectedIDs = Set<URL>()
     @State private var activeItemID: URL?
     @State private var keyMonitor: Any?
+    @FocusState private var isSearchFieldFocused: Bool
     private let gridSpacing: CGFloat = 14
     private let gridPadding: CGFloat = 16
     private let gridColumnCount = 2
@@ -84,6 +85,8 @@ struct ShelfView: View {
                 .buttonStyle(.borderless)
             }
 
+            searchField
+
             HStack {
                 Menu {
                     ForEach(ScreenshotDateFilter.allCases) { filter in
@@ -137,6 +140,37 @@ struct ShelfView: View {
             }
         }
         .padding(16)
+    }
+
+    /// Free-text filter over the shelf. The shelf lives in a plain window with no
+    /// navigation container, so `.searchable()` has nothing to attach to — a
+    /// styled text field in the header plays the same role.
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField("Search screenshots", text: $store.searchQuery)
+                .textFieldStyle(.plain)
+                .focused($isSearchFieldFocused)
+                .onSubmit { isSearchFieldFocused = false }
+
+            if store.searchQuery.isEmpty == false {
+                Button {
+                    store.searchQuery = ""
+                    isSearchFieldFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Clear search")
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
     }
 
     @ViewBuilder
@@ -328,11 +362,18 @@ struct ShelfView: View {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        let commandPressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
+
+        // Handled before the guard below: the search field must stay reachable
+        // even when the current filters leave nothing visible.
+        if commandPressed, isSearchFieldFocused == false, event.charactersIgnoringModifiers?.lowercased() == "f" {
+            isSearchFieldFocused = true
+            return nil
+        }
+
         guard shouldHandleKeyEvent else {
             return event
         }
-
-        let commandPressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
 
         if commandPressed, event.charactersIgnoringModifiers?.lowercased() == "c" {
             copyFocusedItems()
@@ -385,11 +426,7 @@ struct ShelfView: View {
     }
 
     private var shouldHandleKeyEvent: Bool {
-        guard visibleItems.isEmpty == false else {
-            return false
-        }
-
-        if renameTarget != nil {
+        if isSearchFieldFocused || renameTarget != nil {
             return false
         }
 
@@ -397,7 +434,7 @@ struct ShelfView: View {
             return false
         }
 
-        return true
+        return visibleItems.isEmpty == false
     }
 
     private func syncActiveItem() {
