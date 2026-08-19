@@ -300,6 +300,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser %lld fichiers" } }
       }
     },
+    "Drag or nudge with arrows · ↵ to capture · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplace ou décale aux flèches · ↵ pour capturer · Échap pour annuler" } }
+      }
+    },
     "Drag the selected screenshots" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser les captures sélectionnées" } }

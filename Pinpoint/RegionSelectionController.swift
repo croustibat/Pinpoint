@@ -1,7 +1,7 @@
 import AppKit
 
 /// Presents a full-screen dimming overlay (one borderless window per screen)
-/// and lets the user drag a rectangle to pick a capture region.
+/// and lets the user drag, then adjust, a rectangle to pick a capture region.
 ///
 /// One window per `NSScreen` is required because, with "Displays have separate
 /// Spaces" (the macOS default), a single window spanning the union of all
@@ -37,9 +37,10 @@ final class RegionSelectionController {
         let screens = NSScreen.screens
         guard !screens.isEmpty else { finish(nil); return }
 
-        // The window under the pointer becomes key so Esc works immediately and
-        // owns the hint; the others just dim their screen (AppKit routes a drag
-        // to the window that got the mouseDown, so the anchor screen owns it).
+        // The window under the pointer starts out key so Esc works immediately
+        // and owns the hint; the others just dim their screen (AppKit routes a
+        // drag to the window that got the mouseDown, so the anchor screen owns
+        // it). `focus(_:)` hands both over as soon as a drag starts elsewhere.
         let cursor = NSEvent.mouseLocation
         let keyScreen = screens.first { NSMouseInRect(cursor, $0.frame, false) } ?? NSScreen.main
 
@@ -65,6 +66,10 @@ final class RegionSelectionController {
                 self?.finish(Self.resolve(globalRect: globalRect, anchor: anchor))
             }
             view.onCancel = { [weak self] in self?.finish(nil) }
+            view.onBeginSelection = { [weak self, weak view] in
+                guard let view else { return }
+                self?.focus(view)
+            }
             window.contentView = view
 
             windows.append(window)
@@ -78,6 +83,23 @@ final class RegionSelectionController {
         }
 
         NSCursor.crosshair.push()
+    }
+
+    /// Hands the hint, the keyboard focus and the sole selection to the screen
+    /// the user is actually selecting on. The adjustable stage is driven by the keyboard (Return,
+    /// Esc, arrows), so the window owning the selection has to be the key one —
+    /// otherwise a selection started on a secondary display would have its keys
+    /// swallowed by whichever window was key at first.
+    private func focus(_ view: RegionSelectionView) {
+        for window in windows {
+            guard let other = window.contentView as? RegionSelectionView else { continue }
+            let isActive = (other === view)
+            other.showsHint = isActive
+            if !isActive { other.clearSelection() }
+        }
+        guard let window = view.window, !window.isKeyWindow else { return }
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(view)
     }
 
     private func finish(_ region: CaptureRegion?) {
