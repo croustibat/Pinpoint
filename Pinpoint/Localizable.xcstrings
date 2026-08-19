@@ -320,9 +320,19 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer une flèche" } }
       }
     },
+    "Drag to draw an arrow · click one to move or re-aim it" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer une flèche · clique-en une pour la déplacer ou la réorienter" } }
+      }
+    },
     "Drag to draw a rectangle" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer un rectangle" } }
+      }
+    },
+    "Drag to draw a rectangle · click one to move or resize it" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer un rectangle · clique-en un pour le déplacer ou le redimensionner" } }
       }
     },
     "Drop screenshots into %@ or change the watched folder in Settings." : {

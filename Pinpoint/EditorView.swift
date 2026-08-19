@@ -42,6 +42,16 @@ private enum EditorField: Hashable {
     case context
 }
 
+/// Which end of an arrow a handle drags. `tip` is the end carrying the
+/// arrowhead, so re-aiming an arrow is dragging its tip.
+private enum ArrowEnd: CaseIterable {
+    case tail, tip
+
+    func point(of shape: Markup) -> CGPoint {
+        self == .tail ? shape.start : shape.end
+    }
+}
+
 struct EditorView: View {
     /// The editor's base image. Mutable: a crop replaces it in place. Kept at
     /// native pixel size (`.size` == pixels) so export renders at full res.
@@ -80,13 +90,20 @@ struct EditorView: View {
 
     // MARK: Undo/redo state
     @State private var history = EditorHistory()
-    /// Pre-gesture state captured on a pin drag's first event, recorded once on
+    /// Pre-gesture state captured on a drag's first event, recorded once on
     /// release: a drag emits an event per frame, and each one must not become
-    /// its own undo entry.
+    /// its own undo entry. Shared by marker and shape gestures — only one of
+    /// them can be in flight at a time.
     @State private var dragUndoSnapshot: EditorSnapshot?
     /// Pre-edit state captured when a text field takes focus, recorded when it
     /// gives it up. See `flushTextEdit()` for why typing is coalesced this way.
     @State private var textEditSnapshot: EditorSnapshot?
+    /// The shape as it stood before the gesture in progress, captured on its
+    /// first event. Every frame applies the gesture's *cumulative* translation
+    /// to this copy rather than to the live shape — same rule as `pinDrag`, and
+    /// what keeps a drag from accelerating against its own output. Doubles as
+    /// the "a shape gesture is running" flag.
+    @State private var shapeDragOrigin: Markup?
 
     init(
         image: NSImage,
@@ -276,10 +293,19 @@ struct EditorView: View {
         if isCropping {
             return String(localized: "Drag handles to crop · Esc to cancel")
         }
+        // Once something of the active kind is on the canvas, the hint also
+        // advertises that it can be picked back up.
         switch tool {
-        case .pin: return String(localized: "Click to drop a marker")
-        case .arrow: return String(localized: "Drag to draw an arrow")
-        case .rectangle: return String(localized: "Drag to draw a rectangle")
+        case .pin:
+            return String(localized: "Click to drop a marker")
+        case .arrow:
+            return shapes.contains { $0.kind == .arrow }
+                ? String(localized: "Drag to draw an arrow · click one to move or re-aim it")
+                : String(localized: "Drag to draw an arrow")
+        case .rectangle:
+            return shapes.contains { $0.kind == .rectangle }
+                ? String(localized: "Drag to draw a rectangle · click one to move or resize it")
+                : String(localized: "Drag to draw a rectangle")
         }
     }
 
@@ -298,11 +324,25 @@ struct EditorView: View {
                     .position(x: fitted.midX, y: fitted.midY)
                     .shadow(radius: 8, y: 2)
 
-                // Committed markups (display-only; selection happens in the panel).
+                // Committed markups. Drawing and interaction are two layers:
+                // every shape draws first and takes no clicks, then the
+                // manipulable ones take them on top, so a handle is never
+                // buried under the outline of a shape drawn after it.
                 ForEach(shapes) { shape in
                     markupView(shape, in: fitted, selected: shape.id == selectedShapeID)
                 }
                 .allowsHitTesting(false)
+
+                // Grab bands along the outlines, then the selected shape's
+                // handles above every band. Non-manipulable shapes are left out
+                // of the layer entirely rather than hit-test-disabled inside it,
+                // so switching tools mid-hover takes their cursor with them.
+                ForEach(shapes.filter(isManipulable)) { shape in
+                    shapeGrabBand(shape, in: fitted)
+                }
+                if let shape = selectedShape, isManipulable(shape) {
+                    shapeHandles(shape, in: fitted)
+                }
 
                 // Live preview while drawing.
                 if let draft {
@@ -405,6 +445,225 @@ struct EditorView: View {
             .stroke(Color.pinpointVermillon, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
         }
+    }
+
+    // MARK: - Shape manipulation
+
+    /// Width of the invisible band that makes a shape's outline clickable.
+    private static let shapeGrabBand: CGFloat = 14
+    /// Visible diameter of a manipulation handle, and the larger square that
+    /// actually takes the click — the dots are small, the grab area is not
+    /// (`RegionSelectionView` is equally generous with its 10pt tolerance).
+    private static let shapeHandleSize: CGFloat = 9
+    private static let shapeHandleHitSize: CGFloat = 20
+    /// Floor on a rectangle's on-screen sides while resizing. Small enough to
+    /// stay under anything `commitDraft` lets through, so touching a handle can
+    /// never inflate a shape that was already committed.
+    private static let shapeMinSide: CGFloat = 6
+
+    private var selectedShape: Markup? {
+        shapes.first { $0.id == selectedShapeID }
+    }
+
+    /// Whether a shape currently takes clicks on the canvas.
+    ///
+    /// The rule, chosen deliberately: a shape is manipulable exactly when the
+    /// tool that draws it is active — the same rule markers already follow, so
+    /// every tool owns its own objects and ⌘1/⌘2/⌘3 remain the single switch for
+    /// "what am I working on". A dedicated selection tool was the other option;
+    /// it would add a fourth segment and a mode to leave, to save one keystroke
+    /// in the only case where the rules differ (re-editing a shape whose tool
+    /// isn't the current one). Inert while cropping, like undo/redo: the crop
+    /// overlay is modal and owns interaction.
+    private func isManipulable(_ shape: Markup) -> Bool {
+        guard !isCropping else { return false }
+        switch shape.kind {
+        case .arrow: return tool == .arrow
+        case .rectangle: return tool == .rectangle
+        }
+    }
+
+    /// The clickable band along a shape's outline. Deliberately not its
+    /// interior: a rectangle annotation is mostly hole, and clicking through it
+    /// has to keep dropping markers and drawing new shapes.
+    @ViewBuilder
+    private func shapeGrabBand(_ shape: Markup, in fitted: CGRect) -> some View {
+        Group {
+            switch shape.kind {
+            case .rectangle:
+                let r = absoluteRect(shape.rect, in: fitted)
+                Color.clear
+                    .frame(width: r.width, height: r.height)
+                    .contentShape(OutlineHitShape(base: RoundedRectangle(cornerRadius: 4),
+                                                  width: Self.shapeGrabBand))
+                    .position(x: r.midX, y: r.midY)
+            case .arrow:
+                // Sized to the arrow's bounding box, band included, and the
+                // endpoints re-expressed inside it: `ArrowShape` draws in
+                // whatever space it is handed, and a view no larger than the
+                // shape keeps the hover cursor off the rest of the canvas.
+                let a = absolutePoint(shape.start, in: fitted)
+                let b = absolutePoint(shape.end, in: fitted)
+                let box = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
+                                 width: abs(b.x - a.x), height: abs(b.y - a.y))
+                    .insetBy(dx: -Self.shapeGrabBand, dy: -Self.shapeGrabBand)
+                Color.clear
+                    .frame(width: box.width, height: box.height)
+                    .contentShape(OutlineHitShape(
+                        base: ArrowShape(start: CGPoint(x: a.x - box.minX, y: a.y - box.minY),
+                                         end: CGPoint(x: b.x - box.minX, y: b.y - box.minY)),
+                        width: Self.shapeGrabBand
+                    ))
+                    .position(x: box.midX, y: box.midY)
+            }
+        }
+        .gesture(shapeMoveDrag(shape, in: fitted))
+        .hoverCursor(.openHand)
+    }
+
+    /// The handles of the selected shape: the two endpoints of an arrow (so a
+    /// mis-aimed one gets re-aimed instead of redrawn), the eight box handles of
+    /// a rectangle — `SelectionHandle`, the same geometry the capture overlay
+    /// uses, read in SwiftUI's top-left orientation.
+    @ViewBuilder
+    private func shapeHandles(_ shape: Markup, in fitted: CGRect) -> some View {
+        switch shape.kind {
+        case .arrow:
+            ForEach(ArrowEnd.allCases, id: \.self) { end in
+                handleDot(at: absolutePoint(end.point(of: shape), in: fitted), cursor: .crosshair)
+                    .gesture(arrowEndDrag(shape, end: end, in: fitted))
+            }
+        case .rectangle:
+            let r = absoluteRect(shape.rect, in: fitted)
+            ForEach(SelectionHandle.allCases, id: \.self) { handle in
+                handleDot(at: handle.point(in: r, orientation: .yDown), cursor: handle.cursor)
+                    .gesture(rectangleResizeDrag(shape, handle: handle, in: fitted))
+            }
+        }
+    }
+
+    /// One handle dot, styled like the crop overlay's so the two read as the
+    /// same control. The outer frame is the grab area, the inner one the dot.
+    private func handleDot(at point: CGPoint, cursor: NSCursor) -> some View {
+        ZStack {
+            Circle().fill(Color.white)
+            Circle().stroke(Color.pinpointVermillon, lineWidth: 2)
+        }
+        .frame(width: Self.shapeHandleSize, height: Self.shapeHandleSize)
+        .frame(width: Self.shapeHandleHitSize, height: Self.shapeHandleHitSize)
+        .contentShape(Rectangle())
+        .position(point)
+        .hoverCursor(cursor)
+    }
+
+    // MARK: Shape gestures
+
+    /// Shared prologue for every shape gesture: on the drag's first event it
+    /// closes any typing session, captures the pre-gesture state for undo and
+    /// the shape as it was, and selects it. Returns that pre-gesture copy, which
+    /// every mutation below applies the gesture's cumulative translation to.
+    private func beginShapeDrag(_ shape: Markup) -> Markup {
+        if shapeDragOrigin == nil {
+            flushTextEdit()
+            dragUndoSnapshot = snapshot()
+            shapeDragOrigin = shape
+        }
+        selectShape(shape.id)
+        return shapeDragOrigin ?? shape
+    }
+
+    /// Closes a shape gesture and records it as a single undo entry — nothing at
+    /// all when the drag was really a click, since selecting isn't an edit. Same
+    /// bookkeeping as `pinDrag`, which is why the two share `dragUndoSnapshot`:
+    /// only one gesture can be in flight at a time.
+    private func endShapeDrag() {
+        shapeDragOrigin = nil
+        guard let before = dragUndoSnapshot else { return }
+        dragUndoSnapshot = nil
+        if snapshot() != before { history.record(before) }
+    }
+
+    /// Writes a mutated shape back in place, if it is still there — an undo can
+    /// take it away mid-gesture.
+    private func replaceShape(_ shape: Markup) {
+        guard let index = shapes.firstIndex(where: { $0.id == shape.id }) else { return }
+        shapes[index] = shape
+    }
+
+    /// Drag anywhere on a shape's outline to move it.
+    private func shapeMoveDrag(_ shape: Markup, in fitted: CGRect) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let origin = beginShapeDrag(shape)
+                replaceShape(translated(origin, by: value.translation, in: fitted))
+            }
+            .onEnded { _ in endShapeDrag() }
+    }
+
+    /// Drag one of a rectangle's eight handles to resize it.
+    private func rectangleResizeDrag(_ shape: Markup, handle: SelectionHandle,
+                                     in fitted: CGRect) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let origin = beginShapeDrag(shape)
+                // Resized on screen, against the fitted image as bounds: that
+                // keeps the minimum side isotropic and the result inside 0...1
+                // without a second clamp fighting the first.
+                let resized = handle.resize(
+                    absoluteRect(origin.rect, in: fitted),
+                    dx: value.translation.width,
+                    dy: value.translation.height,
+                    minSide: Self.shapeMinSide,
+                    in: fitted,
+                    orientation: .yDown
+                )
+                var moved = origin
+                // Re-anchored to the box corners: `Markup.rect` is
+                // order-independent and the exporter reads rectangles through
+                // it, so which corner is `start` carries no meaning to lose.
+                moved.start = clamp01(normalize(CGPoint(x: resized.minX, y: resized.minY), in: fitted))
+                moved.end = clamp01(normalize(CGPoint(x: resized.maxX, y: resized.maxY), in: fitted))
+                replaceShape(moved)
+            }
+            .onEnded { _ in endShapeDrag() }
+    }
+
+    /// Drag an arrow's tail or tip to re-aim it. Same arithmetic as `pinDrag`:
+    /// one free point following the cursor, clamped to the image.
+    private func arrowEndDrag(_ shape: Markup, end: ArrowEnd, in fitted: CGRect) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let origin = beginShapeDrag(shape)
+                let base = end.point(of: origin)
+                let point = clamp01(CGPoint(
+                    x: base.x + value.translation.width / fitted.width,
+                    y: base.y + value.translation.height / fitted.height
+                ))
+                var moved = origin
+                switch end {
+                case .tail: moved.start = point
+                case .tip: moved.end = point
+                }
+                replaceShape(moved)
+            }
+            .onEnded { _ in endShapeDrag() }
+    }
+
+    /// Moves both defining points by the same on-screen translation, sliding the
+    /// shape back inside the image when it runs out. Clamping each point on its
+    /// own would squash the shape against the edge instead of stopping it, which
+    /// is exactly what `SelectionHandle.moved` already solves for the bounding
+    /// box — the effective delta it produces is then applied to both points.
+    private func translated(_ shape: Markup, by translation: CGSize, in fitted: CGRect) -> Markup {
+        guard fitted.width > 0, fitted.height > 0 else { return shape }
+        let box = absoluteRect(shape.rect, in: fitted)
+        let moved = SelectionHandle.moved(box, dx: translation.width, dy: translation.height, in: fitted)
+        let dx = (moved.minX - box.minX) / fitted.width
+        let dy = (moved.minY - box.minY) / fitted.height
+        var out = shape
+        out.start = clamp01(CGPoint(x: shape.start.x + dx, y: shape.start.y + dy))
+        out.end = clamp01(CGPoint(x: shape.end.x + dx, y: shape.end.y + dy))
+        return out
     }
 
     // MARK: - Side panel
@@ -719,6 +978,7 @@ struct EditorView: View {
         draft = nil
         dragStartPosition = nil
         dragUndoSnapshot = nil
+        shapeDragOrigin = nil
 
         image = state.image
         pins = state.pins
@@ -1100,6 +1360,57 @@ struct ArrowShape: Shape {
         path.move(to: end)
         path.addLine(to: CGPoint(x: end.x - headLength * cos(rightAngle), y: end.y - headLength * sin(rightAngle)))
         return path
+    }
+}
+
+/// Another shape's outline thickened into a grab band, used as a
+/// `contentShape` so a click lands on a stroke instead of on the empty area the
+/// stroke encloses.
+struct OutlineHitShape<Base: Shape>: Shape {
+    var base: Base
+    var width: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        base.path(in: rect)
+            .strokedPath(StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+    }
+}
+
+/// Shows `cursor` while the pointer is over the view.
+///
+/// Push/pop rather than `set()`: AppKit resets the cursor from the window's
+/// tracking areas on every mouse move, and a bare `set()` loses that race. The
+/// pushed state is tracked so a view that vanishes mid-hover — a handle whose
+/// shape gets deselected, a shape an undo takes away, a tool switch retiring a
+/// whole grab band — still balances its push.
+private struct HoverCursor: ViewModifier {
+    let cursor: NSCursor
+    @State private var pushed = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { inside in
+                if inside {
+                    guard !pushed else { return }
+                    pushed = true
+                    cursor.push()
+                } else {
+                    pop()
+                }
+            }
+            .onDisappear(perform: pop)
+    }
+
+    private func pop() {
+        guard pushed else { return }
+        pushed = false
+        NSCursor.pop()
+    }
+}
+
+private extension View {
+    func hoverCursor(_ cursor: NSCursor) -> some View {
+        modifier(HoverCursor(cursor: cursor))
     }
 }
 
