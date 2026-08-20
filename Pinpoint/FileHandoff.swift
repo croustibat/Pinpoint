@@ -114,19 +114,18 @@ enum FileHandoff {
         // the point of the triplet is that the text travels with the image, so
         // baking it in buys nothing here. Native resolution, no clipboard cap:
         // this file is read, not pasted.
-        guard let png = Exporter.pngData(base: base, pins: pins, shapes: shapes, context: context,
-                                         style: style, includeLegend: false, maxDimension: nil),
-              let rep = NSBitmapImageRep(data: png) else {
+        guard let render = Exporter.renderPNG(base: base, pins: pins, shapes: shapes, context: context,
+                                              style: style, includeLegend: false, maxDimension: nil) else {
             throw Failure.renderFailed
         }
+        let png = render.data
         // Measured off the PNG we just produced, not taken from `base.size`.
-        // `annotatedImage` draws through `lockFocus()`, whose backing store
-        // follows the deepest screen: on a Retina Mac the file comes out at 2×
-        // the size in points (and at 1× on a machine with no display at all).
-        // The .md and .json quote pixel coordinates, so they have to be in the
-        // grid of the file sitting next to them — a factor-two mismatch would
-        // send an agent to the wrong half of the image.
-        let pixelSize = CGSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+        // The renderer now draws into a bitmap of exactly the requested pixel
+        // size (#76), so the two agree — but the .md and .json quote pixel
+        // coordinates in the grid of the file sitting next to them, and that
+        // guarantee belongs to whoever wrote the bytes, not to a caller's
+        // assumption about them.
+        let pixelSize = render.pixelSize
 
         // Always the full agent-ready text, again regardless of `includeLegend`
         // — which is what keeps the enriched export (#41) reachable even in the
