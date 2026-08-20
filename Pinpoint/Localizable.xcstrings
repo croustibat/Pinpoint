@@ -274,6 +274,18 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ordre de tri" } }
       }
     },
+    "a11y.window.empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No window under the pointer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune fenêtre sous le pointeur" } }
+      }
+    },
+    "a11y.window.selection" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Window selection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélection de fenêtre" } }
+      }
+    },
     "Add to favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter aux favoris" } }
@@ -537,9 +549,9 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } }
       }
     },
-    "Drag a rectangle · Esc to cancel" : {
+    "Drag a rectangle · Space to pick a window · Esc to cancel" : {
       "localizations" : {
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Échap pour annuler" } }
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Espace pour choisir une fenêtre · Échap pour annuler" } }
       }
     },
     "Drag file" : {
@@ -667,6 +679,11 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture was copied to the clipboard, but the files for the agent couldn’t be written to %@: %@" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture a été copiée dans le presse-papier, mais les fichiers destinés à l’agent n’ont pas pu être écrits dans %@ : %@" } }
+      }
+    },
+    "Hover a window · click to capture · Space for a rectangle · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Survole une fenêtre · clique pour capturer · Espace pour un rectangle · Échap pour annuler" } }
       }
     },
     "Instructions for the agent" : {
@@ -1117,6 +1134,12 @@
     "White ring + drop shadow." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anneau blanc + ombre portée." } }
+      }
+    },
+    "window.untitled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled window" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fenêtre sans titre" } }
       }
     },
     "Yesterday" : {

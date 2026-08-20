@@ -162,10 +162,28 @@ enum ScreenCapture {
 
         let content = try await SCShareableContent.current
 
+        // Window mode (#51). The window is looked up again *now* rather than
+        // trusted from selection time: the capture delay gives it every chance
+        // to have moved, resized, or gone. If it's gone, the rect it occupied is
+        // still known, so the capture quietly degrades to the region below
+        // instead of failing.
+        if let target = region.window,
+           let window = content.windows.first(where: { $0.windowID == target.id }) {
+            return try await capture(window: window, target: target, on: region.displayID)
+        }
+
         guard let display = content.displays.first(where: { $0.displayID == region.displayID })
                 ?? content.displays.first else {
             throw ScreenCaptureError.noDisplay
         }
+
+        // A window capture only reaches this line when its window vanished
+        // between the pick and the shutter. Such a rect is the window's own
+        // frame, which — unlike a dragged rectangle — is free to run past the
+        // display it was resolved against, and a `sourceRect` that does comes
+        // back stretched. Clamping it keeps the fallback honest: a smaller
+        // picture of the right place, at the right scale.
+        let region = region.window == nil ? region : region.clampedToDisplay(display)
 
         let filter = SCContentFilter(display: display,
                                      excludingApplications: ownApplications(in: content),
@@ -185,6 +203,67 @@ enum ScreenCapture {
         // it — and if `captureImage` throws first, the child task is cancelled
         // with the scope.
         async let snapshot = accessibilitySnapshot(for: region)
+        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        return Capture(
+            image: NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height)),
+            accessibility: await snapshot
+        )
+    }
+
+    /// Captures one window on its own: no desktop behind it, no neighbouring
+    /// windows in front of it, transparent rounded corners.
+    ///
+    /// ## Why shadows are dropped
+    ///
+    /// `SCContentFilter(desktopIndependentWindow:)` reports a `contentRect`
+    /// equal to the window's own frame, and asking for it at
+    /// `pointPixelScale` yields an image aligned to that frame pixel for pixel.
+    /// Keeping the drop shadow does *not* enlarge the image: ScreenCaptureKit
+    /// fits "window + shadow" into the size that was asked for, which shrinks
+    /// the window itself and shifts it (measured on a 1798×1041 pt window: the
+    /// opaque content landed at 3247×1881 px offset by 101, 68 instead of
+    /// filling 3596×2082). That resamples the pixels *and* breaks the one
+    /// invariant this whole feature rests on — that `CaptureRegion.rect` is
+    /// exactly the piece of screen the image shows, which is what maps a marker
+    /// back to an accessibility element (#55). Dropping the shadow keeps the
+    /// mapping exact and still gives clean edges: the corners come back
+    /// genuinely transparent, so the PNG carries the window's real silhouette.
+    @MainActor
+    private static func capture(window: SCWindow,
+                                target: CaptureRegion.WindowTarget,
+                                on displayID: CGDirectDisplayID) async throws -> Capture {
+        let filter = SCContentFilter(desktopIndependentWindow: window)
+        let scale = CGFloat(filter.pointPixelScale)
+        let contentRect = filter.contentRect
+
+        let config = SCStreamConfiguration()
+        config.width = Int((contentRect.width * scale).rounded())
+        config.height = Int((contentRect.height * scale).rounded())
+        config.showsCursor = false
+        config.scalesToFit = false
+        config.captureResolution = .best
+        config.ignoreShadowsSingleWindow = true
+
+        // The region the image actually covers, rebuilt from the filter rather
+        // than from what the overlay resolved: those can differ by the time the
+        // shutter fires. `contentRect` is global and top-left, the display's
+        // bounds are in the same space, so the subtraction is all it takes to
+        // get back to the display-relative rect the rest of the app expects.
+        let displayOrigin = CGDisplayBounds(displayID).origin
+        let effective = CaptureRegion(
+            displayID: displayID,
+            rect: contentRect.offsetBy(dx: -displayOrigin.x, dy: -displayOrigin.y),
+            scale: scale,
+            window: CaptureRegion.WindowTarget(
+                id: target.id,
+                processIdentifier: target.processIdentifier,
+                applicationName: target.applicationName,
+                title: target.title,
+                screenFrame: contentRect
+            )
+        )
+
+        async let snapshot = accessibilitySnapshot(for: effective)
         let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
         return Capture(
             image: NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height)),
