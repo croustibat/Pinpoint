@@ -7,35 +7,92 @@ enum Exporter {
     /// first among those — `inDrawOrder`, the same order the editor previews.
     static func annotatedImage(base: NSImage, pins: [Pin], shapes: [Markup], style: PinStyle) -> NSImage {
         let size = base.size
-        let result = NSImage(size: size)
-        result.lockFocus()
+        return drawn(size: size, matching: base) {
+            base.draw(in: NSRect(origin: .zero, size: size),
+                      from: .zero, operation: .copy, fraction: 1.0)
 
-        base.draw(in: NSRect(origin: .zero, size: size),
-                  from: .zero, operation: .copy, fraction: 1.0)
+            // Drawn at 1:1 into the image's own pixel grid, so the metrics need
+            // no scaling here. `EditorView` builds the same metrics with the
+            // canvas' scale factor, which is what makes the preview WYSIWYG.
+            let metrics = MarkupMetrics(imageWidth: size.width)
+            for shape in shapes.inDrawOrder {
+                drawMarkup(shape, in: size, metrics: metrics)
+            }
 
-        // Drawn at 1:1 into the image's own pixel grid, so the metrics need
-        // no scaling here. `EditorView` builds the same metrics with the
-        // canvas' scale factor, which is what makes the preview WYSIWYG.
-        let metrics = MarkupMetrics(imageWidth: size.width)
-        for shape in shapes.inDrawOrder {
-            drawMarkup(shape, in: size, metrics: metrics)
+            for pin in pins {
+                // Pin position is the marked point (top-left origin); NSImage
+                // drawing is bottom-left, so flip y.
+                let anchor = CGPoint(
+                    x: pin.position.x * size.width,
+                    y: (1 - pin.position.y) * size.height
+                )
+                // Keep the badge fully inside the image when the point is near an
+                // edge; the exact point is still carried by the % in the text.
+                let drawAnchor = clampedMarkerAnchor(anchor, metrics: metrics, style: style, in: size)
+                drawMarker(number: pin.number, anchor: drawAnchor, metrics: metrics, style: style)
+            }
+        }
+    }
+
+    /// Renders `body` into a bitmap of exactly `size` pixels — one drawing unit
+    /// per pixel — and hands it back as an `NSImage` whose `size` therefore
+    /// equals its own pixel dimensions.
+    ///
+    /// Deliberately not `NSImage.lockFocus()` (#76). That borrows the backing
+    /// scale of the deepest attached screen, so the very same annotations came
+    /// out at 2× the requested size on a Retina Mac and 1× on a headless build
+    /// machine — and nothing downstream was told. Captures are already stored at
+    /// native pixel resolution (`NSImage(cgImage:size:)` with the pixel
+    /// dimensions), so that 2× was an upscale of pixels we already had: it
+    /// doubled every exported file for no extra detail, while making the
+    /// dimensions in `buildText`'s header and every `px` coordinate under it
+    /// describe a grid half the size of the image they shipped with. An agent
+    /// acting on those numbers landed at a quarter of the intended point.
+    ///
+    /// The comment in `annotatedImage` already promised "1:1 into the image's
+    /// own pixel grid"; this is what makes it true.
+    private static func drawn(size: CGSize, matching source: NSImage?, _ body: () -> Void) -> NSImage {
+        let width = Int(size.width.rounded())
+        let height = Int(size.height.rounded())
+        guard width > 0, height > 0, let context = bitmapContext(width: width, height: height,
+                                                                 matching: source) else {
+            return NSImage(size: size)
         }
 
-        for pin in pins {
-            // Pin position is the marked point (top-left origin); NSImage
-            // drawing is bottom-left, so flip y.
-            let anchor = CGPoint(
-                x: pin.position.x * size.width,
-                y: (1 - pin.position.y) * size.height
-            )
-            // Keep the badge fully inside the image when the point is near an
-            // edge; the exact point is still carried by the % in the text.
-            let drawAnchor = clampedMarkerAnchor(anchor, metrics: metrics, style: style, in: size)
-            drawMarker(number: pin.number, anchor: drawAnchor, metrics: metrics, style: style)
-        }
+        NSGraphicsContext.saveGraphicsState()
+        // `flipped: false` keeps the bottom-left origin every drawing routine
+        // below already assumes, exactly as `lockFocus()` did.
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
+        NSGraphicsContext.current?.imageInterpolation = .high
+        body()
+        NSGraphicsContext.restoreGraphicsState()
 
-        result.unlockFocus()
-        return result
+        guard let cgImage = context.makeImage() else { return NSImage(size: size) }
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        rep.size = NSSize(width: width, height: height)
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return image
+    }
+
+    /// An 8-bit RGBA context of exactly `width`×`height` pixels, in the colour
+    /// space of `source` when that is an RGB one.
+    ///
+    /// Keeping the capture's own space matters for "Save image…", which writes a
+    /// file a human then looks at: forcing a generic space would quietly
+    /// desaturate a wide-gamut screenshot. Read off the backing `CGImage` rather
+    /// than off a representation, because the two kinds of image that reach here
+    /// are backed differently — a capture comes from `NSImage(cgImage:size:)`,
+    /// a Shelf file from an `NSBitmapImageRep` — and only the `CGImage` answers
+    /// for both. Anything that isn't RGB (grey, CMYK) can't back this pixel
+    /// format, so those fall back to sRGB.
+    private static func bitmapContext(width: Int, height: Int, matching source: NSImage?) -> CGContext? {
+        let sourceSpace = source?.cgImage(forProposedRect: nil, context: nil, hints: nil)?.colorSpace
+        let space = (sourceSpace?.model == .rgb ? sourceSpace : nil) ?? CGColorSpace(name: CGColorSpace.sRGB)
+        guard let space else { return nil }
+        return CGContext(data: nil, width: width, height: height,
+                         bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
     }
 
     private static func drawMarkup(_ shape: Markup, in size: CGSize, metrics: MarkupMetrics) {
@@ -238,7 +295,7 @@ enum Exporter {
     /// without reading the pixels — then the user's instructions in their own
     /// section.
     static func buildText(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize,
-                          accessibility: AXSnapshot? = nil) -> String {
+                          preset: TaskPreset = .raw, accessibility: AXSnapshot? = nil) -> String {
         let width = Int(imageSize.width.rounded())
         let height = Int(imageSize.height.rounded())
         let orderedPins = pins.sorted { $0.number < $1.number }
@@ -329,6 +386,17 @@ enum Exporter {
             }
         }
 
+        // The task framing (#53) sits directly above the user's own words: the
+        // two are read together, and an agent that has just been told how to
+        // work should meet the specifics of *this* capture next. `.raw` adds
+        // nothing, which is what keeps the default export byte-identical to
+        // what it was before presets existed.
+        if let guidance = preset.guidance {
+            lines.append("")
+            lines.append("## " + preset.heading)
+            lines.append(guidance)
+        }
+
         let ctx = context.trimmingCharacters(in: .whitespacesAndNewlines)
         if !ctx.isEmpty {
             lines.append("")
@@ -405,6 +473,44 @@ enum Exporter {
         }
     }
 
+    /// The same facts as `buildText`, in the versioned JSON contract (#52).
+    ///
+    /// Deliberately not a second schema. `FileHandoff.Document` is already the
+    /// thing the file handoff writes, the thing #55 hung the accessibility data
+    /// off, and the thing the CLI (#56) and the MCP server (#57) are being built
+    /// against — a rival shape for the clipboard would have meant two formats to
+    /// keep in step and a coin toss for whoever consumes them. This is that
+    /// document, serialized; `directory` is nil because an export chosen from a
+    /// save panel has no triplet around it to point at.
+    ///
+    /// Returns nil only if encoding fails, which for this document means a
+    /// programming error rather than a runtime condition — callers fall back to
+    /// the Markdown, since shipping no text at all would be worse.
+    static func buildJSON(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize,
+                          style: PinStyle, preset: TaskPreset = .raw,
+                          accessibility: AXSnapshot? = nil) -> String? {
+        let document = FileHandoff.Document(pins: pins, shapes: shapes, context: context,
+                                            imageSize: imageSize, directory: nil,
+                                            style: style, preset: preset,
+                                            accessibility: accessibility)
+        guard let data = try? FileHandoff.encoder.encode(document) else { return nil }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// The text half of an export, in whichever format the user asked for.
+    /// Falls back to the Markdown when the JSON can't be produced.
+    static func agentText(format: AgentTextFormat, pins: [Pin], shapes: [Markup], context: String,
+                          imageSize: CGSize, style: PinStyle, preset: TaskPreset,
+                          accessibility: AXSnapshot?) -> String {
+        if format == .json,
+           let json = buildJSON(pins: pins, shapes: shapes, context: context, imageSize: imageSize,
+                                style: style, preset: preset, accessibility: accessibility) {
+            return json
+        }
+        return buildText(pins: pins, shapes: shapes, context: context, imageSize: imageSize,
+                         preset: preset, accessibility: accessibility)
+    }
+
     /// `(1075, 259)` — a normalized point in the image's pixel grid, top-left origin.
     private static func pixels(_ point: CGPoint, in size: CGSize) -> String {
         "(\(Int((point.x * size.width).rounded())), \(Int((point.y * size.height).rounded())))"
@@ -420,9 +526,10 @@ enum Exporter {
     /// single paste carries everything — most chat UIs paste only the image and
     /// drop the clipboard text.
     static func exportImage(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                            style: PinStyle, includeLegend: Bool) -> NSImage {
+                            style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw) -> NSImage {
         let annotated = annotatedImage(base: base, pins: pins, shapes: shapes, style: style)
-        guard includeLegend, let legend = legendString(pins: pins, context: context, width: annotated.size.width) else {
+        guard includeLegend, let legend = legendString(pins: pins, context: context,
+                                                       preset: preset, width: annotated.size.width) else {
             return annotated
         }
 
@@ -431,32 +538,44 @@ enum Exporter {
         let textWidth = width - pad * 2
         let textHeight = ceil(legend.boundingRect(
             with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading]).height)
-        let panelHeight = textHeight + pad * 2
+            options: legendDrawingOptions).height)
+        // Rounded up to a whole pixel: the capture is laid on top of this strip,
+        // and a fractional offset would resample it against the grid it is
+        // already aligned to.
+        let panelHeight = (textHeight + pad * 2).rounded(.up)
         let totalHeight = annotated.size.height + panelHeight
 
-        let result = NSImage(size: NSSize(width: width, height: totalHeight))
-        result.lockFocus()
-        // Capture on top (image space is bottom-left origin, so the panel sits
-        // at the bottom and the capture above it).
-        annotated.draw(in: NSRect(x: 0, y: panelHeight, width: width, height: annotated.size.height))
-        NSColor.white.setFill()
-        NSRect(x: 0, y: 0, width: width, height: panelHeight).fill()
-        NSColor.black.withAlphaComponent(0.10).setFill()
-        NSRect(x: 0, y: panelHeight - 1, width: width, height: 1).fill()
-        // .usesLineFragmentOrigin fills from the top edge of the rect downwards.
-        legend.draw(with: NSRect(x: pad, y: pad, width: textWidth, height: textHeight),
-                    options: [.usesLineFragmentOrigin])
-        result.unlockFocus()
-        return result
+        return drawn(size: NSSize(width: width, height: totalHeight), matching: base) {
+            // Capture on top (image space is bottom-left origin, so the panel sits
+            // at the bottom and the capture above it).
+            annotated.draw(in: NSRect(x: 0, y: panelHeight, width: width, height: annotated.size.height))
+            NSColor.white.setFill()
+            NSRect(x: 0, y: 0, width: width, height: panelHeight).fill()
+            NSColor.black.withAlphaComponent(0.10).setFill()
+            NSRect(x: 0, y: panelHeight - 1, width: width, height: 1).fill()
+            // .usesLineFragmentOrigin fills from the top edge of the rect downwards.
+            legend.draw(with: NSRect(x: pad, y: pad, width: textWidth, height: textHeight),
+                        options: legendDrawingOptions)
+        }
     }
 
+    /// How the legend is laid out — used to measure it *and* to draw it.
+    ///
+    /// One constant for both on purpose. They used to disagree: the height was
+    /// measured with `.usesFontLeading` and the text drawn without it, which lays
+    /// out taller lines, so the panel came out a few points short of its own
+    /// contents and the last line of the user's instructions was cut off by the
+    /// bottom edge of the image. Whichever option is chosen, it has to be the
+    /// same one twice.
+    private static let legendDrawingOptions: NSString.DrawingOptions = [.usesLineFragmentOrigin]
+
     /// The legend rendered into the exported image, or nil if there's nothing to
-    /// show (no pins and no instructions).
-    private static func legendString(pins: [Pin], context: String, width: CGFloat) -> NSAttributedString? {
+    /// show (no pins, no instructions and no task framing).
+    private static func legendString(pins: [Pin], context: String, preset: TaskPreset,
+                                     width: CGFloat) -> NSAttributedString? {
         let trimmedContext = context.trimmingCharacters(in: .whitespacesAndNewlines)
         let orderedPins = pins.sorted { $0.number < $1.number }
-        guard !orderedPins.isEmpty || !trimmedContext.isEmpty else { return nil }
+        guard !orderedPins.isEmpty || !trimmedContext.isEmpty || preset.guidance != nil else { return nil }
 
         let bodySize = max(15, width * 0.016)
         let body = NSFont.systemFont(ofSize: bodySize)
@@ -484,8 +603,17 @@ enum Exporter {
                 add("   \(note.isEmpty ? String(localized: "(no description)") : note)\n", body, dark)
             }
         }
-        if !trimmedContext.isEmpty {
+        // The task framing belongs here for the same reason the legend exists at
+        // all (#41, #69): with it embedded, the clipboard carries the image and
+        // nothing else, so anything left out of the strip never reaches the
+        // agent. Same order as `buildText` — framing, then the user's own words.
+        if let guidance = preset.guidance {
             if !orderedPins.isEmpty { add("\n", body, dark) }
+            add(preset.heading.uppercased(with: .current) + "\n", heading, secondary)
+            add(guidance + "\n", body, dark)
+        }
+        if !trimmedContext.isEmpty {
+            if !orderedPins.isEmpty || preset.guidance != nil { add("\n", body, dark) }
             add(String(localized: "legend.instructions", defaultValue: "INSTRUCTIONS") + "\n", heading, secondary)
             add(trimmedContext, body, dark)
         }
@@ -499,16 +627,53 @@ enum Exporter {
     /// image is downscaled to fit, while "Save image…" keeps full resolution.
     static let clipboardMaxDimension: CGFloat = 2000
 
+    /// A rendered export: the PNG bytes and the pixel grid they are in.
+    ///
+    /// The two travel together on purpose. Every coordinate Pinpoint writes —
+    /// the dimensions in `buildText`'s header, each marker's `px`, every box in
+    /// the JSON — is expressed in *this* grid, so a caller that gets the bytes
+    /// without the size has to guess, and guessing is precisely what #76 was:
+    /// the text quoted `base.size` while the file next to it was twice that,
+    /// then capped to `clipboardMaxDimension`.
+    struct RenderedPNG {
+        let data: Data
+        /// Actual pixel dimensions of `data`, after any downscale.
+        let pixelSize: CGSize
+    }
+
     /// PNG data for the annotated image (with legend when `includeLegend`),
     /// optionally downscaled so its longest edge is at most `maxDimension` pixels.
     /// Pass `nil` for full native resolution.
-    static func pngData(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                        style: PinStyle, includeLegend: Bool, maxDimension: CGFloat?) -> Data? {
+    static func renderPNG(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
+                          style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
+                          maxDimension: CGFloat?) -> RenderedPNG? {
         let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
-                                style: style, includeLegend: includeLegend)
-        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+                                style: style, includeLegend: includeLegend, preset: preset)
+        guard let rep = bitmapRep(of: image) else { return nil }
         let output = maxDimension.flatMap { downscaled(rep, maxDimension: $0) } ?? rep
-        return output.representation(using: .png, properties: [:])
+        guard let data = output.representation(using: .png, properties: [:]) else { return nil }
+        return RenderedPNG(data: data,
+                           pixelSize: CGSize(width: output.pixelsWide, height: output.pixelsHigh))
+    }
+
+    /// The bytes alone, for callers that already know the grid (the full-res
+    /// "Save image…", which writes the file and nothing else).
+    static func pngData(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
+                        style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
+                        maxDimension: CGFloat?) -> Data? {
+        renderPNG(base: base, pins: pins, shapes: shapes, context: context,
+                  style: style, includeLegend: includeLegend, preset: preset,
+                  maxDimension: maxDimension)?.data
+    }
+
+    /// The bitmap behind a rendered export. `drawn(size:matching:)` builds the
+    /// image around a single `NSBitmapImageRep`, so this is normally a lookup;
+    /// the TIFF round trip is only there for an image that came from elsewhere.
+    private static func bitmapRep(of image: NSImage) -> NSBitmapImageRep? {
+        if let rep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first {
+            return rep
+        }
+        return image.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0) }
     }
 
     /// Returns `rep` shrunk so its longest pixel edge is `maxDimension`, or `rep`
@@ -548,19 +713,37 @@ enum Exporter {
     @discardableResult
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
                                  style: PinStyle, includeLegend: Bool,
+                                 preset: TaskPreset = .raw, format: AgentTextFormat = .markdown,
                                  accessibility: AXSnapshot? = nil) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
         var wrote = false
-        if let png = pngData(base: base, pins: pins, shapes: shapes, context: context,
-                             style: style, includeLegend: includeLegend, maxDimension: clipboardMaxDimension) {
-            wrote = pasteboard.setData(png, forType: .png)
+        // The grid the text below will describe. Seeded with the base size only
+        // so a failed render still produces coherent (if imageless) text.
+        var pixelSize = base.size
+        if let png = renderPNG(base: base, pins: pins, shapes: shapes, context: context,
+                               style: style, includeLegend: includeLegend, preset: preset,
+                               maxDimension: clipboardMaxDimension) {
+            pixelSize = png.pixelSize
+            wrote = pasteboard.setData(png.data, forType: .png)
         }
 
         if !includeLegend {
-            let text = buildText(pins: pins, shapes: shapes, context: context, imageSize: base.size,
+            // Measured off the PNG that just went on the pasteboard, never off
+            // `base.size` (#76). Two separate things moved that grid: the render
+            // used to double it on a Retina Mac, and `clipboardMaxDimension`
+            // still caps it — a 2560 px capture is pasted 2000 px wide. Quoting
+            // the capture's own dimensions there put every `px` in this text
+            // 1.28× (or 2.56×) off the pixels it names.
+            let text = agentText(format: format, pins: pins, shapes: shapes, context: context,
+                                 imageSize: pixelSize, style: style, preset: preset,
                                  accessibility: accessibility)
+            // Written as `.string` and nothing else, even for JSON. A pasteboard
+            // item advertising several types lets the receiver choose, and the
+            // ones that matter here choose badly — a terminal already drops the
+            // image the moment text shares the item (see above). One type, one
+            // outcome.
             wrote = pasteboard.setString(text, forType: .string) || wrote
         }
 

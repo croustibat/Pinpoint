@@ -58,6 +58,7 @@ struct SettingsView: View {
 struct CaptureSettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
+    @AppStorage(AgentTextFormat.storageKey) private var textFormat: AgentTextFormat = .markdown
     @AppStorage(CaptureDelay.storageKey) private var captureDelay: CaptureDelay = .off
     @AppStorage(AXContextSettings.enabledKey) private var axContext = true
     @AppStorage(AXContextSettings.fieldValuesKey) private var axFieldValues = false
@@ -96,6 +97,25 @@ struct CaptureSettingsView: View {
             Section("Agent sharing") {
                 Toggle("Embed legend in the image", isOn: $includeLegend)
                 Text("Adds the marker descriptions and instructions below the capture so a single paste carries everything to the agent.")
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+
+                Picker(String(localized: "settings.format.label",
+                              defaultValue: "Copied text:"), selection: $textFormat) {
+                    ForEach(AgentTextFormat.allCases) { format in
+                        Text(format.label).tag(format)
+                    }
+                }
+                // Nothing to choose while the legend is embedded: the image then
+                // carries everything and the clipboard deliberately holds no
+                // text at all, since a terminal pastes the string and drops the
+                // picture when both share an item.
+                .disabled(includeLegend)
+                Text(includeLegend
+                     ? String(localized: "settings.format.unused",
+                              defaultValue: "Unavailable while the legend is embedded: the clipboard then carries the image alone. The files for the agent are written in both formats either way.")
+                     : String(localized: "settings.format.explanation",
+                              defaultValue: "Markdown reads well when pasted into a conversation; JSON is the same facts in the versioned contract, for a script that indexes them. Both are always written to the files for the agent."))
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }

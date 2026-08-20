@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/croustibat/Pinpoint/blob/main/docs/capture-schema.json",
+  "title": "Pinpoint capture handoff",
+  "description": "The machine-readable form of an annotated capture. Written by Pinpoint to ~/Library/Application Support/Pinpoint/last/capture.json on every copy (next to capture.png and capture.md), to ~/Library/Application Support/Pinpoint/archive/<timestamp>/ as a timestamped copy, and to any path chosen through \"Export JSON…\" — where the two file paths below are absent because there are no siblings to point at. Coordinates are pixels from the top-left corner of the image described by `image`, then the same value as a percentage of it. `schemaVersion` moves only on a breaking change: keys are added between versions, so read the ones you know and ignore the rest. The authority is Pinpoint/HandoffDocument.swift; this file is its published restatement.",
+  "type": "object",
+  "required": ["schemaVersion", "generator", "generatedAt", "task", "image", "markerStyle", "context", "markers", "shapes"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of this contract. 1 today."
+    },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "const": "Pinpoint" },
+        "version": { "type": "string", "description": "Marketing version of the app that wrote the file, e.g. \"0.7.0\"." }
+      }
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this document was written (ISO 8601 with offset)."
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the screenshot itself was taken, which can be days earlier — a capture is reopened from the history and re-exported. Read from the accessibility snapshot, so absent when that feature was off or unauthorized. Same instant as accessibility.capturedAt when both are present."
+    },
+    "task": {
+      "type": "object",
+      "description": "The framing written above the user's instructions in capture.md.",
+      "required": ["preset", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["raw", "bug", "review", "implement"],
+          "description": "The stable token — the only field here meant to be switched on. \"raw\" means the user asked for no framing."
+        },
+        "label": { "type": "string", "description": "The preset's name as the editor showed it, in the user's language." },
+        "guidance": { "type": "string", "description": "The paragraph that went into capture.md, verbatim and in the user's language, so a consumer building its own prompt can reuse the same framing. Absent for \"raw\"." }
+      }
+    },
+    "image": {
+      "type": "object",
+      "description": "The image this document describes, and the pixel grid every coordinate below is expressed in. Not necessarily the capture's own dimensions: the clipboard copy is downscaled to stay pasteable.",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "description": "Absolute path of the annotated PNG sitting next to this file. Absent when the JSON was exported on its own." },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Image pixels per screen point — 2 for a Retina capture at native resolution, less once downscaled. With source.screenRect, this is what turns a pixel here back into the point on screen it was read from. Absent when the captured region isn't known."
+        }
+      }
+    },
+    "markerStyle": {
+      "type": "object",
+      "description": "How the numbered badges are drawn on the image.",
+      "required": ["kind", "color"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["disc", "pointer", "outline"],
+          "description": "disc: filled badge centred on the point. pointer: map pin whose tip is the point. outline: hollow ring centred on the point."
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "sRGB colour every marker and outline is drawn in."
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "What was in front of the lens. Every field comes from the accessibility snapshot, so the whole object is absent without one.",
+      "required": ["screenRect"],
+      "additionalProperties": false,
+      "properties": {
+        "application": { "type": "string", "description": "App owning the window under the middle of the capture." },
+        "bundleIdentifier": { "type": "string" },
+        "windowTitle": { "type": "string" },
+        "screenRect": { "$ref": "#/$defs/screenRect", "description": "The region the image covers, in screen points." }
+      }
+    },
+    "markdownPath": {
+      "type": "string",
+      "description": "Absolute path of the Markdown twin next to this file — the same facts in prose. Absent when the JSON was exported on its own."
+    },
+    "context": {
+      "type": "string",
+      "description": "The user's instructions, verbatim. Empty string when they wrote none; the key is always present."
+    },
+    "accessibility": {
+      "type": "object",
+      "description": "What the accessibility pass contributed overall. Absent when no walk happened (feature off, permission not granted). Present with available: false when a walk happened and came back empty — which is how a consumer tells \"not looked at\" from \"looked at, found nothing\".",
+      "required": ["available", "capturedAt", "elementCount", "truncated", "policy"],
+      "additionalProperties": false,
+      "properties": {
+        "available": { "type": "boolean" },
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "elementCount": { "type": "integer", "minimum": 0 },
+        "truncated": {
+          "type": "boolean",
+          "description": "true when the walk stopped on one of its own limits (time, node budget). A missing element may then mean \"not looked at\"."
+        },
+        "policy": {
+          "type": "object",
+          "required": ["secureFieldValuesOmitted", "textFieldValuesOmitted"],
+          "additionalProperties": false,
+          "properties": {
+            "secureFieldValuesOmitted": { "type": "boolean", "const": true, "description": "Always true. Password fields are never read, at any setting." },
+            "textFieldValuesOmitted": { "type": "boolean", "description": "true unless the user opted into including what is typed in ordinary fields." }
+          }
+        }
+      }
+    },
+    "markers": {
+      "type": "array",
+      "description": "The numbered badges, ordered by number.",
+      "items": { "$ref": "#/$defs/marker" }
+    },
+    "shapes": {
+      "type": "array",
+      "description": "The unnumbered outlines — arrows and rectangles — in the order they were drawn.",
+      "items": { "$ref": "#/$defs/shape" }
+    }
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "description": "A point in the image, given twice: pixels for an agent working on this file, percentages for one reasoning about a resized copy.",
+      "required": ["x", "y", "xPercent", "yPercent"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "xPercent": { "type": "number", "description": "0…100, two decimals." },
+        "yPercent": { "type": "number" }
+      }
+    },
+    "box": {
+      "type": "object",
+      "description": "Axis-aligned rectangle in the image, same dual units as a point. May fall outside the image when it describes an element extending past the captured region.",
+      "required": ["x", "y", "width", "height", "xPercent", "yPercent", "widthPercent", "heightPercent"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "xPercent": { "type": "number" },
+        "yPercent": { "type": "number" },
+        "widthPercent": { "type": "number" },
+        "heightPercent": { "type": "number" }
+      }
+    },
+    "screenRect": {
+      "type": "object",
+      "description": "A rectangle in screen points, global top-left origin — the space the macOS accessibility APIs speak. Not relative to the image.",
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+    "marker": {
+      "type": "object",
+      "required": ["id", "label", "number", "note", "position"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable identifier, the same code capture.md prints in brackets. Survives the renumbering that follows a deletion, so two handoffs of one session name the same marker the same way."
+        },
+        "label": { "type": "string", "description": "What is drawn on the image: \"M1\", \"M2\"… Unlike id, this changes when an earlier marker is deleted." },
+        "number": { "type": "integer", "minimum": 1 },
+        "note": { "type": "string", "description": "The user's description. Empty when they left it blank." },
+        "position": { "$ref": "#/$defs/point" },
+        "accessibility": {
+          "$ref": "#/$defs/element",
+          "description": "The interface element under position, resolved against the snapshot taken at capture time. Absent when there is none — the normal case for a capture of something that isn't an app window, or with the feature switched off."
+        }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "required": ["id", "label", "kind", "from", "to", "boundingBox"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "description": "\"S1\", \"S2\"… matching capture.md." },
+        "kind": { "type": "string", "enum": ["arrow", "rectangle"] },
+        "from": { "$ref": "#/$defs/point", "description": "Arrow: the tail. Rectangle: its top-left corner." },
+        "to": { "$ref": "#/$defs/point", "description": "Arrow: the tip, where the head is drawn. Rectangle: its bottom-right corner." },
+        "boundingBox": { "$ref": "#/$defs/box" }
+      }
+    },
+    "element": {
+      "type": "object",
+      "description": "An interface element read from the macOS accessibility tree while the capture was being taken. This is what turns a marker from a pixel into something with a name in somebody's source code.",
+      "required": ["role", "box", "screenFrame", "application", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string", "description": "Raw accessibility role, e.g. \"AXButton\". Not translated into prose on purpose — it is the vocabulary every inspector shares." },
+        "subrole": { "type": "string" },
+        "title": { "type": "string", "description": "AXTitle — the control's visible label." },
+        "label": { "type": "string", "description": "AXDescription — what a screen reader announces." },
+        "identifier": { "type": "string", "description": "AXIdentifier, usually the accessibilityIdentifier written in the app's own source. The most directly actionable field here." },
+        "help": { "type": "string", "description": "AXHelp, collected only when nothing else named the element." },
+        "placeholder": { "type": "string", "description": "AXPlaceholderValue, for inputs." },
+        "value": { "type": "string", "description": "The element's value. Present only when the privacy policy allows it — see redacted." },
+        "redacted": {
+          "type": "string",
+          "enum": ["secureField", "textFieldPolicy"],
+          "description": "Why value is absent: secureField (a password field, never read) or textFieldPolicy (withheld by default). Absent when the element simply has no value worth reporting."
+        },
+        "enabled": { "type": "boolean" },
+        "box": { "$ref": "#/$defs/box", "description": "The element's rectangle in this image's pixel grid." },
+        "screenFrame": { "$ref": "#/$defs/screenRect", "description": "The same rectangle in screen points, for a consumer that wants to go back and drive the live UI." },
+        "application": {
+          "type": "object",
+          "required": ["processIdentifier"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "bundleIdentifier": { "type": "string" },
+            "processIdentifier": { "type": "integer" }
+          }
+        },
+        "path": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The containers around the element, outermost first, each rendered as `AXRole \"Name\"`, ending with the element itself."
+        }
+      }
+    }
+  }
+}

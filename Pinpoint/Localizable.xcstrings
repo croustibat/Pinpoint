@@ -639,6 +639,18 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "# Capture annotée — %lld×%lld px" } }
       }
     },
+    "export.json.button" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export JSON…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Exporter en JSON…" } }
+      }
+    },
+    "export.json.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture couldn’t be written as JSON." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture n’a pas pu être écrite en JSON." } }
+      }
+    },
     "export.markers.legend" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker." } },
@@ -661,6 +673,12 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing." } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Une zone masquée est une région que l’utilisateur a recouverte avant de partager : ses pixels ne sont pas dans l’image, et rien n’a été collecté sur ce qui se trouvait dessous. Demandez à l’utilisateur plutôt que de deviner." } }
+      }
+    },
+    "export.task.heading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Task — %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tâche — %@" } }
       }
     },
     "Favorites" : {
@@ -691,6 +709,18 @@
     "Follow the macOS screenshot location" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
+      }
+    },
+    "format.json.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } }
+      }
+    },
+    "format.markdown.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } }
       }
     },
     "handoff.error.body" : {
@@ -1035,6 +1065,24 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décrire l’élément sous chaque repère" } }
       }
     },
+    "settings.format.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown reads well when pasted into a conversation; JSON is the same facts in the versioned contract, for a script that indexes them. Both are always written to the files for the agent." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown se lit bien collé dans une conversation ; JSON reprend les mêmes faits dans le contrat versionné, pour un script qui les indexe. Les deux sont de toute façon écrits dans les fichiers pour l’agent." } }
+      }
+    },
+    "settings.format.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied text:" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte copié :" } }
+      }
+    },
+    "settings.format.unused" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable while the legend is embedded: the clipboard then carries the image alone. The files for the agent are written in both formats either way." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Indisponible tant que la légende est incrustée : le presse-papier ne porte alors que l’image. Les fichiers pour l’agent sont écrits dans les deux formats quoi qu’il arrive." } }
+      }
+    },
     "Settings…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages…" } }
@@ -1110,6 +1158,60 @@
     "Style:" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Style :" } }
+      }
+    },
+    "task.bug.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at a defect. Find its cause before proposing anything: locate the code that produces what is marked, explain why it behaves this way, then propose the smallest change that addresses the cause rather than the symptom. If the capture isn’t enough to be sure, say what you would need to look at." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent un défaut. Cherchez-en la cause avant de proposer quoi que ce soit : localisez le code qui produit ce qui est marqué, expliquez pourquoi il se comporte ainsi, puis proposez la plus petite modification qui traite la cause plutôt que le symptôme. Si la capture ne suffit pas à en être sûr, dites ce qu’il faudrait aller regarder." } }
+      }
+    },
+    "task.bug.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bug" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Bug" } }
+      }
+    },
+    "task.implement.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at what has to be built or changed. Match what is already there: reuse the existing components, naming and spacing rather than introducing your own. Change only what is marked, and list at the end anything you had to assume because the capture didn’t say." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent ce qui est à construire ou à modifier. Alignez-vous sur l’existant : réutilisez les composants, le nommage et les espacements déjà en place plutôt que d’introduire les vôtres. Ne modifiez que ce qui est marqué, et listez à la fin ce que vous avez dû supposer faute d’information dans la capture." } }
+      }
+    },
+    "task.implement.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Implement" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Implémentation" } }
+      }
+    },
+    "task.picker.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Task:" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tâche :" } }
+      }
+    },
+    "task.raw.caption" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No framing — the export carries only the markers and your instructions." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun cadrage — l’export ne porte que les repères et vos instructions." } }
+      }
+    },
+    "task.raw.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Raw" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Brut" } }
+      }
+    },
+    "task.review.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at things to assess, not to fix. Give a short verdict on each one — what works, what doesn’t, and what it would cost to change — and order your remarks by importance rather than by position on the image. Say plainly when something is fine as it is; only suggest a change where it is worth the effort." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent des points à évaluer, pas à corriger. Donnez un verdict court sur chacun — ce qui fonctionne, ce qui ne fonctionne pas, et ce que coûterait un changement — et classez vos remarques par importance plutôt que par position sur l’image. Dites franchement quand quelque chose convient tel quel ; ne suggérez un changement que là où il en vaut la peine." } }
+      }
+    },
+    "task.review.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Revue" } }
       }
     },
     "The tip marks the exact pixel." : {

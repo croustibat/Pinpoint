@@ -135,6 +135,11 @@ struct EditorView: View {
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
+    /// The framing put above the user's instructions (#53). A preference rather
+    /// than per-capture state: it is a way of working, and the point of the
+    /// feature is not having to pick it again every time.
+    @AppStorage(TaskPreset.storageKey) private var taskPreset: TaskPreset = .raw
+    @AppStorage(AgentTextFormat.storageKey) private var textFormat: AgentTextFormat = .markdown
 
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
@@ -886,6 +891,8 @@ struct EditorView: View {
 
             Divider()
 
+            taskPicker
+
             Text("Instructions for the agent")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
@@ -912,8 +919,38 @@ struct EditorView: View {
             }
             .controlSize(.large)
             .keyboardShortcut("s", modifiers: [.command])
+
+            // The JSON as a target of its own, not a by-product of copying
+            // (#52): a script being written against the contract needs a file it
+            // chose the name of, and the clipboard is the wrong place to build
+            // that against. Full width like its neighbours rather than sharing a
+            // row with them — this panel is 260 pt at its narrowest, and two
+            // labelled buttons side by side truncate before the window does.
+            Button(action: exportJSON) {
+                Label(String(localized: "export.json.button", defaultValue: "Export JSON…"),
+                      systemImage: "curlybraces")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .keyboardShortcut("s", modifiers: [.command, .shift])
         }
         .padding(14)
+    }
+
+    /// Picks the framing written above the instructions in the export.
+    ///
+    /// The guidance itself is the tooltip rather than a caption under the
+    /// picker: it runs to three sentences, this panel is already the tightest
+    /// part of the window, and the text is in the export a click away for anyone
+    /// who wants to read all of it.
+    private var taskPicker: some View {
+        Picker(String(localized: "task.picker.label", defaultValue: "Task:"), selection: $taskPreset) {
+            ForEach(TaskPreset.allCases) { preset in
+                Text(preset.label).tag(preset)
+            }
+        }
+        .help(taskPreset.guidance ?? String(localized: "task.raw.caption",
+                                            defaultValue: "No framing — the export carries only the markers and your instructions."))
     }
 
     private var pinsSection: some View {
@@ -1121,6 +1158,7 @@ struct EditorView: View {
     private func copy() {
         guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
                                         style: pinStyle, includeLegend: includeLegend,
+                                        preset: taskPreset, format: textFormat,
                                         accessibility: axSnapshot) else {
             exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
             return
@@ -1134,7 +1172,8 @@ struct EditorView: View {
         // that never landed is exactly what #38 stopped doing elsewhere.
         do {
             try FileHandoff.write(base: image, pins: pins, shapes: shapes,
-                                  context: context, style: pinStyle, accessibility: axSnapshot)
+                                  context: context, style: pinStyle, preset: taskPreset,
+                                  accessibility: axSnapshot)
         } catch {
             exportError = String(
                 localized: "handoff.error.body",
@@ -1159,12 +1198,45 @@ struct EditorView: View {
         // Full resolution here (no cap): the file is meant to be attached/kept,
         // unlike the pasteboard image which is downscaled to stay pasteable.
         guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
-                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else {
+                                         style: pinStyle, includeLegend: includeLegend,
+                                         preset: taskPreset, maxDimension: nil) else {
             exportError = String(localized: "The annotated image couldn’t be rendered.")
             return
         }
         do {
             try png.write(to: url)
+        } catch {
+            exportError = error.localizedDescription
+            return
+        }
+        onPersist(pins, shapes, context, image, axSnapshot)
+    }
+
+    /// Writes the annotated capture as JSON alone, wherever the user asks.
+    ///
+    /// The coordinates describe the annotated image at native resolution — the
+    /// file "Save image…" writes without a legend, and `image.size` since the
+    /// renderer became 1:1 with its own pixel grid (#76). The legend strip is
+    /// left out of the reckoning on purpose: it only ever grows the image
+    /// downwards, so every marker keeps the pixel it had, and quoting a taller
+    /// image here would describe a picture nobody asked for.
+    private func exportJSON() {
+        guard let json = Exporter.buildJSON(pins: pins, shapes: shapes, context: context,
+                                            imageSize: image.size, style: pinStyle,
+                                            preset: taskPreset, accessibility: axSnapshot) else {
+            exportError = String(localized: "export.json.error",
+                                 defaultValue: "The capture couldn’t be written as JSON.")
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "Pinpoint.json"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try Data(json.utf8).write(to: url)
         } catch {
             exportError = error.localizedDescription
             return
