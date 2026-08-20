@@ -1290,6 +1290,18 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inconnu" } }
       }
     },
+    "url.last.empty.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint writes capture.png, capture.md and capture.json to %@ every time you copy from the editor. Take a capture, copy it, then try again." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint écrit capture.png, capture.md et capture.json dans %@ à chaque copie depuis l’éditeur. Faites une capture, copiez-la, puis réessayez." } }
+      }
+    },
+    "url.last.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No capture to open yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture à ouvrir" } }
+      }
+    },
     "Use the current macOS location" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utiliser l’emplacement macOS actuel" } }

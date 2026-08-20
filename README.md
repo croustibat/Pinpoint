@@ -75,6 +75,8 @@ relaunch Pinpoint once.
 - **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
   rename, Quick Look, and reopen any capture with its annotations.
 - **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
+- **Deep links** — a `pinpoint://` URL scheme, so a script or a hook can ask the
+  running app for a capture.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
@@ -146,7 +148,10 @@ Pinpoint/
   Theme.swift                     # vermillon palette
   Exporter.swift                  # annotated PNG render + structured text + clipboard
   FileHandoff.swift               # writes capture.{png,md,json} where an agent can read them
+  HandoffContract.swift           # where those files live + how to read one back (shared with the CLI)
   HandoffDocument.swift           # the JSON contract for capture.json (schemaVersion 1)
+  HandoffDocumentBuilder.swift    # fills that contract in from the annotation model
+  URLCommand.swift                # pinpoint:// deep links — what is accepted, and what isn't
   SettingsWindowController.swift  # AppKit settings window (works around the macOS 14+ SettingsLink bug)
   ShelfWindowController.swift     # the shelf window
   ScreenshotDetailWindowController.swift  # detail window for a shelf item
@@ -184,6 +189,25 @@ A file path is the channel that reliably works.
 - `capture.json` carries a `schemaVersion`. New keys can appear without bumping
   it — consumers must ignore what they don't know.
 
+## Deep links (`pinpoint://`)
+
+| URL | what it does |
+| --- | --- |
+| `pinpoint://capture` | starts the interactive region capture (same as ⌘⇧1) |
+| `pinpoint://last` | reopens the last handoff in the editor |
+| `pinpoint://last?format=json` (or `md`, `png`) | reveals that file in the Finder |
+
+Anything else is ignored, silently and on purpose.
+
+A URL can come from anywhere — a shell script, a terminal, or a web page you
+merely visited — and macOS doesn't say which. So the scheme is kept deliberately
+narrow: each URL names one action and carries nothing else (no coordinates, no
+destination path, nothing that could turn into a file write), `capture` only ever
+opens the same overlay you have to drag on and an editor you have to press Copy
+in, and nothing ever answers back — a page that fires one learns nothing about
+your Mac, not even whether Pinpoint is installed. **No URL takes a screenshot on
+its own**, which is why the menu's full-screen capture has no deep link.
+
 ## Dependencies
 
 - [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (Sindre Sorhus) — rebindable global shortcuts.
@@ -219,13 +243,6 @@ gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
 scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/homebrew-tap
 scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
-
-Add the release to the changelog (`landing/src/changelog.ts` — new entry at the top,
-mark it `latest`), then commit it together with `landing/public/appcast.xml` and redeploy
-the landing (`vercel deploy --prod`) so in-app auto-update (Sparkle) sees the new version
-and [`/changelog`](https://pinpoint-ashy.vercel.app/changelog) shows it. The EdDSA private
-key lives in the release machine's keychain (paired with `SUPublicEDKey` in `project.yml`);
-create it once with Sparkle's `generate_keys`.
 
 ## License
 

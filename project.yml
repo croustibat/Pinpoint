@@ -35,6 +35,15 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # Menu-bar only app: no Dock icon, no main window.
         LSUIElement: true
+        # Deep links (#58). Declared here rather than in Info.plist, which
+        # `xcodegen generate` rewrites — same reason as the version keys above.
+        # What each URL may ask for, and what it deliberately cannot, is in
+        # Pinpoint/URLCommand.swift.
+        CFBundleURLTypes:
+          - CFBundleURLName: app.croustibat.Pinpoint.deeplink
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes:
+              - pinpoint
         NSHumanReadableCopyright: "© 2026 Baptiste Bouillot"
         # Sparkle auto-update. The appcast is hosted on the landing site; the
         # public EdDSA key pairs with the private key held in the release
@@ -59,3 +68,4 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
