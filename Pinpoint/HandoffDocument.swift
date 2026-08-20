@@ -252,6 +252,23 @@ extension FileHandoff {
             /// absent for a marker dropped on a redacted region, where naming
             /// what sits under the bar would undo the redaction in text.
             let accessibility: AccessibilityElement?
+            /// The text Pinpoint read in the pixels under this marker (#49),
+            /// recognized on the user's own Mac with no network call.
+            ///
+            /// A separate key from `note` rather than folded into it, even
+            /// though `note` is often pre-filled from this very string: the two
+            /// have different provenance — one is what a person wrote, the
+            /// other what a machine read — and a consumer weighing them has to
+            /// be able to tell which is which. `capture.md` drops the second
+            /// copy when they match because it is prose; this file keeps both,
+            /// because a missing key here would be ambiguous between "nothing
+            /// was read" and "what was read matched the note".
+            ///
+            /// Absent when nothing legible sat within reach of the marker, when
+            /// the accessibility element above already names the same thing,
+            /// when the feature is switched off — and always for a marker on a
+            /// redacted region or a read a bar touches.
+            let recognizedText: String?
         }
 
         /// An unnumbered shape: arrow, rectangle or redaction.
@@ -330,13 +347,13 @@ extension FileHandoff.Document {
         let mask = RedactionMask(shapes)
         if let snapshot = accessibility {
             self.markers = ordered.map { pin in
-                Marker(pin, in: imageSize,
+                Marker(pin, in: imageSize, hiddenBy: mask,
                        accessibility: snapshot.element(atNormalized: pin.position, hiddenBy: mask)
                     .map { AccessibilityElement($0, in: snapshot, imageSize: imageSize) })
             }
             self.accessibility = AccessibilityContext(snapshot, formatter: formatter)
         } else {
-            self.markers = ordered.map { Marker($0, in: imageSize, accessibility: nil) }
+            self.markers = ordered.map { Marker($0, in: imageSize, hiddenBy: mask, accessibility: nil) }
             self.accessibility = nil
         }
 
@@ -406,7 +423,11 @@ extension FileHandoff {
 }
 
 extension FileHandoff.Document.Marker {
-    init(_ pin: Pin, in size: CGSize,
+    /// `mask` is asked about the marker's read rather than about the marker
+    /// alone: the redaction has to reach the text Pinpoint recognized the same
+    /// way it already reaches the accessibility element, and this is the last
+    /// point before it is encoded.
+    init(_ pin: Pin, in size: CGSize, hiddenBy mask: RedactionMask,
          accessibility: FileHandoff.Document.AccessibilityElement?) {
         self.init(
             id: pin.id.shortToken,
@@ -414,7 +435,8 @@ extension FileHandoff.Document.Marker {
             number: pin.number,
             note: pin.note.trimmingCharacters(in: .whitespacesAndNewlines),
             position: FileHandoff.Document.Point(pin.position, in: size),
-            accessibility: accessibility
+            accessibility: accessibility,
+            recognizedText: pin.recognizedText(hiddenBy: mask)?.text
         )
     }
 }

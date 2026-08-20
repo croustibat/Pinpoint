@@ -140,6 +140,8 @@ struct EditorView: View {
     /// feature is not having to pick it again every time.
     @AppStorage(TaskPreset.storageKey) private var taskPreset: TaskPreset = .raw
     @AppStorage(AgentTextFormat.storageKey) private var textFormat: AgentTextFormat = .markdown
+    /// Whether Pinpoint reads the text in the capture at all (#49).
+    @AppStorage(TextRecognitionSettings.enabledKey) private var textRecognition = true
 
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
@@ -149,6 +151,17 @@ struct EditorView: View {
     /// name the element under each marker at export time — never queried live,
     /// since by now the photographed UI may be long gone.
     @State private var axSnapshot: AXSnapshot?
+    /// What the last recognition pass read in the capture (#49), or nil while
+    /// there is no usable answer — the feature is off, the pass hasn't finished
+    /// yet, or a crop has just replaced the image the boxes were measured in.
+    ///
+    /// Nil means "unknown", never "nothing there": `syncRecognizedText` returns
+    /// immediately on it rather than treating it as an empty read, so a marker
+    /// keeps whatever it already had until a real answer arrives. This is not
+    /// part of `EditorSnapshot` — it is derived from the image and the
+    /// redactions, both of which *are* — so undo re-derives it instead of
+    /// carrying a second copy around.
+    @State private var recognition: TextRecognition?
     @State private var tool: EditorTool = .pin
     @State private var selectedPinID: Pin.ID?
     @State private var selectedShapeID: Markup.ID?
@@ -225,6 +238,13 @@ struct EditorView: View {
                 .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
         }
         .frame(minWidth: 680, minHeight: 440)
+        // Reading the capture's text (#49). Keyed on everything the answer
+        // depends on, so SwiftUI cancels the pass in flight and starts a fresh
+        // one whenever the image is cropped, a redaction is drawn, moved,
+        // resized or deleted, or the setting is flipped. The work itself is
+        // `nonisolated async`, so it leaves the main actor at the `await` and
+        // the editor stays responsive while a full-screen capture is read.
+        .task(id: recognitionKey) { await refreshRecognition() }
         .onDisappear { onPersist(pins, shapes, context, image, axSnapshot) }
         // A text field changing hands closes one typing session and opens the
         // next. See `flushTextEdit()`.
@@ -998,13 +1018,31 @@ struct EditorView: View {
                 // so VoiceOver reads it once instead of twice.
                 .accessibilityHidden(true)
 
-            TextField("Describe this marker…", text: pin.note)
-                .textFieldStyle(.roundedBorder)
-                .focused($focusedField, equals: .note(pin.wrappedValue.id))
-                // Without this the placeholder is the label, and every field in
-                // the list announces itself identically.
-                .accessibilityLabel(String(localized: "a11y.marker.note",
-                                           defaultValue: "Description of marker \(number)"))
+            VStack(alignment: .leading, spacing: 3) {
+                TextField("Describe this marker…", text: pin.note)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .note(pin.wrappedValue.id))
+                    // Without this the placeholder is the label, and every field in
+                    // the list announces itself identically.
+                    .accessibilityLabel(String(localized: "a11y.marker.note",
+                                               defaultValue: "Description of marker \(number)"))
+
+                // What Pinpoint read under this marker, shown only once it has
+                // stopped being what the field above already says — i.e. once
+                // the user has written their own description over the pre-fill.
+                // The read still travels in the export, so it has to be visible
+                // somewhere: a feature that quietly puts a line of the screen
+                // into a file the user is about to hand to someone else should
+                // show them that line first.
+                if let read = recognizedCaption(for: pin.wrappedValue) {
+                    Text(read)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(read)
+                }
+            }
 
             Button {
                 removePin(pin.wrappedValue)
@@ -1024,6 +1062,20 @@ struct EditorView: View {
         // `onTapGesture` is a mouse affordance and nothing else; the same
         // selection has to be reachable from VoiceOver's actions menu.
         .accessibilityAction { selectPin(pin.wrappedValue.id) }
+    }
+
+    /// The one-line reminder of what was read under a marker, or nil when there
+    /// is nothing to add — no read, a read a redaction covers, or a read the
+    /// description already repeats word for word.
+    ///
+    /// Deliberately the same three conditions `Exporter.recognizedLines` uses,
+    /// so what the panel shows and what the export writes can't come apart.
+    private func recognizedCaption(for pin: Pin) -> String? {
+        guard let read = pin.recognizedText(hiddenBy: RedactionMask(shapes)) else { return nil }
+        let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard note.caseInsensitiveCompare(read.text) != .orderedSame else { return nil }
+        return String(localized: "editor.marker.read",
+                      defaultValue: "Read in the image: “\(read.text)”")
     }
 
     /// Highlight for the selected row of the side panel.
@@ -1278,8 +1330,97 @@ struct EditorView: View {
         flushTextEdit()
         let before = snapshot()
         body()
+        // Recognized text is derived state, refreshed here rather than at each
+        // of the dozen call sites — so no future mutation can forget it, and so
+        // the refresh lands *inside* the entry of the action that caused it.
+        // That is what makes drawing a redaction over a quoted error one undo
+        // step and not two, and what makes dropping a marker arrive with its
+        // description already filled in.
+        syncRecognizedText()
         guard snapshot() != before else { return }
         history.record(before)
+    }
+
+    // MARK: - Recognized text (#49)
+
+    /// Everything the recognition pass depends on. Any change to it cancels the
+    /// pass in flight and schedules another.
+    ///
+    /// Only the *redactions* are listed, not every shape: an arrow moved across
+    /// the picture changes nothing about what can be read, and re-running a
+    /// second of OCR on every frame of a drag would be absurd. A redaction, on
+    /// the other hand, changes the image the recognizer is given.
+    private var recognitionKey: RecognitionKey {
+        RecognitionKey(image: ObjectIdentifier(image),
+                       redactions: shapes.filter(\.isRedaction).map(\.rect),
+                       enabled: textRecognition)
+    }
+
+    private struct RecognitionKey: Equatable {
+        let image: ObjectIdentifier
+        let redactions: [CGRect]
+        let enabled: Bool
+    }
+
+    /// Runs one recognition pass over the current image and folds its result
+    /// into the document.
+    ///
+    /// The `CGImage` is taken here, on the main actor, because `NSImage` is not
+    /// safe to touch from anywhere else; everything after the `await` runs off
+    /// it. The mask is read here too, so the pass is given the redactions as
+    /// they stood when it started — and `.task(id:)` restarts it if they move.
+    private func refreshRecognition() async {
+        // Settle before doing anything. A redaction is *dragged* into place, so
+        // `recognitionKey` changes on every frame of that gesture and SwiftUI
+        // restarts this task each time — and a pass is half a second of CPU
+        // that cancellation cannot claw back, because `perform(on:)` runs to
+        // completion whatever the task's state. Sleeping is the part that *is*
+        // cancellable, so putting it first is what turns sixty restarts into
+        // sixty abandoned waits and one pass.
+        do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+
+        guard textRecognition else {
+            // Switched off. The reads are dropped, so no `Text:` line and no
+            // `recognizedText` key leaves the app — but the notes stay exactly
+            // as they are. A description the user has been looking at, and may
+            // have accepted as their own, is not Pinpoint's to delete on a
+            // settings flip.
+            recognition = nil
+            withUndo { for index in pins.indices { pins[index].recognized = nil } }
+            return
+        }
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+        let mask = RedactionMask(shapes)
+
+        let result = await TextRecognizer.recognize(in: cgImage, hiddenBy: mask)
+        guard !Task.isCancelled else { return }
+
+        recognition = result
+        // `withUndo` re-derives every marker's text and records an entry only
+        // if that actually changed the document — so a pass over a capture with
+        // no markers, or one that confirms what the markers already carry,
+        // leaves the undo stack alone.
+        withUndo(syncRecognizedText)
+    }
+
+    /// Re-derives every marker's recognized text from the current pass, the
+    /// current redactions and the current accessibility context.
+    ///
+    /// The rules themselves live in `Array<Pin>.applyRecognition` — including
+    /// the one that takes back a pre-filled description when a redaction covers
+    /// what it was read from — so they can be exercised without an editor on
+    /// screen. All that belongs here is the state to feed them.
+    private func syncRecognizedText() {
+        guard let recognition else { return }
+        let mask = RedactionMask(shapes)
+        // The accessibility tree gets first refusal on naming what a marker
+        // points at (#55); the read is kept only where it says something the
+        // tree did not. Deciding it here rather than in the exporters is what
+        // keeps the pre-filled description and the exported `Text:` line from
+        // ever disagreeing about it.
+        pins.applyRecognition(recognition, imageSize: image.size, hiddenBy: mask) { text, position in
+            axSnapshot?.names(text, atNormalized: position, hiddenBy: mask) ?? false
+        }
     }
 
     /// Closes the current typing session, if any, and folds it into one undo
@@ -1407,11 +1548,31 @@ struct EditorView: View {
             (0...1).contains(p.x) && (0...1).contains(p.y)
         }
 
+        // A read's box is normalized against the image, so it has to be remapped
+        // exactly like a marker's position — otherwise a crop would leave every
+        // marker quoting text at coordinates measured in the *previous* image,
+        // and the redaction check at the export boundary would be asking the
+        // mask about the wrong rectangle.
+        func remap(_ rect: CGRect) -> CGRect {
+            CGRect(x: (rect.minX - origin.x) / size.width, y: (rect.minY - origin.y) / size.height,
+                   width: rect.width / size.width, height: rect.height / size.height)
+        }
+        let unit = CGRect(x: 0, y: 0, width: 1, height: 1)
+
         var newPins: [Pin] = []
         for pin in pins {
             let q = remap(pin.position)
             guard inside(q) else { continue }
-            newPins.append(Pin(id: pin.id, number: pin.number, position: q, note: pin.note))
+            let recognized = pin.recognized.flatMap { read -> RecognizedText? in
+                let box = remap(read.box)
+                // A read cropped entirely out of the picture stops describing
+                // this image; the note keeps whatever it said, as the user's
+                // text now.
+                guard box.intersects(unit) else { return nil }
+                return RecognizedText(text: read.text, box: box)
+            }
+            newPins.append(Pin(id: pin.id, number: pin.number, position: q,
+                               note: pin.note, recognized: recognized))
         }
         var newShapes: [Markup] = []
         for shape in shapes {
@@ -1441,6 +1602,12 @@ struct EditorView: View {
         image = newImage
         pins = newPins
         shapes = newShapes
+        // The cached reading was measured in the image that has just been
+        // replaced. Dropping it stops `syncRecognizedText` — which `withUndo`
+        // is about to call — from resolving markers against boxes that no
+        // longer mean anything; `.task(id:)` starts a fresh pass on the new
+        // image, and the markers keep what they carry until it lands.
+        recognition = nil
         // The snapshot describes a screen region, not the image, so a crop only
         // has to narrow that region — every element frame stays valid as it is.
         axSnapshot = axSnapshot?.cropped(to: c)

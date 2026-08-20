@@ -131,7 +131,7 @@
     },
     "shapes": {
       "type": "array",
-      "description": "The unnumbered outlines — arrows and rectangles — in the order they were drawn.",
+      "description": "The unnumbered outlines — arrows, rectangles and redactions — in the order they were drawn.",
       "items": { "$ref": "#/$defs/shape" }
     }
   },
@@ -192,6 +192,11 @@
         "accessibility": {
           "$ref": "#/$defs/element",
           "description": "The interface element under position, resolved against the snapshot taken at capture time. Absent when there is none — the normal case for a capture of something that isn't an app window, or with the feature switched off."
+        },
+        "recognizedText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The line of text Pinpoint read in the pixels under this marker, recognized on the user's Mac with no network call. A separate field from note on purpose: note is what a person wrote, this is what a machine read, and note is often — but not always — pre-filled from this. Absent when nothing legible sat within reach of the marker, when the accessibility element above already names the same string (it is not repeated), when the feature is switched off, and always for a marker on a redacted region or a read a redaction touches."
         }
       }
     },
@@ -202,9 +207,9 @@
       "properties": {
         "id": { "type": "string" },
         "label": { "type": "string", "description": "\"S1\", \"S2\"… matching capture.md." },
-        "kind": { "type": "string", "enum": ["arrow", "rectangle"] },
-        "from": { "$ref": "#/$defs/point", "description": "Arrow: the tail. Rectangle: its top-left corner." },
-        "to": { "$ref": "#/$defs/point", "description": "Arrow: the tip, where the head is drawn. Rectangle: its bottom-right corner." },
+        "kind": { "type": "string", "enum": ["arrow", "rectangle", "redaction"], "description": "A redaction is a region the user painted over before sharing: its pixels are gone from the PNG, and nothing under it — no accessibility element, no recognized text — is described anywhere in this file. Its box is still given: where something was hidden is not itself a secret, and a consumer that knows a region is unreadable asks rather than guessing." },
+        "from": { "$ref": "#/$defs/point", "description": "Arrow: the tail. Rectangle/redaction: its top-left corner." },
+        "to": { "$ref": "#/$defs/point", "description": "Arrow: the tip, where the head is drawn. Rectangle/redaction: its bottom-right corner." },
         "boundingBox": { "$ref": "#/$defs/box" }
       }
     },
