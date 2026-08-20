@@ -9,12 +9,20 @@ import AppKit
 /// captures, Esc cancels the whole selection, and a drag starting outside it
 /// rubber-bands a fresh one.
 ///
+/// The space bar switches to *window mode* (#51), the same key macOS itself
+/// uses: the rectangle gives way to whichever window is under the pointer,
+/// highlighted whole, and a click captures it with its real edges and rounded
+/// corners. Space switches back, and a rectangle already drawn survives the
+/// round trip.
+///
 /// Everything is tracked in view-local coordinates and handed back to
 /// `RegionSelectionController` in global (screen) coordinates.
 final class RegionSelectionView: NSView {
     /// Called when the user validates the selection, with the rect in global
     /// AppKit coordinates (bottom-left origin) and the drag's anchor point.
     var onComplete: ((CGRect, CGPoint) -> Void)?
+    /// Called when the user picks a whole window in window mode.
+    var onCompleteWindow: ((PickableWindow) -> Void)?
     /// Called when the user cancels (Esc, or a click without a real drag).
     var onCancel: (() -> Void)?
     /// Called on every mouse-down, before anything else. The controller uses it
@@ -22,6 +30,14 @@ final class RegionSelectionView: NSView {
     /// selecting on — otherwise a selection started on a secondary display would
     /// leave Esc/Return/arrows going to another window.
     var onBeginSelection: (() -> Void)?
+    /// Called when the space bar is pressed. Window mode is a state of the whole
+    /// selection, not of one screen, so the controller mirrors it everywhere.
+    var onToggleWindowMode: (() -> Void)?
+    /// Called when the pointer settles over a window (or over nothing) in window
+    /// mode. The controller uses it both to move the keyboard focus to this
+    /// screen and to mirror the highlight onto the other screens, so a window
+    /// straddling two displays lights up on both.
+    var onHoverWindow: ((PickableWindow?) -> Void)?
     /// Whether to draw the hint. With one view per screen, only the view the
     /// user is working on sets this, so the hint shows just once.
     var showsHint: Bool = true { didSet { needsDisplay = true } }
@@ -60,6 +76,19 @@ final class RegionSelectionView: NSView {
     private var pressPoint: CGPoint?
     private var trackingArea: NSTrackingArea?
 
+    /// Whether the space bar has switched this selection over to picking whole
+    /// windows. Mirrored across every screen's view by the controller.
+    private var isWindowMode = false
+    /// Every window a capture could target, frontmost first. Loaded in the
+    /// background while the overlay is already up, so the shortcut stays as
+    /// immediate as it was (#39's preflight runs before any of this).
+    private var candidates: [PickableWindow] = []
+    /// The window currently highlighted, whichever screen the pointer is on.
+    private var highlighted: PickableWindow?
+    /// Whether the pointer is on *this* screen. Only the view under it may
+    /// capture; the others merely echo the highlight.
+    private var ownsPointer = false
+
     override var isFlipped: Bool { false }
     override var acceptsFirstResponder: Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
@@ -75,15 +104,17 @@ final class RegionSelectionView: NSView {
         )
     }
 
-    /// The rect to draw: the live rubber band while drawing, the settled
-    /// selection otherwise.
+    /// The rect to draw: the highlighted window in window mode, the live rubber
+    /// band while drawing, the settled selection otherwise.
     private var displayRect: CGRect? {
+        if isWindowMode { return highlighted.flatMap { viewRect(for: $0.overlayFrame) } }
         if case .drawing = gesture { return rubberBandRect }
         return selection
     }
 
     /// Whether a settled selection is up and waiting to be adjusted.
     private var isAdjusting: Bool {
+        if isWindowMode { return false }
         if case .drawing = gesture { return false }
         return selection != nil
     }
@@ -101,13 +132,92 @@ final class RegionSelectionView: NSView {
         needsDisplay = true
     }
 
+    // MARK: - Window mode
+
+    /// Hands over the list of windows a capture could target. Arrives after the
+    /// overlay is already on screen, so the highlight is recomputed in case the
+    /// user is waiting in window mode with the pointer still.
+    func setCandidates(_ windows: [PickableWindow]) {
+        candidates = windows
+        guard isWindowMode else { return }
+        updateHighlight()
+    }
+
+    /// Switches this screen's view into (or out of) window mode.
+    func setWindowMode(_ enabled: Bool) {
+        guard isWindowMode != enabled else { return }
+        isWindowMode = enabled
+        // A gesture in flight belongs to the mode being left.
+        gesture = .none
+        pressPoint = nil
+        lastDragPoint = nil
+        anchor = nil
+        current = nil
+        if enabled {
+            updateHighlight()
+        } else {
+            highlighted = nil
+            ownsPointer = false
+        }
+        needsDisplay = true
+        announceSelection()
+        cursorForPointer()?.set()
+    }
+
+    /// Echoes a highlight decided by the view under the pointer, so a window
+    /// spanning two displays is outlined on both.
+    func setHighlight(_ window: PickableWindow?) {
+        ownsPointer = false
+        guard highlighted != window else { return }
+        highlighted = window
+        needsDisplay = true
+    }
+
+    /// Recomputes what the pointer is over and tells the controller, which
+    /// mirrors it onto the other screens.
+    ///
+    /// The pointer position is read from `NSEvent` rather than taken from an
+    /// event, so this also works when nothing moved — pressing space with a
+    /// still mouse has to light a window up immediately.
+    private func updateHighlight() {
+        let point = NSEvent.mouseLocation
+        guard let window, window.frame.contains(point) else {
+            // The pointer is on another screen: that view owns the decision.
+            ownsPointer = false
+            return
+        }
+        // Notify on taking the pointer over as well as on a change of window: a
+        // window spanning two displays is already highlighted on both, so
+        // "nothing changed" would otherwise leave the keyboard on the screen
+        // the pointer just left.
+        let takingOver = !ownsPointer
+        ownsPointer = true
+        let next = WindowPicker.window(at: point, in: candidates)
+        guard next != highlighted || takingOver else { return }
+        highlighted = next
+        needsDisplay = true
+        announceSelection()
+        onHoverWindow?(next)
+    }
+
+    /// A global AppKit rect in this view's own coordinates.
+    private func viewRect(for globalRect: CGRect) -> CGRect? {
+        guard let window else { return nil }
+        return convert(window.convertFromScreen(globalRect), from: nil)
+    }
+
     // MARK: - Mouse
 
     override func mouseDown(with event: NSEvent) {
-        onBeginSelection?()
         let point = convert(event.locationInWindow, from: nil)
         pressPoint = point
         lastDragPoint = point
+
+        // Window mode has nothing to rubber-band: the press only has to be
+        // remembered long enough to tell a click from a stray drag.
+        guard !isWindowMode else { return }
+
+        onBeginSelection?()
 
         if let selection {
             if let handle = SelectionHandle.hit(point, in: selection, tolerance: Self.handleTolerance) {
@@ -132,6 +242,11 @@ final class RegionSelectionView: NSView {
 
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        guard !isWindowMode else {
+            // Dragging in window mode just moves the highlight along.
+            updateHighlight()
+            return
+        }
         defer { lastDragPoint = point; needsDisplay = true }
 
         switch gesture {
@@ -160,6 +275,13 @@ final class RegionSelectionView: NSView {
         gesture = .none
         pressPoint = nil
         lastDragPoint = nil
+
+        guard !isWindowMode else {
+            // A click captures the highlighted window; a drag that wandered off
+            // it does nothing, so a slip of the hand can't fire the shutter.
+            if travel < Self.clickSlop { commitWindow() }
+            return
+        }
         defer { announceSelection() }
 
         switch finished {
@@ -196,7 +318,8 @@ final class RegionSelectionView: NSView {
         let step: CGFloat = event.modifierFlags.contains(.shift) ? 10 : 1
         switch event.keyCode {
         case 53:            onCancel?()                 // Esc — cancels everything
-        case 36, 76:        commit()                    // Return / keypad Enter
+        case 49:            onToggleWindowMode?()       // Space — rectangle ⇄ window
+        case 36, 76:        isWindowMode ? commitWindow() : commit()  // Return / keypad Enter
         case 123:           nudge(dx: -step, dy: 0)     // ←
         case 124:           nudge(dx: step, dy: 0)      // →
         case 125:           nudge(dx: 0, dy: -step)     // ↓ (unflipped view)
@@ -225,6 +348,13 @@ final class RegionSelectionView: NSView {
         onComplete?(globalRect, anchor)
     }
 
+    /// Hands over the highlighted window. Only the view the pointer is on may
+    /// do this: the others are showing an echo of its decision.
+    private func commitWindow() {
+        guard isWindowMode, ownsPointer, let highlighted else { return }
+        onCompleteWindow?(highlighted)
+    }
+
     // MARK: - Accessibility
 
     /// The overlay is one element as far as VoiceOver is concerned: it has no
@@ -235,10 +365,19 @@ final class RegionSelectionView: NSView {
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
 
     override func accessibilityLabel() -> String? {
-        String(localized: "a11y.region.selection", defaultValue: "Region selection")
+        isWindowMode
+            ? String(localized: "a11y.window.selection", defaultValue: "Window selection")
+            : String(localized: "a11y.region.selection", defaultValue: "Region selection")
     }
 
     override func accessibilityValue() -> Any? {
+        if isWindowMode {
+            guard let highlighted else {
+                return String(localized: "a11y.window.empty",
+                              defaultValue: "No window under the pointer")
+            }
+            return highlighted.displayName
+        }
         guard let selection else {
             return String(localized: "a11y.region.empty", defaultValue: "No region selected yet")
         }
@@ -250,11 +389,7 @@ final class RegionSelectionView: NSView {
 
     /// The same sentence the on-screen hint carries, so the keyboard steps are
     /// reachable without reading the badge.
-    override func accessibilityHelp() -> String? {
-        isAdjusting
-            ? String(localized: "Drag or nudge with arrows · ↵ to capture · Esc to cancel")
-            : String(localized: "Drag a rectangle · Esc to cancel")
-    }
+    override func accessibilityHelp() -> String? { hintText }
 
     /// Announces the new size once a gesture settles. Deliberately not called
     /// per drag event: VoiceOver would read a new figure every frame.
@@ -281,14 +416,18 @@ final class RegionSelectionView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
+        if isWindowMode { updateHighlight() }
         cursor(at: convert(event.locationInWindow, from: nil)).set()
     }
 
     /// Crosshair everywhere, except over an adjustable selection: its handles
     /// get the matching resize cursor and its interior an open hand, so the rect
-    /// reads as draggable. The controller pushes the crosshair; setting a cursor
-    /// here only changes what's displayed, so its `pop()` still restores.
+    /// reads as draggable. Window mode uses the plain arrow — there is nothing
+    /// to aim precisely, only a window to point at. The controller pushes the
+    /// crosshair; setting a cursor here only changes what's displayed, so its
+    /// `pop()` still restores.
     private func cursor(at point: CGPoint) -> NSCursor {
+        if isWindowMode { return .arrow }
         guard isAdjusting, let selection else { return .crosshair }
         if let handle = SelectionHandle.hit(point, in: selection, tolerance: Self.handleTolerance) {
             return handle.cursor
@@ -296,7 +435,29 @@ final class RegionSelectionView: NSView {
         return selection.contains(point) ? .openHand : .crosshair
     }
 
+    /// The cursor for wherever the pointer happens to be right now — used when
+    /// the mode changes under a still mouse, which sends no event. `nil` when
+    /// the pointer is on another screen: every view is told about the mode
+    /// change, and only the one under the pointer gets to say what it looks
+    /// like.
+    private func cursorForPointer() -> NSCursor? {
+        guard let window, window.frame.contains(NSEvent.mouseLocation) else { return nil }
+        let inWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
+        return cursor(at: convert(inWindow, from: nil))
+    }
+
     // MARK: - Drawing
+
+    /// What the badge at the bottom (or centre) of the screen says. Also read
+    /// out as the accessibility help, so the two never drift apart.
+    private var hintText: String {
+        if isWindowMode {
+            return String(localized: "Hover a window · click to capture · Space for a rectangle · Esc to cancel")
+        }
+        return isAdjusting
+            ? String(localized: "Drag or nudge with arrows · ↵ to capture · Esc to cancel")
+            : String(localized: "Drag a rectangle · Space to pick a window · Esc to cancel")
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let dim = NSColor.black.withAlphaComponent(0.45)
@@ -304,7 +465,7 @@ final class RegionSelectionView: NSView {
 
         guard let sel = displayRect?.intersection(bounds), sel.width > 0, sel.height > 0 else {
             bounds.fill()
-            if showsHint { drawHint(String(localized: "Drag a rectangle · Esc to cancel"), at: bounds.center) }
+            if showsHint { drawHint(hintText, at: bounds.center) }
             return
         }
 
@@ -321,17 +482,21 @@ final class RegionSelectionView: NSView {
         border.lineWidth = 1.5
         border.stroke()
 
-        drawHandles(sel)
-        drawDimensions(sel)
-        if showsHint, isAdjusting {
+        if isWindowMode {
+            drawWindowName(in: sel)
+            // The window's own size, not the part that fits on this screen —
+            // otherwise a window spanning two displays reports two wrong figures.
+            drawDimensions(sel, size: highlighted?.overlayFrame.size)
+        } else {
+            drawHandles(sel)
+            drawDimensions(sel, size: nil)
+        }
+        if showsHint, isWindowMode || isAdjusting {
             // Below the selection by default, above it when the rect reaches
             // that low — the hint must not sit on top of what's being framed.
             let low = CGPoint(x: bounds.midX, y: bounds.minY + 56)
             let high = CGPoint(x: bounds.midX, y: bounds.maxY - 56)
-            drawHint(
-                String(localized: "Drag or nudge with arrows · ↵ to capture · Esc to cancel"),
-                at: sel.minY < low.y + 24 ? high : low
-            )
+            drawHint(hintText, at: sel.minY < low.y + 24 ? high : low)
         }
     }
 
@@ -353,8 +518,9 @@ final class RegionSelectionView: NSView {
         }
     }
 
-    private func drawDimensions(_ sel: CGRect) {
-        let text = "\(Int(sel.width.rounded())) × \(Int(sel.height.rounded()))" as NSString
+    private func drawDimensions(_ sel: CGRect, size: CGSize?) {
+        let reported = size ?? sel.size
+        let text = "\(Int(reported.width.rounded())) × \(Int(reported.height.rounded()))" as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold),
             .foregroundColor: NSColor.white
@@ -372,6 +538,38 @@ final class RegionSelectionView: NSView {
         NSColor.black.withAlphaComponent(0.88).setFill()
         NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
         text.draw(at: CGPoint(x: rect.minX + padX, y: rect.minY + padY), withAttributes: attrs)
+    }
+
+    /// Names the highlighted window in its middle. Two windows of the same app
+    /// look alike from the outside, and the title is what tells them apart —
+    /// but only when there is room, so a small palette isn't covered by its own
+    /// label.
+    private func drawWindowName(in sel: CGRect) {
+        guard let highlighted, sel.width >= 160, sel.height >= 72 else { return }
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byTruncatingMiddle
+        style.alignment = .center
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: style
+        ]
+        let text = highlighted.displayName as NSString
+        let measured = text.size(withAttributes: attrs)
+        let padX: CGFloat = 14, padY: CGFloat = 8
+        let width = min(measured.width, min(sel.width - 48, 520))
+        let badge = CGSize(width: width + padX * 2, height: measured.height + padY * 2)
+        let rect = CGRect(
+            x: sel.midX - badge.width / 2,
+            y: sel.midY - badge.height / 2,
+            width: badge.width,
+            height: badge.height
+        )
+        NSColor.black.withAlphaComponent(0.82).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 10, yRadius: 10).fill()
+        text.draw(in: CGRect(x: rect.minX + padX, y: rect.minY + padY,
+                             width: width, height: measured.height),
+                  withAttributes: attrs)
     }
 
     private func drawHint(_ string: String, at center: CGPoint) {

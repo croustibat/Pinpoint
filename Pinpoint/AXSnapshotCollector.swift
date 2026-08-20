@@ -91,6 +91,12 @@ enum AXSnapshotCollector {
     ///
     /// Call it *alongside* the screenshot rather than after it: the two then
     /// describe the same instant, which is the whole contract of the snapshot.
+    ///
+    /// A window capture (#51) is the favourable case, and it is treated as one:
+    /// the owning process is already known, so the search over "which
+    /// applications might be under this rectangle" is skipped entirely and the
+    /// walk starts at that application's windows — cheaper, and free of the
+    /// neighbours that happen to sit under the same coordinates.
     static func capture(region: CaptureRegion, includeFieldValues: Bool) async -> AXSnapshot? {
         guard AXPermission.isTrusted else { return nil }
 
@@ -104,8 +110,9 @@ enum AXSnapshotCollector {
         // lets whichever finishes first resume, and lets the loser be ignored.
         return await withCheckedContinuation { continuation in
             let box = SingleResume(continuation)
+            let target = region.window
             Task.detached(priority: .userInitiated) {
-                box.resume(walk(screenRect: screenRect, display: display,
+                box.resume(walk(screenRect: screenRect, display: display, target: target,
                                 includeFieldValues: includeFieldValues))
             }
             DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + hardCeiling) {
@@ -129,12 +136,19 @@ enum AXSnapshotCollector {
 
     // MARK: - The walk
 
-    private static func walk(screenRect: CGRect, display: CGRect, includeFieldValues: Bool) -> AXSnapshot? {
+    private static func walk(screenRect: CGRect, display: CGRect,
+                             target: CaptureRegion.WindowTarget?,
+                             includeFieldValues: Bool) -> AXSnapshot? {
         var state = State(region: screenRect,
                           includeFieldValues: includeFieldValues,
                           deadline: CACurrentMediaTime() + walkBudget)
 
-        for (order, pid) in owningProcesses(over: screenRect, on: display).enumerated() {
+        // One known process for a window capture, the window-list search
+        // otherwise.
+        let processes = target.map { [$0.processIdentifier] }
+            ?? owningProcesses(over: screenRect, on: display)
+
+        for (order, pid) in processes.enumerated() {
             guard !state.reachedElementLimit() else { break }
 
             let application = AXUIElementCreateApplication(pid)
@@ -152,10 +166,15 @@ enum AXSnapshotCollector {
             // an open menu or a popover — exactly what the capture timer exists
             // to let people photograph — is walked like any other top-level
             // container.
-            let roots = children(of: application) ?? []
-            for root in roots {
+            let roots = prioritised(children(of: application) ?? [], matching: target?.screenFrame)
+            for (rootIndex, root) in roots.enumerated() {
+                // Ranking by root rather than by application is what makes the
+                // targeted case precise: an app with two overlapping windows
+                // would otherwise give both the same rank, and a marker could
+                // resolve against the one *behind* the window that was
+                // photographed.
                 descend(root, parent: nil, depth: 0, application: appIndex,
-                        windowOrder: order, into: &state)
+                        windowOrder: target == nil ? order : rootIndex, into: &state)
             }
         }
 
@@ -168,6 +187,36 @@ enum AXSnapshotCollector {
             capturedAt: Date(),
             includesFieldValues: includeFieldValues
         )
+    }
+
+    /// Moves the captured window to the front of an application's top-level
+    /// elements, so it outranks its siblings.
+    ///
+    /// `SCWindow` and `AXFrame` report the same rectangle in the same space
+    /// (points, global top-left), which is the whole reason a `CGWindowID` can
+    /// be tied to an accessibility element without reaching for a private API:
+    /// the frames simply match. When nothing matches — the window moved between
+    /// the pick and the shutter, or the app doesn't answer `AXFrame` — the
+    /// order is left alone and the region pruning does its usual work.
+    private static func prioritised(_ roots: [AXUIElement], matching target: CGRect?) -> [AXUIElement] {
+        guard let target,
+              let match = roots.firstIndex(where: { matches(frame(of: $0), target) }) else {
+            return roots
+        }
+        var ordered = roots
+        ordered.insert(ordered.remove(at: match), at: 0)
+        return ordered
+    }
+
+    /// Frame equality with a point of slack: accessibility and window-server
+    /// geometry agree, but not always to the last fraction of a point.
+    private static func matches(_ frame: CGRect?, _ target: CGRect) -> Bool {
+        guard let frame else { return false }
+        let tolerance: CGFloat = 2
+        return abs(frame.minX - target.minX) <= tolerance
+            && abs(frame.minY - target.minY) <= tolerance
+            && abs(frame.width - target.width) <= tolerance
+            && abs(frame.height - target.height) <= tolerance
     }
 
     /// Depth-first, parents recorded before their children so `parent` indices
