@@ -139,10 +139,12 @@ enum FileHandoff {
         try replaceDirectory(latest, with: files(png: png, markdown: markdown,
                                                  pins: pins, shapes: shapes, context: context,
                                                  imageSize: pixelSize, directory: latest,
+                                                 style: style, preset: preset,
                                                  accessibility: accessibility))
 
         let archived = try? archive(png: png, markdown: markdown, pins: pins, shapes: shapes,
                                     context: context, imageSize: pixelSize,
+                                    style: style, preset: preset,
                                     accessibility: accessibility)
 
         return Output(
@@ -159,20 +161,47 @@ enum FileHandoff {
     /// be built for its final home, not for the staging folder.
     private static func files(png: Data, markdown: String, pins: [Pin], shapes: [Markup],
                               context: String, imageSize: CGSize, directory: URL,
+                              style: PinStyle, preset: TaskPreset,
                               accessibility: AXSnapshot?) throws -> [(name: String, data: Data)] {
         let document = Document(pins: pins, shapes: shapes, context: context,
                                 imageSize: imageSize, directory: directory,
+                                style: style, preset: preset,
                                 accessibility: accessibility)
-        let encoder = JSONEncoder()
-        // Pretty-printed, key-sorted and unescaped: a human debugging this reads
-        // it, `\/Users\/…` for every path is noise, and a fixed key order keeps
-        // two handoffs of the same annotations byte-identical.
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return [
             (pngFileName, png),
             (markdownFileName, Data(markdown.utf8)),
             (jsonFileName, try encoder.encode(document))
         ]
+    }
+
+    /// The one encoder every producer of this contract uses.
+    ///
+    /// Pretty-printed, key-sorted and unescaped: a human debugging this reads it,
+    /// `\/Users\/…` for every path is noise, and a fixed key order keeps two
+    /// handoffs of the same annotations byte-identical. Shared with
+    /// `Exporter.buildJSON` so the file on disk and the JSON handed to the
+    /// clipboard can't drift into two dialects of the same schema.
+    static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return encoder
+    }
+
+    /// Reads a handoff document back.
+    ///
+    /// The contract was write-only until now, which is a strange thing to hand
+    /// somebody as an interoperability format: the CLI (#56) and the MCP server
+    /// (#57) both have to read `last/capture.json` before they can act on it, and
+    /// so does anything a user scripts. Every field decodes the way it encodes,
+    /// and the keys added since version 1 are optional, so a document written by
+    /// an older build still reads.
+    static func readDocument(at url: URL) throws -> Document {
+        try JSONDecoder().decode(Document.self, from: Data(contentsOf: url))
+    }
+
+    /// The most recent handoff, or nil when none has been written yet.
+    static func latestDocument() -> Document? {
+        try? readDocument(at: latestDirectory.appendingPathComponent(jsonFileName))
     }
 
     /// Writes `files` into `directory`, replacing whatever was there.
@@ -206,11 +235,13 @@ enum FileHandoff {
     /// Writes a timestamped copy of the handoff and prunes the oldest ones.
     private static func archive(png: Data, markdown: String, pins: [Pin], shapes: [Markup],
                                 context: String, imageSize: CGSize,
+                                style: PinStyle, preset: TaskPreset,
                                 accessibility: AXSnapshot?) throws -> URL {
         let folder = archiveDirectory.appendingPathComponent(timestamp(), isDirectory: true)
         try replaceDirectory(folder, with: files(png: png, markdown: markdown,
                                                  pins: pins, shapes: shapes, context: context,
                                                  imageSize: imageSize, directory: folder,
+                                                 style: style, preset: preset,
                                                  accessibility: accessibility))
         prune()
         return folder

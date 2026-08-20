@@ -123,6 +123,7 @@ struct EditorView: View {
     /// than per-capture state: it is a way of working, and the point of the
     /// feature is not having to pick it again every time.
     @AppStorage(TaskPreset.storageKey) private var taskPreset: TaskPreset = .raw
+    @AppStorage(AgentTextFormat.storageKey) private var textFormat: AgentTextFormat = .markdown
 
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
@@ -881,6 +882,20 @@ struct EditorView: View {
             }
             .controlSize(.large)
             .keyboardShortcut("s", modifiers: [.command])
+
+            // The JSON as a target of its own, not a by-product of copying
+            // (#52): a script being written against the contract needs a file it
+            // chose the name of, and the clipboard is the wrong place to build
+            // that against. Full width like its neighbours rather than sharing a
+            // row with them — this panel is 260 pt at its narrowest, and two
+            // labelled buttons side by side truncate before the window does.
+            Button(action: exportJSON) {
+                Label(String(localized: "export.json.button", defaultValue: "Export JSON…"),
+                      systemImage: "curlybraces")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .keyboardShortcut("s", modifiers: [.command, .shift])
         }
         .padding(14)
     }
@@ -1106,7 +1121,8 @@ struct EditorView: View {
     private func copy() {
         guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
                                         style: pinStyle, includeLegend: includeLegend,
-                                        preset: taskPreset, accessibility: axSnapshot) else {
+                                        preset: taskPreset, format: textFormat,
+                                        accessibility: axSnapshot) else {
             exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
             return
         }
@@ -1152,6 +1168,38 @@ struct EditorView: View {
         }
         do {
             try png.write(to: url)
+        } catch {
+            exportError = error.localizedDescription
+            return
+        }
+        onPersist(pins, shapes, context, image, axSnapshot)
+    }
+
+    /// Writes the annotated capture as JSON alone, wherever the user asks.
+    ///
+    /// The coordinates describe the annotated image at native resolution — the
+    /// file "Save image…" writes without a legend, and `image.size` since the
+    /// renderer became 1:1 with its own pixel grid (#76). The legend strip is
+    /// left out of the reckoning on purpose: it only ever grows the image
+    /// downwards, so every marker keeps the pixel it had, and quoting a taller
+    /// image here would describe a picture nobody asked for.
+    private func exportJSON() {
+        guard let json = Exporter.buildJSON(pins: pins, shapes: shapes, context: context,
+                                            imageSize: image.size, style: pinStyle,
+                                            preset: taskPreset, accessibility: axSnapshot) else {
+            exportError = String(localized: "export.json.error",
+                                 defaultValue: "The capture couldn’t be written as JSON.")
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "Pinpoint.json"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try Data(json.utf8).write(to: url)
         } catch {
             exportError = error.localizedDescription
             return

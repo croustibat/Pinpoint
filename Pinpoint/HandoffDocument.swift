@@ -14,15 +14,36 @@ import Foundation
 // coordinate convention matches `capture.md`: pixels from the top-left corner
 // first, then the same point as a percentage of the image size.
 extension FileHandoff {
-    struct Document: Encodable {
+    struct Document: Codable {
         let schemaVersion: Int
         let generator: Generator
         /// When this handoff was written (ISO 8601, with offset).
         let generatedAt: String
+        /// When the screenshot itself was taken (ISO 8601), which can be days
+        /// before `generatedAt` — a capture is reopened from the history and
+        /// re-exported. Absent when nothing recorded it: the instant is read
+        /// from the accessibility snapshot (#55), so a capture taken with that
+        /// feature off carries no origin date. Same instant as
+        /// `accessibility.capturedAt` when both are present.
+        let capturedAt: String?
+        /// The framing chosen in the editor (#53). Always present: `preset` is
+        /// "raw" when the user asked for none, so a consumer never has to tell
+        /// "no preset" from "key not written by this version".
+        let task: TaskFraming
         let image: Image
+        /// How the numbered markers are drawn on the image, so a consumer can
+        /// describe or redraw them without looking at the pixels.
+        let markerStyle: MarkerStyle
+        /// What was in front of the lens: the app and window the capture was
+        /// pointed at, and the piece of screen it covers. Absent without an
+        /// accessibility snapshot, which is where every one of these facts comes
+        /// from.
+        let source: Source?
         /// Absolute path of the Markdown twin sitting next to this file — the
         /// same content in prose, for an agent that would rather read that.
-        let markdownPath: String
+        /// Absent when the JSON was exported on its own ("Export JSON…"), where
+        /// there is no twin and no image to point at.
+        let markdownPath: String?
         /// The user's instructions, verbatim. Empty string when they wrote none
         /// (the key is always present, so a consumer never has to branch on its
         /// absence).
@@ -36,23 +57,80 @@ extension FileHandoff {
         let markers: [Marker]
         let shapes: [Shape]
 
-        struct Generator: Encodable {
+        struct Generator: Codable {
             let name: String
             let version: String
         }
 
-        struct Image: Encodable {
-            /// Absolute path of the annotated PNG next to this file.
-            let path: String
+        struct Image: Codable {
+            /// Absolute path of the annotated PNG next to this file. Absent when
+            /// the JSON was exported alone — see `markdownPath`.
+            let path: String?
             /// Pixel dimensions of that PNG — the grid every `x`/`y` below is
             /// expressed in.
+            ///
+            /// Always the grid of the file this document describes, never the
+            /// capture's own: the clipboard copy is downscaled to stay pasteable,
+            /// and quoting the original dimensions there is exactly what sent
+            /// agents 1.28× off the mark (#76).
             let width: Int
             let height: Int
+            /// Image pixels per screen point — 2 on a Retina display. Lets a
+            /// consumer go from a pixel here back to the point on screen it was
+            /// read from, together with `source.screenRect`. Absent when the
+            /// captured region isn't known (no accessibility snapshot).
+            let scale: Double?
+        }
+
+        /// The task framing that was written into the export (#53).
+        struct TaskFraming: Codable {
+            /// The stable token — "raw", "bug", "review" or "implement". The
+            /// only field here meant to be switched on; the two below are prose
+            /// in the user's language.
+            let preset: String
+            /// The preset's name as the editor showed it.
+            let label: String
+            /// The paragraph that went into `capture.md` above the user's
+            /// instructions, repeated verbatim so a consumer building its own
+            /// prompt gets the same framing. Absent for the "raw" preset.
+            let guidance: String?
+        }
+
+        /// How the numbered badges are drawn.
+        struct MarkerStyle: Codable {
+            /// "disc", "pointer" or "outline".
+            let kind: String
+            /// `#RRGGBB`, sRGB — the vermillon every marker and outline is drawn
+            /// in. A constant today, stated rather than assumed so a consumer
+            /// looking for the badges in the pixels knows what to look for.
+            let color: String
+        }
+
+        /// The screen the capture was taken from.
+        struct Source: Codable {
+            /// The app owning the window under the middle of the capture.
+            let application: String?
+            let bundleIdentifier: String?
+            /// That window's title, when it has one.
+            let windowTitle: String?
+            /// The region the image covers, in screen points. With `image.scale`
+            /// this is what turns a pixel in the image back into a point the
+            /// macOS APIs accept.
+            let screenRect: ScreenRect
+        }
+
+        /// A rectangle in screen points, global top-left origin. Not
+        /// percentages: it isn't relative to the image.
+        struct ScreenRect: Codable {
+            let x: Double
+            let y: Double
+            let width: Double
+            let height: Double
         }
 
         /// A point in the image, given twice: pixels for an agent working on
         /// the file, percentages for one reasoning about a resized copy.
-        struct Point: Encodable {
+        struct Point: Codable {
             let x: Int
             let y: Int
             /// 0…100, two decimals.
@@ -61,7 +139,7 @@ extension FileHandoff {
         }
 
         /// Axis-aligned box, same dual units as `Point`.
-        struct Box: Encodable {
+        struct Box: Codable {
             let x: Int
             let y: Int
             let width: Int
@@ -74,7 +152,7 @@ extension FileHandoff {
 
         /// Snapshot-wide facts about the accessibility pass (#55). Lets a
         /// consumer reason about *why* a marker has no element attached.
-        struct AccessibilityContext: Encodable {
+        struct AccessibilityContext: Codable {
             /// Whether at least one element was collected.
             let available: Bool
             /// ISO 8601 instant the tree was read — the capture instant.
@@ -88,7 +166,7 @@ extension FileHandoff {
             /// missing `value` means "empty" or "withheld".
             let policy: Policy
 
-            struct Policy: Encodable {
+            struct Policy: Codable {
                 /// Always true. Password fields are never read, at any setting.
                 let secureFieldValuesOmitted: Bool
                 /// True unless the user opted in: the text typed in ordinary
@@ -104,7 +182,7 @@ extension FileHandoff {
         /// This is the point of the whole file: a marker is a pixel, and a pixel
         /// is not something you can go and edit. `role` + `identifier` + `path`
         /// are what turn it into a thing with a name in somebody's source code.
-        struct AccessibilityElement: Encodable {
+        struct AccessibilityElement: Codable {
             /// Raw accessibility role, e.g. "AXButton". Not translated into
             /// prose on purpose — it's the vocabulary every inspector shares.
             let role: String
@@ -141,24 +219,18 @@ extension FileHandoff {
             /// `AXRole “Name”`.
             let path: [String]
 
-            struct Application: Encodable {
+            struct Application: Codable {
                 let name: String?
                 let bundleIdentifier: String?
                 let processIdentifier: Int32
             }
 
-            /// Points, global top-left origin. Not percentages: this rect isn't
-            /// relative to the image.
-            struct ScreenFrame: Encodable {
-                let x: Double
-                let y: Double
-                let width: Double
-                let height: Double
-            }
+            /// The same shape as `source.screenRect`, and the same space.
+            typealias ScreenFrame = FileHandoff.Document.ScreenRect
         }
 
         /// A numbered marker.
-        struct Marker: Encodable {
+        struct Marker: Codable {
             /// Stable identifier, the same code `capture.md` prints in brackets.
             /// Survives the renumbering that follows a deletion, so two handoffs
             /// of one session refer to the same marker by the same id.
@@ -178,7 +250,7 @@ extension FileHandoff {
         }
 
         /// An unnumbered outline: arrow or rectangle.
-        struct Shape: Encodable {
+        struct Shape: Codable {
             let id: String
             /// "S1", "S2"… matching `capture.md`.
             let label: String
@@ -197,10 +269,17 @@ extension FileHandoff {
 }
 
 extension FileHandoff.Document {
-    /// Builds the document for a set of annotations. `directory` is where the
-    /// triplet will live, since the absolute paths below point at its siblings.
-    init(pins: [Pin], shapes: [Markup], context: String, imageSize: CGSize, directory: URL,
-         accessibility: AXSnapshot? = nil) {
+    /// Builds the document for a set of annotations.
+    ///
+    /// `directory` is where the triplet will live, since the absolute paths
+    /// below point at its siblings; nil when the JSON is exported on its own and
+    /// there is nothing to point at.
+    ///
+    /// `imageSize` must be the pixel grid of the image this document describes —
+    /// not the capture's own dimensions, which stopped being the same thing the
+    /// moment the clipboard copy started downscaling (#76).
+    init(pins: [Pin], shapes: [Markup], context: String, imageSize: CGSize, directory: URL?,
+         style: PinStyle, preset: TaskPreset, accessibility: AXSnapshot? = nil) {
         self.schemaVersion = FileHandoff.schemaVersion
         self.generator = Generator(
             name: "Pinpoint",
@@ -209,12 +288,25 @@ extension FileHandoff.Document {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         self.generatedAt = formatter.string(from: Date())
+        self.capturedAt = accessibility.map { formatter.string(from: $0.capturedAt) }
+        self.task = TaskFraming(preset: preset.rawValue, label: preset.label, guidance: preset.guidance)
         self.image = Image(
-            path: directory.appendingPathComponent(FileHandoff.pngFileName).path,
+            path: directory?.appendingPathComponent(FileHandoff.pngFileName).path,
             width: Int(imageSize.width.rounded()),
-            height: Int(imageSize.height.rounded())
+            height: Int(imageSize.height.rounded()),
+            scale: accessibility.flatMap { $0.pixelsPerPoint(for: imageSize) }
         )
-        self.markdownPath = directory.appendingPathComponent(FileHandoff.markdownFileName).path
+        self.markerStyle = MarkerStyle(kind: style.rawValue, color: FileHandoff.markerColorHex)
+        self.source = accessibility.map { snapshot in
+            let window = snapshot.sourceWindow
+            return Source(
+                application: window?.application.name,
+                bundleIdentifier: window?.application.bundleIdentifier,
+                windowTitle: window?.title,
+                screenRect: ScreenRect(snapshot.captureRect)
+            )
+        }
+        self.markdownPath = directory?.appendingPathComponent(FileHandoff.markdownFileName).path
         self.context = context.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let ordered = pins.sorted { $0.number < $1.number }
@@ -339,12 +431,7 @@ extension FileHandoff.Document.AccessibilityElement {
             redacted: element.redaction?.rawValue,
             enabled: element.enabled,
             box: FileHandoff.Document.Box(snapshot.normalizedRect(for: element.frame), in: imageSize),
-            screenFrame: ScreenFrame(
-                x: Double(element.frame.minX),
-                y: Double(element.frame.minY),
-                width: Double(element.frame.width),
-                height: Double(element.frame.height)
-            ),
+            screenFrame: ScreenFrame(element.frame),
             application: Application(
                 name: resolved.application.name,
                 bundleIdentifier: resolved.application.bundleIdentifier,
@@ -352,5 +439,46 @@ extension FileHandoff.Document.AccessibilityElement {
             ),
             path: (resolved.ancestors.map(\.summary) + [element.summary])
         )
+    }
+}
+
+extension FileHandoff.Document.ScreenRect {
+    init(_ rect: CGRect) {
+        self.init(x: Double(rect.minX), y: Double(rect.minY),
+                  width: Double(rect.width), height: Double(rect.height))
+    }
+}
+
+extension FileHandoff {
+    /// The vermillon `NSColor.pinpointVermillon` draws every marker and outline
+    /// in, spelled for the JSON. Hard-coded rather than read back off the colour:
+    /// this is a contract value, and it should take an edit here — not a change
+    /// of colour space on someone's Mac — to move it.
+    static let markerColorHex = "#FF4D2E"
+}
+
+extension AXSnapshot {
+    /// The window the capture was aimed at: whatever sits under the middle of
+    /// the image, walked back up to its outermost container.
+    ///
+    /// The centre rather than a scan of every window, and `element(atNormalized:)`
+    /// rather than a second selection rule: that method already knows how to pick
+    /// between overlapping windows (frontmost first), and the middle of a region
+    /// the user dragged themselves is the least ambiguous statement of what they
+    /// meant to photograph. Nothing there — a capture of the desktop, of a menu
+    /// that left no accessible window — simply yields nil.
+    var sourceWindow: (application: Application, title: String?)? {
+        guard let resolved = element(atNormalized: CGPoint(x: 0.5, y: 0.5)) else { return nil }
+        let window = resolved.ancestors.first ?? resolved.element
+        return (resolved.application, window.title ?? window.name)
+    }
+
+    /// How many pixels of an image of `imageSize` cover one screen point — 2 for
+    /// a Retina capture, less once the clipboard copy has been downscaled. Nil
+    /// when the captured region is degenerate, which would make the ratio
+    /// meaningless rather than merely unknown.
+    func pixelsPerPoint(for imageSize: CGSize) -> Double? {
+        guard captureRect.width > 0 else { return nil }
+        return ((Double(imageSize.width) / Double(captureRect.width)) * 1000).rounded() / 1000
     }
 }

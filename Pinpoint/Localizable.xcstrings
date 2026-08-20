@@ -615,6 +615,18 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "# Capture annotée — %lld×%lld px" } }
       }
     },
+    "export.json.button" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export JSON…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Exporter en JSON…" } }
+      }
+    },
+    "export.json.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture couldn’t be written as JSON." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture n’a pas pu être écrite en JSON." } }
+      }
+    },
     "export.markers.legend" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker." } },
@@ -667,6 +679,18 @@
     "Follow the macOS screenshot location" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
+      }
+    },
+    "format.json.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } }
+      }
+    },
+    "format.markdown.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } }
       }
     },
     "handoff.error.body" : {
@@ -986,6 +1010,24 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe the element under each marker" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décrire l’élément sous chaque repère" } }
+      }
+    },
+    "settings.format.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown reads well when pasted into a conversation; JSON is the same facts in the versioned contract, for a script that indexes them. Both are always written to the files for the agent." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown se lit bien collé dans une conversation ; JSON reprend les mêmes faits dans le contrat versionné, pour un script qui les indexe. Les deux sont de toute façon écrits dans les fichiers pour l’agent." } }
+      }
+    },
+    "settings.format.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied text:" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte copié :" } }
+      }
+    },
+    "settings.format.unused" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable while the legend is embedded: the clipboard then carries the image alone. The files for the agent are written in both formats either way." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Indisponible tant que la légende est incrustée : le presse-papier ne porte alors que l’image. Les fichiers pour l’agent sont écrits dans les deux formats quoi qu’il arrive." } }
       }
     },
     "Settings…" : {

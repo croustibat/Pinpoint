@@ -405,6 +405,44 @@ enum Exporter {
         }
     }
 
+    /// The same facts as `buildText`, in the versioned JSON contract (#52).
+    ///
+    /// Deliberately not a second schema. `FileHandoff.Document` is already the
+    /// thing the file handoff writes, the thing #55 hung the accessibility data
+    /// off, and the thing the CLI (#56) and the MCP server (#57) are being built
+    /// against — a rival shape for the clipboard would have meant two formats to
+    /// keep in step and a coin toss for whoever consumes them. This is that
+    /// document, serialized; `directory` is nil because an export chosen from a
+    /// save panel has no triplet around it to point at.
+    ///
+    /// Returns nil only if encoding fails, which for this document means a
+    /// programming error rather than a runtime condition — callers fall back to
+    /// the Markdown, since shipping no text at all would be worse.
+    static func buildJSON(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize,
+                          style: PinStyle, preset: TaskPreset = .raw,
+                          accessibility: AXSnapshot? = nil) -> String? {
+        let document = FileHandoff.Document(pins: pins, shapes: shapes, context: context,
+                                            imageSize: imageSize, directory: nil,
+                                            style: style, preset: preset,
+                                            accessibility: accessibility)
+        guard let data = try? FileHandoff.encoder.encode(document) else { return nil }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// The text half of an export, in whichever format the user asked for.
+    /// Falls back to the Markdown when the JSON can't be produced.
+    static func agentText(format: AgentTextFormat, pins: [Pin], shapes: [Markup], context: String,
+                          imageSize: CGSize, style: PinStyle, preset: TaskPreset,
+                          accessibility: AXSnapshot?) -> String {
+        if format == .json,
+           let json = buildJSON(pins: pins, shapes: shapes, context: context, imageSize: imageSize,
+                                style: style, preset: preset, accessibility: accessibility) {
+            return json
+        }
+        return buildText(pins: pins, shapes: shapes, context: context, imageSize: imageSize,
+                         preset: preset, accessibility: accessibility)
+    }
+
     /// `(1075, 259)` — a normalized point in the image's pixel grid, top-left origin.
     private static func pixels(_ point: CGPoint, in size: CGSize) -> String {
         "(\(Int((point.x * size.width).rounded())), \(Int((point.y * size.height).rounded())))"
@@ -606,7 +644,8 @@ enum Exporter {
     /// happened.
     @discardableResult
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                                 style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
+                                 style: PinStyle, includeLegend: Bool,
+                                 preset: TaskPreset = .raw, format: AgentTextFormat = .markdown,
                                  accessibility: AXSnapshot? = nil) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -629,8 +668,14 @@ enum Exporter {
             // still caps it — a 2560 px capture is pasted 2000 px wide. Quoting
             // the capture's own dimensions there put every `px` in this text
             // 1.28× (or 2.56×) off the pixels it names.
-            let text = buildText(pins: pins, shapes: shapes, context: context, imageSize: pixelSize,
-                                 preset: preset, accessibility: accessibility)
+            let text = agentText(format: format, pins: pins, shapes: shapes, context: context,
+                                 imageSize: pixelSize, style: style, preset: preset,
+                                 accessibility: accessibility)
+            // Written as `.string` and nothing else, even for JSON. A pasteboard
+            // item advertising several types lets the receiver choose, and the
+            // ones that matter here choose badly — a terminal already drops the
+            // image the moment text shares the item (see above). One type, one
+            // outcome.
             wrote = pasteboard.setString(text, forType: .string) || wrote
         }
 
