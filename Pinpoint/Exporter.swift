@@ -189,7 +189,8 @@ enum Exporter {
     /// image (top-left origin), so the agent can locate every annotation
     /// without reading the pixels — then the user's instructions in their own
     /// section.
-    static func buildText(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize) -> String {
+    static func buildText(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize,
+                          accessibility: AXSnapshot? = nil) -> String {
         let width = Int(imageSize.width.rounded())
         let height = Int(imageSize.height.rounded())
         let orderedPins = pins.sorted { $0.number < $1.number }
@@ -211,16 +212,32 @@ enum Exporter {
             lines.append(String(localized: "export.coordinates", defaultValue: "Positions are given in pixels from the top-left corner (0, 0), then as a percentage of the image size."))
         }
 
+        // Kept only when at least one marker actually resolves to an element:
+        // an empty snapshot must not print a legend promising details that never
+        // come, and must leave the text byte-identical to what it was before.
+        let snapshot = accessibility.flatMap { candidate in
+            orderedPins.contains { candidate.element(atNormalized: $0.position) != nil } ? candidate : nil
+        }
+
         if !orderedPins.isEmpty {
             lines.append("")
             lines.append("## " + String(localized: "Markers"))
             lines.append(String(localized: "export.markers.legend", defaultValue: "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker."))
+            if snapshot != nil {
+                lines.append(String(localized: "export.markers.accessibility.legend", defaultValue: "“UI” lines name the interface element found under the marker in the macOS accessibility tree at capture time — its role, its label, the app owning it, and its box in this image. “Path” is the chain of containers around it."))
+            }
             lines.append("")
             for pin in orderedPins {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
                 let description = note.isEmpty ? String(localized: "(no description)") : note
                 lines.append("- M\(pin.number) [\(pin.id.shortToken)] · \(description) — "
                              + "\(pixels(pin.position, in: imageSize)) px · \(percent(pin.position))")
+                // The interface element the marker landed on, read from the
+                // accessibility tree while the capture was taken (#55). Indented
+                // under its marker so the association is positional and can't be
+                // misread, and left out entirely when there's nothing to say.
+                lines.append(contentsOf: accessibilityLines(for: pin.position,
+                                                            snapshot: snapshot, imageSize: imageSize))
             }
         }
 
@@ -255,6 +272,69 @@ enum Exporter {
             lines.append(ctx)
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// The two-or-three indented lines describing what sits under a marker, or
+    /// nothing at all when the snapshot has no element there.
+    ///
+    /// Written for both readers at once: a human scanning the file sees a
+    /// sentence, an agent sees `key: value` fields it can lift verbatim. The
+    /// role stays in its raw accessibility spelling (`AXButton`) because that is
+    /// the vocabulary shared with every inspector, and with the code that
+    /// created the element in the first place.
+    private static func accessibilityLines(for position: CGPoint, snapshot: AXSnapshot?,
+                                           imageSize: CGSize) -> [String] {
+        guard let snapshot, let resolved = snapshot.element(atNormalized: position) else { return [] }
+        let element = resolved.element
+
+        var facts: [String] = [element.summary]
+        if let identifier = element.identifier, identifier != element.name {
+            facts.append("id=\(identifier)")
+        }
+        if let subrole = element.subrole { facts.append("subrole=\(subrole)") }
+        if let bundle = resolved.application.bundleIdentifier ?? resolved.application.name {
+            facts.append(bundle)
+        }
+        facts.append(box(element.frame, snapshot: snapshot, imageSize: imageSize))
+        if element.enabled == false { facts.append(String(localized: "export.ax.disabled", defaultValue: "disabled")) }
+
+        // `UI:`, `Value:` and `Path:` stay in English like `M1` and `px`: they
+        // are field names in a machine-read file, not prose. Only the sentences
+        // a human might read are localized.
+        var lines = ["  - UI: " + facts.joined(separator: " · ")]
+        if let value = element.value {
+            lines.append("  - Value: “\(value)”")
+        } else if let redaction = element.redaction {
+            lines.append("  - Value: " + redactionNote(redaction))
+        }
+        lines.append("  - Path: " + resolved.path)
+        return lines
+    }
+
+    /// An element's screen frame restated in the image's own pixel grid, so it
+    /// lines up with every other coordinate in this file. Not clamped: a box
+    /// reaching past the edges is an element that sticks out of the capture,
+    /// which is worth knowing rather than hiding.
+    private static func box(_ frame: CGRect, snapshot: AXSnapshot, imageSize: CGSize) -> String {
+        let rect = snapshot.normalizedRect(for: frame)
+        let x = Int((rect.minX * imageSize.width).rounded())
+        let y = Int((rect.minY * imageSize.height).rounded())
+        let width = Int((rect.width * imageSize.width).rounded())
+        let height = Int((rect.height * imageSize.height).rounded())
+        return "box (\(x), \(y)) \(width)×\(height) px"
+    }
+
+    /// Says plainly that a value exists and was withheld, rather than leaving a
+    /// silent gap an agent might read as "the field was empty".
+    private static func redactionNote(_ redaction: AXSnapshot.Redaction) -> String {
+        switch redaction {
+        case .secureField:
+            return String(localized: "export.ax.value.secure",
+                          defaultValue: "withheld (secure field — Pinpoint never reads it)")
+        case .textFieldPolicy:
+            return String(localized: "export.ax.value.policy",
+                          defaultValue: "withheld (text field — enable “Include what is typed in fields” in Pinpoint’s settings)")
+        }
     }
 
     /// `(1075, 259)` — a normalized point in the image's pixel grid, top-left origin.
@@ -399,7 +479,8 @@ enum Exporter {
     /// happened.
     @discardableResult
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                                 style: PinStyle, includeLegend: Bool) -> Bool {
+                                 style: PinStyle, includeLegend: Bool,
+                                 accessibility: AXSnapshot? = nil) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
@@ -410,7 +491,8 @@ enum Exporter {
         }
 
         if !includeLegend {
-            let text = buildText(pins: pins, shapes: shapes, context: context, imageSize: base.size)
+            let text = buildText(pins: pins, shapes: shapes, context: context, imageSize: base.size,
+                                 accessibility: accessibility)
             wrote = pasteboard.setString(text, forType: .string) || wrote
         }
 

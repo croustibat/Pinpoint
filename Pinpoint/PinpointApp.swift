@@ -42,7 +42,7 @@ struct SettingsView: View {
                 .textSelection(.enabled)
                 .padding(.vertical, 6)
         }
-        .frame(width: 460, height: 366)
+        .frame(width: 460, height: 470)
     }
 
     /// Marketing version + build read from the bundle, e.g. "Pinpoint 0.3.0 (3)".
@@ -59,6 +59,13 @@ struct CaptureSettingsView: View {
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
     @AppStorage(CaptureDelay.storageKey) private var captureDelay: CaptureDelay = .off
+    @AppStorage(AXContextSettings.enabledKey) private var axContext = true
+    @AppStorage(AXContextSettings.fieldValuesKey) private var axFieldValues = false
+
+    /// Whether macOS grants Accessibility, re-read whenever the window comes
+    /// back — the switch is flipped in System Settings, in another process, so
+    /// there's nothing to observe here beyond "the user came back to us".
+    @State private var isTrusted = AXPermission.isTrusted
 
     var body: some View {
         Form {
@@ -92,7 +99,56 @@ struct CaptureSettingsView: View {
                     .foregroundStyle(.secondary)
                     .font(.callout)
             }
+            accessibilitySection
         }
         .formStyle(.grouped)
+        // Coming back from System Settings is the moment the answer can have
+        // changed; nothing else in this window can change it.
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didBecomeActiveNotification)) { _ in
+            isTrusted = AXPermission.isTrusted
+        }
+    }
+
+    /// The accessibility context (#55): what turns a marker from a pixel into a
+    /// named element an agent can go and edit.
+    ///
+    /// Its permission is a separate grant from Screen Recording, so the section
+    /// states where it stands rather than surprising anyone mid-capture — and
+    /// nothing here prompts unless the button is pressed.
+    private var accessibilitySection: some View {
+        Section(String(localized: "settings.ax.section", defaultValue: "Interface context")) {
+            Toggle(String(localized: "settings.ax.toggle",
+                          defaultValue: "Describe the element under each marker"),
+                   isOn: $axContext)
+            Text(String(localized: "settings.ax.explanation",
+                        defaultValue: "Adds a line under each marker naming the interface element it points at — its role, its label and the app owning it — read while the capture is taken. Needs the Accessibility permission, which is separate from Screen Recording."))
+                .foregroundStyle(.secondary)
+                .font(.callout)
+
+            if axContext && !isTrusted {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(String(localized: "settings.ax.permission.missing",
+                                defaultValue: "Accessibility permission required. Without it, captures work exactly as before — they just carry no interface details."))
+                        .font(.callout)
+                }
+                Button(String(localized: "settings.ax.permission.grant",
+                              defaultValue: "Allow access…")) {
+                    AXPermission.request()
+                    isTrusted = AXPermission.isTrusted
+                }
+            }
+
+            Toggle(String(localized: "settings.ax.fieldValues",
+                          defaultValue: "Include what is typed in fields"),
+                   isOn: $axFieldValues)
+                .disabled(!axContext)
+            Text(String(localized: "settings.ax.fieldValues.explanation",
+                        defaultValue: "Off by default: the accessibility tree returns the whole contents of a field, including the part scrolled out of the picture. Password fields are never read, whatever this says."))
+                .foregroundStyle(.secondary)
+                .font(.callout)
+        }
     }
 }

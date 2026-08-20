@@ -20,6 +20,19 @@ enum ScreenCaptureError: LocalizedError {
 
 enum ScreenCapture {
 
+    /// What one capture produced: the pixels, plus the accessibility tree that
+    /// covered them at that instant (#55).
+    ///
+    /// The two travel together on purpose. Markers are placed later, in the
+    /// editor, when the photographed UI may already be gone — so the only moment
+    /// the tree can be read is this one. `accessibility` is nil whenever the
+    /// feature is off, unauthorized, or simply found nothing: it is context, and
+    /// its absence never turns a successful capture into a failure.
+    struct Capture {
+        let image: NSImage
+        let accessibility: AXSnapshot?
+    }
+
     // MARK: - Screen recording permission
 
     /// System Settings ▸ Privacy & Security ▸ Screen Recording.
@@ -94,7 +107,7 @@ enum ScreenCapture {
     /// Captures the full display that currently contains the mouse cursor,
     /// at native (Retina) resolution, using ScreenCaptureKit.
     @MainActor
-    static func captureDisplayUnderCursor() async throws -> NSImage {
+    static func captureDisplayUnderCursor() async throws -> Capture {
         guard await ensurePermission() else { throw ScreenCaptureError.permissionDenied }
 
         let content = try await SCShareableContent.current
@@ -120,8 +133,21 @@ enum ScreenCapture {
         config.showsCursor = false
         config.scalesToFit = false
 
+        // A whole-display capture is a region capture whose region happens to be
+        // the display: expressing it that way lets the accessibility snapshot use
+        // one mapping rule instead of two.
+        let region = CaptureRegion(
+            displayID: display.displayID,
+            rect: CGRect(x: 0, y: 0, width: CGFloat(display.width), height: CGFloat(display.height)),
+            scale: scale
+        )
+
+        async let snapshot = accessibilitySnapshot(for: region)
         let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        return Capture(
+            image: NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height)),
+            accessibility: await snapshot
+        )
     }
 
     /// Captures a single region of one display, at native (Retina) resolution.
@@ -131,7 +157,7 @@ enum ScreenCapture {
     /// pixel dimensions are the region size multiplied by the display scale — so
     /// the result keeps native resolution without any rescaling.
     @MainActor
-    static func captureRegion(_ region: CaptureRegion) async throws -> NSImage {
+    static func captureRegion(_ region: CaptureRegion) async throws -> Capture {
         guard await ensurePermission() else { throw ScreenCaptureError.permissionDenied }
 
         let content = try await SCShareableContent.current
@@ -153,8 +179,31 @@ enum ScreenCapture {
         config.scalesToFit = false
         config.captureResolution = .best
 
+        // Started before the screenshot rather than after it, so both describe
+        // the same instant. It never throws and never blocks past its own
+        // ceiling, so awaiting it here can only delay the capture, never break
+        // it — and if `captureImage` throws first, the child task is cancelled
+        // with the scope.
+        async let snapshot = accessibilitySnapshot(for: region)
         let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        return Capture(
+            image: NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height)),
+            accessibility: await snapshot
+        )
+    }
+
+    /// Reads the accessibility tree over `region`, or nothing at all.
+    ///
+    /// The two gates are checked here, together, so no other call site has to
+    /// remember them: the feature has to be switched on, and macOS has to have
+    /// granted Accessibility. Neither ever prompts — a user who never asked for
+    /// this sees precisely the app they had before (#55).
+    private static func accessibilitySnapshot(for region: CaptureRegion) async -> AXSnapshot? {
+        guard AXContextSettings.shouldCapture else { return nil }
+        return await AXSnapshotCollector.capture(
+            region: region,
+            includeFieldValues: AXContextSettings.includesFieldValues
+        )
     }
 
     /// Pinpoint's own running application(s), so its windows (a leftover editor,

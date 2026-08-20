@@ -20,6 +20,11 @@ struct EditorSnapshot {
     /// back, and undoing a placement restores whatever was selected before.
     var selectedPinID: Pin.ID?
     var selectedShapeID: Markup.ID?
+    /// The accessibility snapshot (#55). Only a crop changes it — it narrows
+    /// the screen region the snapshot describes — so undoing a crop has to put
+    /// the wide one back, or the markers would be read against a region the
+    /// restored image no longer matches.
+    var accessibility: AXSnapshot?
 }
 
 extension EditorSnapshot: Equatable {
@@ -30,6 +35,11 @@ extension EditorSnapshot: Equatable {
     /// Images compare by identity — pixel comparison would be pointless work,
     /// and every image change in the editor comes from a crop, which always
     /// produces a new instance.
+    ///
+    /// The accessibility snapshot is excluded for the same reason and for one
+    /// more: it only ever moves with the image, which is already compared here,
+    /// and comparing several hundred element frames on every edit would be real
+    /// work done to learn nothing.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.image === rhs.image
             && lhs.pins == rhs.pins
