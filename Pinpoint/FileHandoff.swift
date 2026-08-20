@@ -27,9 +27,10 @@ enum FileHandoff {
     /// Version of the JSON contract written to `capture.json`.
     ///
     /// Bumped only on a *breaking* change — a key removed, renamed, or given a
-    /// new meaning. Adding keys is not breaking: issue #55 will hang an
-    /// `accessibility` object off each marker, and a consumer written against
-    /// version 1 has to keep working. Read what you know, ignore the rest.
+    /// new meaning. Adding keys is not breaking, which is why #55 hanging an
+    /// `accessibility` object off each marker (and one on the document) left
+    /// this at 1: a consumer written against version 1 reads exactly what it
+    /// read before. Read what you know, ignore the rest.
     static let schemaVersion = 1
 
     /// How many timestamped folders `archive/` keeps; the oldest are deleted on
@@ -105,7 +106,8 @@ enum FileHandoff {
     /// failure there only leaves `Output.archive` nil.
     @discardableResult
     static func write(base: NSImage, pins: [Pin], shapes: [Markup],
-                      context: String, style: PinStyle) throws -> Output {
+                      context: String, style: PinStyle,
+                      accessibility: AXSnapshot? = nil) throws -> Output {
         // No legend strip, whatever the editor's `includeLegend` setting says.
         // The legend grows the image downwards, which would shift every pixel
         // coordinate in the .md and .json off the pixels they describe — and
@@ -131,15 +133,18 @@ enum FileHandoff {
         // default configuration, where the clipboard only carries the image
         // (#69).
         let markdown = Exporter.buildText(pins: pins, shapes: shapes,
-                                          context: context, imageSize: pixelSize)
+                                          context: context, imageSize: pixelSize,
+                                          accessibility: accessibility)
 
         let latest = latestDirectory
         try replaceDirectory(latest, with: files(png: png, markdown: markdown,
                                                  pins: pins, shapes: shapes, context: context,
-                                                 imageSize: pixelSize, directory: latest))
+                                                 imageSize: pixelSize, directory: latest,
+                                                 accessibility: accessibility))
 
         let archived = try? archive(png: png, markdown: markdown, pins: pins, shapes: shapes,
-                                    context: context, imageSize: pixelSize)
+                                    context: context, imageSize: pixelSize,
+                                    accessibility: accessibility)
 
         return Output(
             directory: latest,
@@ -154,10 +159,11 @@ enum FileHandoff {
     /// is where they will *end up*: the JSON quotes absolute paths, so it has to
     /// be built for its final home, not for the staging folder.
     private static func files(png: Data, markdown: String, pins: [Pin], shapes: [Markup],
-                              context: String, imageSize: CGSize,
-                              directory: URL) throws -> [(name: String, data: Data)] {
+                              context: String, imageSize: CGSize, directory: URL,
+                              accessibility: AXSnapshot?) throws -> [(name: String, data: Data)] {
         let document = Document(pins: pins, shapes: shapes, context: context,
-                                imageSize: imageSize, directory: directory)
+                                imageSize: imageSize, directory: directory,
+                                accessibility: accessibility)
         let encoder = JSONEncoder()
         // Pretty-printed, key-sorted and unescaped: a human debugging this reads
         // it, `\/Users\/…` for every path is noise, and a fixed key order keeps
@@ -200,11 +206,13 @@ enum FileHandoff {
 
     /// Writes a timestamped copy of the handoff and prunes the oldest ones.
     private static func archive(png: Data, markdown: String, pins: [Pin], shapes: [Markup],
-                                context: String, imageSize: CGSize) throws -> URL {
+                                context: String, imageSize: CGSize,
+                                accessibility: AXSnapshot?) throws -> URL {
         let folder = archiveDirectory.appendingPathComponent(timestamp(), isDirectory: true)
         try replaceDirectory(folder, with: files(png: png, markdown: markdown,
                                                  pins: pins, shapes: shapes, context: context,
-                                                 imageSize: imageSize, directory: folder))
+                                                 imageSize: imageSize, directory: folder,
+                                                 accessibility: accessibility))
         prune()
         return folder
     }

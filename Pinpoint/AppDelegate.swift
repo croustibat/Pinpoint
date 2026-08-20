@@ -163,7 +163,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let record = CaptureHistory.shared.records.first(where: { $0.id == id }),
               let image = CaptureHistory.shared.image(for: record) else { return }
         presentEditor(image: image, recordID: record.id,
-                      pins: record.pins, shapes: record.shapes, context: record.context)
+                      pins: record.pins, shapes: record.shapes, context: record.context,
+                      accessibility: CaptureHistory.shared.accessibility(for: record))
     }
 
     @objc private func clearHistory() {
@@ -177,9 +178,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func captureFullScreen() {
         Task { @MainActor in
             do {
-                let image = try await ScreenCapture.captureDisplayUnderCursor()
-                let record = CaptureHistory.shared.add(image: image)
-                presentEditor(image: image, recordID: record?.id)
+                let capture = try await ScreenCapture.captureDisplayUnderCursor()
+                let record = CaptureHistory.shared.add(image: capture.image,
+                                                       accessibility: capture.accessibility)
+                presentEditor(image: capture.image, recordID: record?.id,
+                              accessibility: capture.accessibility)
             } catch {
                 presentCaptureError(error)
             }
@@ -243,9 +246,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
 
             do {
-                let image = try await ScreenCapture.captureRegion(region)
-                let record = CaptureHistory.shared.add(image: image)
-                presentEditor(image: image, recordID: record?.id)
+                let capture = try await ScreenCapture.captureRegion(region)
+                let record = CaptureHistory.shared.add(image: capture.image,
+                                                       accessibility: capture.accessibility)
+                presentEditor(image: capture.image, recordID: record?.id,
+                              accessibility: capture.accessibility)
             } catch {
                 presentCaptureError(error)
             }
@@ -307,17 +312,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor
     private func presentEditor(image: NSImage, recordID: UUID?, sourceURL: URL? = nil,
-                               pins: [Pin] = [], shapes: [Markup] = [], context: String = "") {
+                               pins: [Pin] = [], shapes: [Markup] = [], context: String = "",
+                               accessibility: AXSnapshot? = nil) {
         let controller = EditorWindowController(
             image: image,
             initialPins: pins,
             initialShapes: shapes,
             initialContext: context,
+            initialAccessibility: accessibility,
             sourceURL: sourceURL,
-            onPersist: { pins, shapes, context, image in
+            onPersist: { pins, shapes, context, image, accessibility in
                 guard let recordID else { return }
                 CaptureHistory.shared.update(id: recordID, pins: pins, shapes: shapes, context: context)
                 CaptureHistory.shared.replaceImage(id: recordID, image: image)
+                // Only the crop moves the snapshot, but it moves both at once,
+                // so they're re-persisted together — a stale sidecar would point
+                // at a region the image no longer shows.
+                CaptureHistory.shared.replaceAccessibility(id: recordID, snapshot: accessibility)
                 if let sourceURL {
                     Self.writeCroppedFile(from: image, nextTo: sourceURL)
                 }

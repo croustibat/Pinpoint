@@ -111,8 +111,11 @@ struct EditorView: View {
     private let sourceURL: URL?
     var onClose: () -> Void
     /// Called with the current annotation state and base image so they can be
-    /// persisted to history (on copy and when the editor closes).
-    var onPersist: ([Pin], [Markup], String, NSImage) -> Void
+    /// persisted to history (on copy and when the editor closes). The
+    /// accessibility snapshot rides along because a crop narrows it: the two
+    /// have to be written back together or they'd disagree about which region
+    /// the image shows.
+    var onPersist: ([Pin], [Markup], String, NSImage, AXSnapshot?) -> Void
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
@@ -120,6 +123,11 @@ struct EditorView: View {
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
     @State private var context: String = ""
+    /// The accessibility tree as it stood when the capture was taken (#55), or
+    /// nil when the feature was off, unauthorized, or found nothing. Used to
+    /// name the element under each marker at export time — never queried live,
+    /// since by now the photographed UI may be long gone.
+    @State private var axSnapshot: AXSnapshot?
     @State private var tool: EditorTool = .pin
     @State private var selectedPinID: Pin.ID?
     @State private var selectedShapeID: Markup.ID?
@@ -167,8 +175,9 @@ struct EditorView: View {
         initialPins: [Pin] = [],
         initialShapes: [Markup] = [],
         initialContext: String = "",
+        initialAccessibility: AXSnapshot? = nil,
         sourceURL: URL? = nil,
-        onPersist: @escaping ([Pin], [Markup], String, NSImage) -> Void = { _, _, _, _ in },
+        onPersist: @escaping ([Pin], [Markup], String, NSImage, AXSnapshot?) -> Void = { _, _, _, _, _ in },
         onClose: @escaping () -> Void
     ) {
         _image = State(initialValue: image)
@@ -178,6 +187,7 @@ struct EditorView: View {
         _pins = State(initialValue: initialPins)
         _shapes = State(initialValue: initialShapes)
         _context = State(initialValue: initialContext)
+        _axSnapshot = State(initialValue: initialAccessibility)
     }
 
     var body: some View {
@@ -194,7 +204,7 @@ struct EditorView: View {
                 .frame(minWidth: 260, idealWidth: 280, maxWidth: 360)
         }
         .frame(minWidth: 680, minHeight: 440)
-        .onDisappear { onPersist(pins, shapes, context, image) }
+        .onDisappear { onPersist(pins, shapes, context, image, axSnapshot) }
         // A text field changing hands closes one typing session and opens the
         // next. See `flushTextEdit()`.
         .onChange(of: focusedField) { _, newValue in
@@ -1073,11 +1083,12 @@ struct EditorView: View {
 
     private func copy() {
         guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
-                                        style: pinStyle, includeLegend: includeLegend) else {
+                                        style: pinStyle, includeLegend: includeLegend,
+                                        accessibility: axSnapshot) else {
             exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
             return
         }
-        onPersist(pins, shapes, context, image)
+        onPersist(pins, shapes, context, image, axSnapshot)
 
         // The clipboard is only half of it. An agent that can’t render a pasted
         // image — Claude Code being the case that started this — still reads the
@@ -1086,7 +1097,7 @@ struct EditorView: View {
         // that never landed is exactly what #38 stopped doing elsewhere.
         do {
             try FileHandoff.write(base: image, pins: pins, shapes: shapes,
-                                  context: context, style: pinStyle)
+                                  context: context, style: pinStyle, accessibility: axSnapshot)
         } catch {
             exportError = String(
                 localized: "handoff.error.body",
@@ -1121,7 +1132,7 @@ struct EditorView: View {
             exportError = error.localizedDescription
             return
         }
-        onPersist(pins, shapes, context, image)
+        onPersist(pins, shapes, context, image, axSnapshot)
     }
 
     // MARK: - Undo / redo
@@ -1141,7 +1152,8 @@ struct EditorView: View {
             shapes: shapes,
             context: context,
             selectedPinID: selectedPinID,
-            selectedShapeID: selectedShapeID
+            selectedShapeID: selectedShapeID,
+            accessibility: axSnapshot
         )
     }
 
@@ -1209,6 +1221,7 @@ struct EditorView: View {
         pins = state.pins
         shapes = state.shapes
         context = state.context
+        axSnapshot = state.accessibility
         // Selection travels with the snapshot, but is re-validated against the
         // restored arrays: it must never point at something that isn't there.
         selectedPinID = state.pins.contains { $0.id == state.selectedPinID } ? state.selectedPinID : nil
@@ -1306,6 +1319,9 @@ struct EditorView: View {
         image = newImage
         pins = newPins
         shapes = newShapes
+        // The snapshot describes a screen region, not the image, so a crop only
+        // has to narrow that region — every element frame stays valid as it is.
+        axSnapshot = axSnapshot?.cropped(to: c)
         selectedPinID = nil
         selectedShapeID = nil
         withMotion(.easeInOut(duration: 0.15)) { isCropping = false }

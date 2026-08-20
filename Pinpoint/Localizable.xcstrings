@@ -420,6 +420,48 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier pour l’agent" } }
       }
     },
+    "export.ax.disabled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "disabled" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "désactivé" } }
+      }
+    },
+    "export.ax.value.policy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (text field — enable “Include what is typed in fields” in Pinpoint’s settings)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "masquée (champ texte — activez « Inclure ce qui est saisi dans les champs » dans les réglages de Pinpoint)" } }
+      }
+    },
+    "export.ax.value.secure" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (secure field — Pinpoint never reads it)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "masquée (champ sécurisé — Pinpoint ne la lit jamais)" } }
+      }
+    },
+    "export.markers.accessibility.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "“UI” lines name the interface element found under the marker in the macOS accessibility tree at capture time — its role, its label, the app owning it, and its box in this image. “Path” is the chain of containers around it." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les lignes « UI » nomment l’élément d’interface trouvé sous le repère dans l’arbre d’accessibilité macOS au moment de la capture — son rôle, son libellé, l’app qui le possède et sa boîte dans cette image. « Path » est la chaîne de conteneurs qui l’entoure." } }
+      }
+    },
+    "permission.accessibility.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "To name the element under each marker, Pinpoint needs the Accessibility permission. Open System Settings ▸ Privacy & Security ▸ Accessibility, turn Pinpoint on, then relaunch the app. Captures keep working without it — they just carry no interface details." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pour nommer l’élément sous chaque repère, Pinpoint a besoin de l’autorisation Accessibilité. Ouvrez Réglages Système ▸ Confidentialité et sécurité ▸ Accessibilité, activez Pinpoint, puis relancez l’application. Les captures continuent de fonctionner sans elle — elles ne portent simplement aucun détail d’interface." } }
+      }
+    },
+    "permission.accessibility.openSettings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les Réglages Système" } }
+      }
+    },
+    "permission.accessibility.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t read the interface" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint ne peut pas lire l’interface" } }
+      }
+    },
     "Save image…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer l’image…" } }
@@ -896,6 +938,48 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld sélectionnées" } }
+      }
+    },
+    "settings.ax.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Adds a line under each marker naming the interface element it points at — its role, its label and the app owning it — read while the capture is taken. Needs the Accessibility permission, which is separate from Screen Recording." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajoute sous chaque repère une ligne nommant l’élément d’interface visé — son rôle, son libellé et l’app qui le possède — lu au moment de la capture. Nécessite l’autorisation Accessibilité, distincte de l’Enregistrement de l’écran." } }
+      }
+    },
+    "settings.ax.fieldValues" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Include what is typed in fields" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure ce qui est saisi dans les champs" } }
+      }
+    },
+    "settings.ax.fieldValues.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Off by default: the accessibility tree returns the whole contents of a field, including the part scrolled out of the picture. Password fields are never read, whatever this says." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivé par défaut : l’arbre d’accessibilité renvoie tout le contenu d’un champ, y compris la partie sortie du cadre. Les champs de mot de passe ne sont jamais lus, quel que soit ce réglage." } }
+      }
+    },
+    "settings.ax.permission.grant" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow access…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autoriser l’accès…" } }
+      }
+    },
+    "settings.ax.permission.missing" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility permission required. Without it, captures work exactly as before — they just carry no interface details." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autorisation Accessibilité requise. Sans elle, les captures fonctionnent exactement comme avant — elles ne portent simplement aucun détail d’interface." } }
+      }
+    },
+    "settings.ax.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Interface context" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Contexte d’interface" } }
+      }
+    },
+    "settings.ax.toggle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe the element under each marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décrire l’élément sous chaque repère" } }
       }
     },
     "Settings…" : {

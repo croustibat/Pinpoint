@@ -27,6 +27,12 @@ extension FileHandoff {
         /// (the key is always present, so a consumer never has to branch on its
         /// absence).
         let context: String
+        /// What the accessibility tree contributed, or absent when it
+        /// contributed nothing (feature off, permission not granted, no element
+        /// under any marker). Present with `available: false` only when a walk
+        /// happened and came back thin, so a consumer can tell "not looked at"
+        /// from "looked at, found nothing".
+        let accessibility: AccessibilityContext?
         let markers: [Marker]
         let shapes: [Shape]
 
@@ -66,12 +72,92 @@ extension FileHandoff {
             let heightPercent: Double
         }
 
-        /// A numbered marker.
+        /// Snapshot-wide facts about the accessibility pass (#55). Lets a
+        /// consumer reason about *why* a marker has no element attached.
+        struct AccessibilityContext: Encodable {
+            /// Whether at least one element was collected.
+            let available: Bool
+            /// ISO 8601 instant the tree was read — the capture instant.
+            let capturedAt: String
+            /// How many elements the snapshot holds, across every app walked.
+            let elementCount: Int
+            /// `true` when the walk stopped on one of its own limits (time,
+            /// node budget). A missing element may then mean "not looked at".
+            let truncated: Bool
+            /// What was deliberately left out, so nobody has to guess whether a
+            /// missing `value` means "empty" or "withheld".
+            let policy: Policy
+
+            struct Policy: Encodable {
+                /// Always true. Password fields are never read, at any setting.
+                let secureFieldValuesOmitted: Bool
+                /// True unless the user opted in: the text typed in ordinary
+                /// fields is withheld by default, because the accessibility
+                /// tree hands over the whole field — including the part that was
+                /// scrolled out of the picture.
+                let textFieldValuesOmitted: Bool
+            }
+        }
+
+        /// The interface element found under a marker.
         ///
-        /// Issue #55 will add an `accessibility` object here (the element under
-        /// the marker, read from the accessibility tree at capture time). That's
-        /// an addition, so `schemaVersion` stays at 1 — consumers must tolerate
-        /// keys they don't know.
+        /// This is the point of the whole file: a marker is a pixel, and a pixel
+        /// is not something you can go and edit. `role` + `identifier` + `path`
+        /// are what turn it into a thing with a name in somebody's source code.
+        struct AccessibilityElement: Encodable {
+            /// Raw accessibility role, e.g. "AXButton". Not translated into
+            /// prose on purpose — it's the vocabulary every inspector shares.
+            let role: String
+            let subrole: String?
+            /// `AXTitle` — the control's visible label.
+            let title: String?
+            /// `AXDescription` — what a screen reader announces.
+            let label: String?
+            /// `AXIdentifier`, usually the `accessibilityIdentifier` written in
+            /// the app's own source. The most directly actionable field here.
+            let identifier: String?
+            /// `AXHelp`, only collected when nothing else named the element.
+            let help: String?
+            /// `AXPlaceholderValue`, for inputs.
+            let placeholder: String?
+            /// The element's value — present only when the privacy policy allows
+            /// it (see `redacted`).
+            let value: String?
+            /// Why `value` is absent: "secureField" (never read) or
+            /// "textFieldPolicy" (withheld by default). Absent when the element
+            /// simply has no value worth reporting.
+            let redacted: String?
+            let enabled: Bool?
+            /// The element's box in *this image's* pixel grid, the same one
+            /// every other coordinate in this file uses. May fall outside the
+            /// image when the element extends past the captured region.
+            let box: Box
+            /// The same box in screen points, global top-left origin — the
+            /// space the macOS accessibility APIs speak, for a consumer that
+            /// wants to go back and drive the live UI.
+            let screenFrame: ScreenFrame
+            let application: Application
+            /// Containers around the element, outermost first, each rendered as
+            /// `AXRole “Name”`.
+            let path: [String]
+
+            struct Application: Encodable {
+                let name: String?
+                let bundleIdentifier: String?
+                let processIdentifier: Int32
+            }
+
+            /// Points, global top-left origin. Not percentages: this rect isn't
+            /// relative to the image.
+            struct ScreenFrame: Encodable {
+                let x: Double
+                let y: Double
+                let width: Double
+                let height: Double
+            }
+        }
+
+        /// A numbered marker.
         struct Marker: Encodable {
             /// Stable identifier, the same code `capture.md` prints in brackets.
             /// Survives the renumbering that follows a deletion, so two handoffs
@@ -84,6 +170,11 @@ extension FileHandoff {
             /// The user's description. Empty when they left it blank.
             let note: String
             let position: Point
+            /// The interface element under `position`, resolved against the
+            /// snapshot taken at capture time. Absent when there is none —
+            /// which is the normal case for a capture of something that isn't
+            /// an app window, or with the feature switched off.
+            let accessibility: AccessibilityElement?
         }
 
         /// An unnumbered outline: arrow or rectangle.
@@ -108,7 +199,8 @@ extension FileHandoff {
 extension FileHandoff.Document {
     /// Builds the document for a set of annotations. `directory` is where the
     /// triplet will live, since the absolute paths below point at its siblings.
-    init(pins: [Pin], shapes: [Markup], context: String, imageSize: CGSize, directory: URL) {
+    init(pins: [Pin], shapes: [Markup], context: String, imageSize: CGSize, directory: URL,
+         accessibility: AXSnapshot? = nil) {
         self.schemaVersion = FileHandoff.schemaVersion
         self.generator = Generator(
             name: "Pinpoint",
@@ -125,14 +217,16 @@ extension FileHandoff.Document {
         self.markdownPath = directory.appendingPathComponent(FileHandoff.markdownFileName).path
         self.context = context.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        self.markers = pins.sorted { $0.number < $1.number }.map { pin in
-            Marker(
-                id: pin.id.shortToken,
-                label: "M\(pin.number)",
-                number: pin.number,
-                note: pin.note.trimmingCharacters(in: .whitespacesAndNewlines),
-                position: Point(pin.position, in: imageSize)
-            )
+        let ordered = pins.sorted { $0.number < $1.number }
+        if let snapshot = accessibility {
+            self.markers = ordered.map { pin in
+                Marker(pin, in: imageSize, accessibility: snapshot.element(atNormalized: pin.position)
+                    .map { AccessibilityElement($0, in: snapshot, imageSize: imageSize) })
+            }
+            self.accessibility = AccessibilityContext(snapshot, formatter: formatter)
+        } else {
+            self.markers = ordered.map { Marker($0, in: imageSize, accessibility: nil) }
+            self.accessibility = nil
         }
 
         self.shapes = shapes.enumerated().map { index, shape in
@@ -193,5 +287,70 @@ extension FileHandoff {
     /// this is for computing against.
     static func percent(_ value: CGFloat) -> Double {
         (Double(value) * 10_000).rounded() / 100
+    }
+}
+
+extension FileHandoff.Document.Marker {
+    init(_ pin: Pin, in size: CGSize,
+         accessibility: FileHandoff.Document.AccessibilityElement?) {
+        self.init(
+            id: pin.id.shortToken,
+            label: "M\(pin.number)",
+            number: pin.number,
+            note: pin.note.trimmingCharacters(in: .whitespacesAndNewlines),
+            position: FileHandoff.Document.Point(pin.position, in: size),
+            accessibility: accessibility
+        )
+    }
+}
+
+extension FileHandoff.Document.AccessibilityContext {
+    init(_ snapshot: AXSnapshot, formatter: ISO8601DateFormatter) {
+        self.init(
+            available: !snapshot.elements.isEmpty,
+            capturedAt: formatter.string(from: snapshot.capturedAt),
+            elementCount: snapshot.elements.count,
+            truncated: snapshot.truncated,
+            policy: Policy(
+                // Not a setting: no code path reads the value of a secure field,
+                // so this is a statement of fact rather than a configuration.
+                secureFieldValuesOmitted: true,
+                textFieldValuesOmitted: !snapshot.includesFieldValues
+            )
+        )
+    }
+}
+
+extension FileHandoff.Document.AccessibilityElement {
+    /// Restates one resolved element in the handoff's own terms: screen points
+    /// become image pixels, the ancestor chain becomes a list of strings, and
+    /// the redaction reason becomes a plain token a script can switch on.
+    init(_ resolved: AXSnapshot.Resolved, in snapshot: AXSnapshot, imageSize: CGSize) {
+        let element = resolved.element
+        self.init(
+            role: element.role,
+            subrole: element.subrole,
+            title: element.title,
+            label: element.label,
+            identifier: element.identifier,
+            help: element.help,
+            placeholder: element.placeholder,
+            value: element.value,
+            redacted: element.redaction?.rawValue,
+            enabled: element.enabled,
+            box: FileHandoff.Document.Box(snapshot.normalizedRect(for: element.frame), in: imageSize),
+            screenFrame: ScreenFrame(
+                x: Double(element.frame.minX),
+                y: Double(element.frame.minY),
+                width: Double(element.frame.width),
+                height: Double(element.frame.height)
+            ),
+            application: Application(
+                name: resolved.application.name,
+                bundleIdentifier: resolved.application.bundleIdentifier,
+                processIdentifier: resolved.application.processIdentifier
+            ),
+            path: (resolved.ancestors.map(\.summary) + [element.summary])
+        )
     }
 }
