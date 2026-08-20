@@ -621,6 +621,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
       }
     },
+    "handoff.error.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture was copied to the clipboard, but the files for the agent couldn’t be written to %@: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture a été copiée dans le presse-papier, mais les fichiers destinés à l’agent n’ont pas pu être écrits dans %@ : %@" } }
+      }
+    },
     "Instructions for the agent" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Instructions pour l’agent" } }

@@ -1078,6 +1078,23 @@ struct EditorView: View {
             return
         }
         onPersist(pins, shapes, context, image)
+
+        // The clipboard is only half of it. An agent that can’t render a pasted
+        // image — Claude Code being the case that started this — still reads the
+        // file triplet by path, so every copy also writes it to disk. Surfaced
+        // on failure rather than swallowed: announcing “Copied!” for a handoff
+        // that never landed is exactly what #38 stopped doing elsewhere.
+        do {
+            try FileHandoff.write(base: image, pins: pins, shapes: shapes,
+                                  context: context, style: pinStyle)
+        } catch {
+            exportError = String(
+                localized: "handoff.error.body",
+                defaultValue: "The capture was copied to the clipboard, but the files for the agent couldn’t be written to \(FileHandoff.latestDirectory.path): \(error.localizedDescription)"
+            )
+            return
+        }
+
         withMotion { didCopy = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withMotion { didCopy = false }

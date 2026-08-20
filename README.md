@@ -145,6 +145,8 @@ Pinpoint/
   PinStyle.swift                  # marker styles (disc / pointer / outline)
   Theme.swift                     # vermillon palette
   Exporter.swift                  # annotated PNG render + structured text + clipboard
+  FileHandoff.swift               # writes capture.{png,md,json} where an agent can read them
+  HandoffDocument.swift           # the JSON contract for capture.json (schemaVersion 1)
   SettingsWindowController.swift  # AppKit settings window (works around the macOS 14+ SettingsLink bug)
   ShelfWindowController.swift     # the shelf window
   ScreenshotDetailWindowController.swift  # detail window for a shelf item
@@ -152,6 +154,35 @@ Pinpoint/
   Shelf/                          # the screenshot library (Models, Services, Stores, Views)
 landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
+
+## Agent handoff (files on disk)
+
+Copying from the editor doesn't only fill the clipboard: it also writes the
+capture to a fixed path, because a clipboard image is not something every agent
+can read (Claude Code doesn't render images returned inline by an MCP server —
+[anthropics/claude-code#31208](https://github.com/anthropics/claude-code/issues/31208)).
+A file path is the channel that reliably works.
+
+```
+~/Library/Application Support/Pinpoint/last/capture.png    annotated image, native resolution, no legend strip
+~/Library/Application Support/Pinpoint/last/capture.md     the agent-ready text (markers, shapes, instructions)
+~/Library/Application Support/Pinpoint/last/capture.json   the same facts, machine-readable — see HandoffDocument.swift
+~/Library/Application Support/Pinpoint/archive/<stamp>/    a timestamped copy of each handoff
+```
+
+- The path is fixed on purpose: an agent has to be able to hard-code it rather
+  than discover it. Point one at `capture.md` and it has everything.
+- The triplet is staged in a sibling folder and swapped in atomically, so a
+  reader gets the previous handoff or the new one, never a mix of the two.
+- `capture.md` always carries the complete text, whatever the "legend in the
+  image" setting says — unlike the clipboard, which drops it when the legend is
+  baked into the PNG.
+- Pixel coordinates in `.md`/`.json` are in the grid of `capture.png` itself, so
+  on a Retina capture they read 2× the size in points.
+- **The archive keeps the 10 most recent handoffs**, oldest deleted first. Each
+  folder holds a full-resolution PNG, so the cap is deliberately low.
+- `capture.json` carries a `schemaVersion`. New keys can appear without bumping
+  it — consumers must ignore what they don't know.
 
 ## Dependencies
 
