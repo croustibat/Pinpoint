@@ -244,6 +244,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annotation rectangle" } }
       }
     },
+    "a11y.shape.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hidden area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone masquée" } }
+      }
+    },
     "a11y.shelf.dateFilter" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Date filter" } },
@@ -272,6 +278,18 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Sort order" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ordre de tri" } }
+      }
+    },
+    "a11y.window.empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No window under the pointer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune fenêtre sous le pointeur" } }
+      }
+    },
+    "a11y.window.selection" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Window selection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélection de fenêtre" } }
       }
     },
     "Add to favorites" : {
@@ -432,6 +450,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "masquée (champ texte — activez « Inclure ce qui est saisi dans les champs » dans les réglages de Pinpoint)" } }
       }
     },
+    "export.ax.value.redacted" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (the user painted over this element — its name and its contents were left out)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "retenue (l’utilisateur a masqué cet élément — son nom et son contenu ont été écartés)" } }
+      }
+    },
     "export.ax.value.secure" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (secure field — Pinpoint never reads it)" } },
@@ -537,9 +561,9 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } }
       }
     },
-    "Drag a rectangle · Esc to cancel" : {
+    "Drag a rectangle · Space to pick a window · Esc to cancel" : {
       "localizations" : {
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Échap pour annuler" } }
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Espace pour choisir une fenêtre · Échap pour annuler" } }
       }
     },
     "Drag file" : {
@@ -645,6 +669,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tracés non numérotés dessinés sur l’image : les rectangles sont donnés haut-gauche → bas-droite, les flèches base → pointe, suivis de la taille de leur boîte englobante." } }
       }
     },
+    "export.shapes.redaction.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Une zone masquée est une région que l’utilisateur a recouverte avant de partager : ses pixels ne sont pas dans l’image, et rien n’a été collecté sur ce qui se trouvait dessous. Demandez à l’utilisateur plutôt que de deviner." } }
+      }
+    },
     "export.task.heading" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Task — %@" } },
@@ -697,6 +727,23 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture was copied to the clipboard, but the files for the agent couldn’t be written to %@: %@" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture a été copiée dans le presse-papier, mais les fichiers destinés à l’agent n’ont pas pu être écrits dans %@ : %@" } }
+      }
+    },
+    "hint.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag over what should never leave your Mac" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser sur ce qui ne doit jamais quitter votre Mac" } }
+      }
+    },
+    "hint.redaction.some" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag over what to hide · click one to move or resize it" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser sur ce qu’il faut masquer · cliquez sur une zone pour la déplacer ou la redimensionner" } }
+      }
+    },
+    "Hover a window · click to capture · Space for a rectangle · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Survole une fenêtre · clique pour capturer · Espace pour un rectangle · Échap pour annuler" } }
       }
     },
     "Instructions for the agent" : {
@@ -763,6 +810,12 @@
     "Markers (position in % of the image, top-left origin):" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repères (position en % de l’image, origine haut-gauche) :" } }
+      }
+    },
+    "markup.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hidden area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone masquée" } }
       }
     },
     "More actions" : {
@@ -1191,6 +1244,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Outil" } }
       }
     },
+    "tool.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Masquer" } }
+      }
+    },
     "Undo" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } }
@@ -1219,6 +1278,12 @@
     "White ring + drop shadow." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anneau blanc + ombre portée." } }
+      }
+    },
+    "window.untitled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled window" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fenêtre sans titre" } }
       }
     },
     "Yesterday" : {

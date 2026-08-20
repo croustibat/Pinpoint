@@ -64,6 +64,12 @@ struct AXSnapshot: Codable, Sendable, Equatable {
         case secureField
         /// An ordinary text field, withheld by the default privacy policy.
         case textFieldPolicy
+        /// The user painted over this element in the editor (#50), so its name
+        /// and its value were stripped on the way out. Unlike the two above,
+        /// this one is never stored: the snapshot keeps every element intact
+        /// and only the exported copy is stripped, which is what makes undoing
+        /// a redaction restore the context it took away.
+        case userRedaction
     }
 
     struct Element: Codable, Sendable, Equatable {
