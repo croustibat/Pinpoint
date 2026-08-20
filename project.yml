@@ -23,6 +23,21 @@ targets:
     dependencies:
       - package: KeyboardShortcuts
       - package: Sparkle
+      # The `pinpoint` CLI (#56) ships *inside* the app, at
+      # Pinpoint.app/Contents/Helpers/pinpoint. Not a separate download: it has
+      # to be signed with the app and notarized with it, and the Homebrew cask
+      # symlinks it from there. Listed as a dependency so `xcodebuild -scheme
+      # Pinpoint` — which is all CI runs — builds and embeds it too.
+      #
+      # Helpers/ rather than MacOS/: macOS filesystems are case-insensitive, so
+      # `pinpoint` and the app's own `Pinpoint` executable are the *same name*
+      # in that directory — the copy silently overwrites the app binary and the
+      # bundle no longer launches. Helpers/ is also where a bundled command-line
+      # tool belongs; MacOS/ is for the main executable.
+      - target: PinpointCLI
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     info:
       path: Pinpoint/Info.plist
       properties:
@@ -69,3 +84,41 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
+  # The scriptable entry point (#56): `pinpoint capture`, `pinpoint last`.
+  # A command-line tool, not a second app — it drives the running app through
+  # the `pinpoint://` scheme above, because a bare executable has none of the
+  # app's TCC grants and could never take the screenshot itself.
+  PinpointCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - PinpointCLI
+      # The handoff contract, compiled into both binaries instead of restated
+      # in the CLI: `pinpoint last` reads the very file the app writes, and a
+      # second copy of the paths or of the schema is a second thing to keep in
+      # step. A build error here is the point — it fires the day the contract
+      # grows a dependency a file reader shouldn't need.
+      - path: Pinpoint/HandoffContract.swift
+      - path: Pinpoint/HandoffDocument.swift
+      # The deep-link vocabulary, for the same reason: the tool that fires
+      # `pinpoint://capture` and the handler that reads it are one piece of code.
+      - path: Pinpoint/URLCommand.swift
+    settings:
+      base:
+        PRODUCT_NAME: pinpoint
+        PRODUCT_BUNDLE_IDENTIFIER: app.croustibat.Pinpoint.cli
+        MARKETING_VERSION: "0.6.0"
+        CURRENT_PROJECT_VERSION: "6"
+        # A tool has no Info.plist of its own; this embeds one in the binary so
+        # `pinpoint --version` can read the version it was built with.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: MMJD6CLKNQ
+        # Same hardened runtime as the app: it is embedded in that bundle, and
+        # scripts/release.sh signs it individually before signing the app.
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        # Never installed on its own — it rides in the app bundle.
+        SKIP_INSTALL: YES

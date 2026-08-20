@@ -45,6 +45,9 @@ On Homebrew 6+ you'll be asked to trust the tap once first — run
 `brew trust croustibat/tap`, then re-run the install. See the
 [tap](https://github.com/croustibat/homebrew-tap) for details.
 
+The cask also puts the `pinpoint` command on your `PATH` — see
+[Scripting](#scripting-the-pinpoint-cli).
+
 ### Direct download
 
 1. Grab the latest **`Pinpoint.dmg`** from the [releases page](https://github.com/croustibat/Pinpoint/releases/latest).
@@ -75,8 +78,8 @@ relaunch Pinpoint once.
 - **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
   rename, Quick Look, and reopen any capture with its annotations.
 - **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
-- **Deep links** — a `pinpoint://` URL scheme, so a script or a hook can ask the
-  running app for a capture.
+- **Scriptable** — a `pinpoint` CLI and a `pinpoint://` URL scheme, so agents,
+  hooks and `!`-commands can ask for a capture and read the result.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
@@ -157,6 +160,7 @@ Pinpoint/
   ScreenshotDetailWindowController.swift  # detail window for a shelf item
   Localizable.xcstrings           # String Catalog (English base, French)
   Shelf/                          # the screenshot library (Models, Services, Stores, Views)
+PinpointCLI/                      # the `pinpoint` tool, embedded in the app at Contents/Helpers
 landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
 
@@ -188,6 +192,47 @@ A file path is the channel that reliably works.
   folder holds a full-resolution PNG, so the cap is deliberately low.
 - `capture.json` carries a `schemaVersion`. New keys can appear without bumping
   it — consumers must ignore what they don't know.
+
+## Scripting: the `pinpoint` CLI
+
+Pinpoint ships a small command-line tool **inside the app bundle**, at
+`Pinpoint.app/Contents/Helpers/pinpoint`, so it is signed and notarized with the
+app. The Homebrew cask symlinks it onto your `PATH`; after a direct download,
+link it yourself:
+
+```sh
+ln -s "/Applications/Pinpoint.app/Contents/Helpers/pinpoint" /usr/local/bin/pinpoint
+```
+
+```sh
+pinpoint capture --out ./bug.png --json   # ask the app for a capture, wait for the copy
+pinpoint last --json                      # the most recent handoff, machine-readable
+pinpoint last --format md                 # the agent-ready text, verbatim
+pinpoint --help
+```
+
+Two commands, split by what they need rather than by what they do:
+
+| command | needs | does |
+| --- | --- | --- |
+| `pinpoint last` | nothing — reads files | prints the handoff already on disk |
+| `pinpoint capture` | the running app | starts a region capture and waits for you to press Copy |
+
+`capture` deliberately doesn't take the screenshot itself. macOS grants Screen
+Recording to the app bundle you allowed by name, not to a bare executable, so the
+tool asks the app through `pinpoint://` and waits for the handoff to land. The
+region is always drawn by hand.
+
+The output is built to be read by a program:
+
+- `--json` puts **one** JSON document on stdout and nothing else — on success and
+  on failure alike (`{"ok":false,"error":{"code":…}}`). Every human sentence goes
+  to stderr.
+- `capture.json` travels **verbatim** under the `capture` key rather than being
+  re-encoded, so a newer app can add keys without an older CLI dropping them.
+- Exit codes tell a state from an error: `0` done · `1` failed · `2` bad usage ·
+  `3` no capture handed off yet · `4` timed out waiting for the copy · `5` Pinpoint
+  isn't installed.
 
 ## Deep links (`pinpoint://`)
 
@@ -243,6 +288,25 @@ gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
 scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/homebrew-tap
 scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
+
+> The cask lives in a separate repo (`croustibat/homebrew-tap`) and must carry a
+> `binary` stanza, otherwise `brew install` leaves the CLI unreachable:
+>
+> ```ruby
+> app "Pinpoint.app"
+> binary "#{appdir}/Pinpoint.app/Contents/Helpers/pinpoint"
+> ```
+>
+> `scripts/release.sh` signs that nested executable before signing the app —
+> `codesign` refuses to sign a bundle containing unsigned nested code, and
+> notarization refuses the archive after it.
+
+Add the release to the changelog (`landing/src/changelog.ts` — new entry at the top,
+mark it `latest`), then commit it together with `landing/public/appcast.xml` and redeploy
+the landing (`vercel deploy --prod`) so in-app auto-update (Sparkle) sees the new version
+and [`/changelog`](https://pinpoint-ashy.vercel.app/changelog) shows it. The EdDSA private
+key lives in the release machine's keychain (paired with `SUPublicEDKey` in `project.yml`);
+create it once with Sparkle's `generate_keys`.
 
 ## License
 
