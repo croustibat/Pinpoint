@@ -106,7 +106,7 @@ enum FileHandoff {
     /// failure there only leaves `Output.archive` nil.
     @discardableResult
     static func write(base: NSImage, pins: [Pin], shapes: [Markup],
-                      context: String, style: PinStyle,
+                      context: String, style: PinStyle, preset: TaskPreset = .raw,
                       accessibility: AXSnapshot? = nil) throws -> Output {
         // No legend strip, whatever the editor's `includeLegend` setting says.
         // The legend grows the image downwards, which would shift every pixel
@@ -133,7 +133,7 @@ enum FileHandoff {
         // (#69).
         let markdown = Exporter.buildText(pins: pins, shapes: shapes,
                                           context: context, imageSize: pixelSize,
-                                          accessibility: accessibility)
+                                          preset: preset, accessibility: accessibility)
 
         let latest = latestDirectory
         try replaceDirectory(latest, with: files(png: png, markdown: markdown,

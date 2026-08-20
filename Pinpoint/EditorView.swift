@@ -119,6 +119,10 @@ struct EditorView: View {
 
     @AppStorage(PinStyle.storageKey) private var pinStyle: PinStyle = .disc
     @AppStorage("includeLegend") private var includeLegend = true
+    /// The framing put above the user's instructions (#53). A preference rather
+    /// than per-capture state: it is a way of working, and the point of the
+    /// feature is not having to pick it again every time.
+    @AppStorage(TaskPreset.storageKey) private var taskPreset: TaskPreset = .raw
 
     @State private var pins: [Pin] = []
     @State private var shapes: [Markup] = []
@@ -849,6 +853,8 @@ struct EditorView: View {
 
             Divider()
 
+            taskPicker
+
             Text("Instructions for the agent")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
@@ -877,6 +883,22 @@ struct EditorView: View {
             .keyboardShortcut("s", modifiers: [.command])
         }
         .padding(14)
+    }
+
+    /// Picks the framing written above the instructions in the export.
+    ///
+    /// The guidance itself is the tooltip rather than a caption under the
+    /// picker: it runs to three sentences, this panel is already the tightest
+    /// part of the window, and the text is in the export a click away for anyone
+    /// who wants to read all of it.
+    private var taskPicker: some View {
+        Picker(String(localized: "task.picker.label", defaultValue: "Task:"), selection: $taskPreset) {
+            ForEach(TaskPreset.allCases) { preset in
+                Text(preset.label).tag(preset)
+            }
+        }
+        .help(taskPreset.guidance ?? String(localized: "task.raw.caption",
+                                            defaultValue: "No framing — the export carries only the markers and your instructions."))
     }
 
     private var pinsSection: some View {
@@ -1084,7 +1106,7 @@ struct EditorView: View {
     private func copy() {
         guard Exporter.copyToPasteboard(base: image, pins: pins, shapes: shapes, context: context,
                                         style: pinStyle, includeLegend: includeLegend,
-                                        accessibility: axSnapshot) else {
+                                        preset: taskPreset, accessibility: axSnapshot) else {
             exportError = String(localized: "Nothing was written to the clipboard. The annotated image couldn’t be rendered.")
             return
         }
@@ -1097,7 +1119,8 @@ struct EditorView: View {
         // that never landed is exactly what #38 stopped doing elsewhere.
         do {
             try FileHandoff.write(base: image, pins: pins, shapes: shapes,
-                                  context: context, style: pinStyle, accessibility: axSnapshot)
+                                  context: context, style: pinStyle, preset: taskPreset,
+                                  accessibility: axSnapshot)
         } catch {
             exportError = String(
                 localized: "handoff.error.body",
@@ -1122,7 +1145,8 @@ struct EditorView: View {
         // Full resolution here (no cap): the file is meant to be attached/kept,
         // unlike the pasteboard image which is downscaled to stay pasteable.
         guard let png = Exporter.pngData(base: image, pins: pins, shapes: shapes, context: context,
-                                         style: pinStyle, includeLegend: includeLegend, maxDimension: nil) else {
+                                         style: pinStyle, includeLegend: includeLegend,
+                                         preset: taskPreset, maxDimension: nil) else {
             exportError = String(localized: "The annotated image couldn’t be rendered.")
             return
         }

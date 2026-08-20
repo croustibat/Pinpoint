@@ -247,7 +247,7 @@ enum Exporter {
     /// without reading the pixels — then the user's instructions in their own
     /// section.
     static func buildText(pins: [Pin], shapes: [Markup] = [], context: String, imageSize: CGSize,
-                          accessibility: AXSnapshot? = nil) -> String {
+                          preset: TaskPreset = .raw, accessibility: AXSnapshot? = nil) -> String {
         let width = Int(imageSize.width.rounded())
         let height = Int(imageSize.height.rounded())
         let orderedPins = pins.sorted { $0.number < $1.number }
@@ -320,6 +320,17 @@ enum Exporter {
                              + "\(pixels(from, in: imageSize)) → \(pixels(to, in: imageSize)) px · "
                              + "\(percent(from)) → \(percent(to)) · \(boxWidth)×\(boxHeight) px")
             }
+        }
+
+        // The task framing (#53) sits directly above the user's own words: the
+        // two are read together, and an agent that has just been told how to
+        // work should meet the specifics of *this* capture next. `.raw` adds
+        // nothing, which is what keeps the default export byte-identical to
+        // what it was before presets existed.
+        if let guidance = preset.guidance {
+            lines.append("")
+            lines.append("## " + preset.heading)
+            lines.append(guidance)
         }
 
         let ctx = context.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -409,9 +420,10 @@ enum Exporter {
     /// single paste carries everything — most chat UIs paste only the image and
     /// drop the clipboard text.
     static func exportImage(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                            style: PinStyle, includeLegend: Bool) -> NSImage {
+                            style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw) -> NSImage {
         let annotated = annotatedImage(base: base, pins: pins, shapes: shapes, style: style)
-        guard includeLegend, let legend = legendString(pins: pins, context: context, width: annotated.size.width) else {
+        guard includeLegend, let legend = legendString(pins: pins, context: context,
+                                                       preset: preset, width: annotated.size.width) else {
             return annotated
         }
 
@@ -420,7 +432,7 @@ enum Exporter {
         let textWidth = width - pad * 2
         let textHeight = ceil(legend.boundingRect(
             with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading]).height)
+            options: legendDrawingOptions).height)
         // Rounded up to a whole pixel: the capture is laid on top of this strip,
         // and a fractional offset would resample it against the grid it is
         // already aligned to.
@@ -437,16 +449,27 @@ enum Exporter {
             NSRect(x: 0, y: panelHeight - 1, width: width, height: 1).fill()
             // .usesLineFragmentOrigin fills from the top edge of the rect downwards.
             legend.draw(with: NSRect(x: pad, y: pad, width: textWidth, height: textHeight),
-                        options: [.usesLineFragmentOrigin])
+                        options: legendDrawingOptions)
         }
     }
 
+    /// How the legend is laid out — used to measure it *and* to draw it.
+    ///
+    /// One constant for both on purpose. They used to disagree: the height was
+    /// measured with `.usesFontLeading` and the text drawn without it, which lays
+    /// out taller lines, so the panel came out a few points short of its own
+    /// contents and the last line of the user's instructions was cut off by the
+    /// bottom edge of the image. Whichever option is chosen, it has to be the
+    /// same one twice.
+    private static let legendDrawingOptions: NSString.DrawingOptions = [.usesLineFragmentOrigin]
+
     /// The legend rendered into the exported image, or nil if there's nothing to
-    /// show (no pins and no instructions).
-    private static func legendString(pins: [Pin], context: String, width: CGFloat) -> NSAttributedString? {
+    /// show (no pins, no instructions and no task framing).
+    private static func legendString(pins: [Pin], context: String, preset: TaskPreset,
+                                     width: CGFloat) -> NSAttributedString? {
         let trimmedContext = context.trimmingCharacters(in: .whitespacesAndNewlines)
         let orderedPins = pins.sorted { $0.number < $1.number }
-        guard !orderedPins.isEmpty || !trimmedContext.isEmpty else { return nil }
+        guard !orderedPins.isEmpty || !trimmedContext.isEmpty || preset.guidance != nil else { return nil }
 
         let bodySize = max(15, width * 0.016)
         let body = NSFont.systemFont(ofSize: bodySize)
@@ -474,8 +497,17 @@ enum Exporter {
                 add("   \(note.isEmpty ? String(localized: "(no description)") : note)\n", body, dark)
             }
         }
-        if !trimmedContext.isEmpty {
+        // The task framing belongs here for the same reason the legend exists at
+        // all (#41, #69): with it embedded, the clipboard carries the image and
+        // nothing else, so anything left out of the strip never reaches the
+        // agent. Same order as `buildText` — framing, then the user's own words.
+        if let guidance = preset.guidance {
             if !orderedPins.isEmpty { add("\n", body, dark) }
+            add(preset.heading.uppercased(with: .current) + "\n", heading, secondary)
+            add(guidance + "\n", body, dark)
+        }
+        if !trimmedContext.isEmpty {
+            if !orderedPins.isEmpty || preset.guidance != nil { add("\n", body, dark) }
             add(String(localized: "legend.instructions", defaultValue: "INSTRUCTIONS") + "\n", heading, secondary)
             add(trimmedContext, body, dark)
         }
@@ -507,9 +539,10 @@ enum Exporter {
     /// optionally downscaled so its longest edge is at most `maxDimension` pixels.
     /// Pass `nil` for full native resolution.
     static func renderPNG(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                          style: PinStyle, includeLegend: Bool, maxDimension: CGFloat?) -> RenderedPNG? {
+                          style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
+                          maxDimension: CGFloat?) -> RenderedPNG? {
         let image = exportImage(base: base, pins: pins, shapes: shapes, context: context,
-                                style: style, includeLegend: includeLegend)
+                                style: style, includeLegend: includeLegend, preset: preset)
         guard let rep = bitmapRep(of: image) else { return nil }
         let output = maxDimension.flatMap { downscaled(rep, maxDimension: $0) } ?? rep
         guard let data = output.representation(using: .png, properties: [:]) else { return nil }
@@ -520,9 +553,11 @@ enum Exporter {
     /// The bytes alone, for callers that already know the grid (the full-res
     /// "Save image…", which writes the file and nothing else).
     static func pngData(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                        style: PinStyle, includeLegend: Bool, maxDimension: CGFloat?) -> Data? {
+                        style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
+                        maxDimension: CGFloat?) -> Data? {
         renderPNG(base: base, pins: pins, shapes: shapes, context: context,
-                  style: style, includeLegend: includeLegend, maxDimension: maxDimension)?.data
+                  style: style, includeLegend: includeLegend, preset: preset,
+                  maxDimension: maxDimension)?.data
     }
 
     /// The bitmap behind a rendered export. `drawn(size:matching:)` builds the
@@ -571,7 +606,7 @@ enum Exporter {
     /// happened.
     @discardableResult
     static func copyToPasteboard(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
-                                 style: PinStyle, includeLegend: Bool,
+                                 style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw,
                                  accessibility: AXSnapshot? = nil) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -581,7 +616,7 @@ enum Exporter {
         // so a failed render still produces coherent (if imageless) text.
         var pixelSize = base.size
         if let png = renderPNG(base: base, pins: pins, shapes: shapes, context: context,
-                               style: style, includeLegend: includeLegend,
+                               style: style, includeLegend: includeLegend, preset: preset,
                                maxDimension: clipboardMaxDimension) {
             pixelSize = png.pixelSize
             wrote = pasteboard.setData(png.data, forType: .png)
@@ -595,7 +630,7 @@ enum Exporter {
             // the capture's own dimensions there put every `px` in this text
             // 1.28× (or 2.56×) off the pixels it names.
             let text = buildText(pins: pins, shapes: shapes, context: context, imageSize: pixelSize,
-                                 accessibility: accessibility)
+                                 preset: preset, accessibility: accessibility)
             wrote = pasteboard.setString(text, forType: .string) || wrote
         }
 
