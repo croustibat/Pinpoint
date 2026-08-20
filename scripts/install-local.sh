@@ -42,6 +42,12 @@ if [ -d "$APP/Contents/Frameworks" ]; then
         codesign --force --options runtime --sign "$IDENTITY" "$item"
       done
 fi
+# Le CLI imbriqué (#56) : même raison qu'en release, `--verify --strict` refuse
+# un exécutable non signé dans le bundle.
+CLI="$APP/Contents/Helpers/pinpoint"
+[ -f "$CLI" ] || { echo "✗ CLI absent du bundle : $CLI"; exit 1; }
+codesign --force --options runtime --sign "$IDENTITY" "$CLI"
+
 codesign --force --options runtime --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

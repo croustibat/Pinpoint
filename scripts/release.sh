@@ -53,6 +53,15 @@ if [ -d "$APP/Contents/Frameworks" ]; then
         codesign --force --options runtime --timestamp --sign "$IDENTITY" "$item"
       done
 fi
+# The bundled `pinpoint` CLI (#56). A nested Mach-O carries its own signature or
+# the bundle isn't valid: `codesign --verify --strict` rejects an unsigned
+# executable inside the app, and notarization rejects the archive after it. Hard
+# failure rather than a skip — a release without the tool would ship a Homebrew
+# cask whose `binary` stanza points at nothing.
+CLI="$APP/Contents/Helpers/pinpoint"
+[ -f "$CLI" ] || { echo "✗ Missing CLI in the bundle: $CLI"; exit 1; }
+codesign --force --options runtime --timestamp --sign "$IDENTITY" "$CLI"
+
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

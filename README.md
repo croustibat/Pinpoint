@@ -45,6 +45,9 @@ On Homebrew 6+ you'll be asked to trust the tap once first — run
 `brew trust croustibat/tap`, then re-run the install. See the
 [tap](https://github.com/croustibat/homebrew-tap) for details.
 
+The cask also puts the `pinpoint` command on your `PATH` — see
+[Scripting](#scripting-the-pinpoint-cli).
+
 ### Direct download
 
 1. Grab the latest **`Pinpoint.dmg`** from the [releases page](https://github.com/croustibat/Pinpoint/releases/latest).
@@ -75,6 +78,8 @@ relaunch Pinpoint once.
 - **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
   rename, Quick Look, and reopen any capture with its annotations.
 - **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
+- **Scriptable** — a `pinpoint` CLI and a `pinpoint://` URL scheme, so agents,
+  hooks and `!`-commands can ask for a capture and read the result.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
@@ -146,12 +151,16 @@ Pinpoint/
   Theme.swift                     # vermillon palette
   Exporter.swift                  # annotated PNG render + structured text + clipboard
   FileHandoff.swift               # writes capture.{png,md,json} where an agent can read them
+  HandoffContract.swift           # where those files live + how to read one back (shared with the CLI)
   HandoffDocument.swift           # the JSON contract for capture.json (schemaVersion 1)
+  HandoffDocumentBuilder.swift    # fills that contract in from the annotation model
+  URLCommand.swift                # pinpoint:// deep links — what is accepted, and what isn't
   SettingsWindowController.swift  # AppKit settings window (works around the macOS 14+ SettingsLink bug)
   ShelfWindowController.swift     # the shelf window
   ScreenshotDetailWindowController.swift  # detail window for a shelf item
   Localizable.xcstrings           # String Catalog (English base, French)
   Shelf/                          # the screenshot library (Models, Services, Stores, Views)
+PinpointCLI/                      # the `pinpoint` tool, embedded in the app at Contents/Helpers
 landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
 
@@ -183,6 +192,66 @@ A file path is the channel that reliably works.
   folder holds a full-resolution PNG, so the cap is deliberately low.
 - `capture.json` carries a `schemaVersion`. New keys can appear without bumping
   it — consumers must ignore what they don't know.
+
+## Scripting: the `pinpoint` CLI
+
+Pinpoint ships a small command-line tool **inside the app bundle**, at
+`Pinpoint.app/Contents/Helpers/pinpoint`, so it is signed and notarized with the
+app. The Homebrew cask symlinks it onto your `PATH`; after a direct download,
+link it yourself:
+
+```sh
+ln -s "/Applications/Pinpoint.app/Contents/Helpers/pinpoint" /usr/local/bin/pinpoint
+```
+
+```sh
+pinpoint capture --out ./bug.png --json   # ask the app for a capture, wait for the copy
+pinpoint last --json                      # the most recent handoff, machine-readable
+pinpoint last --format md                 # the agent-ready text, verbatim
+pinpoint --help
+```
+
+Two commands, split by what they need rather than by what they do:
+
+| command | needs | does |
+| --- | --- | --- |
+| `pinpoint last` | nothing — reads files | prints the handoff already on disk |
+| `pinpoint capture` | the running app | starts a region capture and waits for you to press Copy |
+
+`capture` deliberately doesn't take the screenshot itself. macOS grants Screen
+Recording to the app bundle you allowed by name, not to a bare executable, so the
+tool asks the app through `pinpoint://` and waits for the handoff to land. The
+region is always drawn by hand.
+
+The output is built to be read by a program:
+
+- `--json` puts **one** JSON document on stdout and nothing else — on success and
+  on failure alike (`{"ok":false,"error":{"code":…}}`). Every human sentence goes
+  to stderr.
+- `capture.json` travels **verbatim** under the `capture` key rather than being
+  re-encoded, so a newer app can add keys without an older CLI dropping them.
+- Exit codes tell a state from an error: `0` done · `1` failed · `2` bad usage ·
+  `3` no capture handed off yet · `4` timed out waiting for the copy · `5` Pinpoint
+  isn't installed.
+
+## Deep links (`pinpoint://`)
+
+| URL | what it does |
+| --- | --- |
+| `pinpoint://capture` | starts the interactive region capture (same as ⌘⇧1) |
+| `pinpoint://last` | reopens the last handoff in the editor |
+| `pinpoint://last?format=json` (or `md`, `png`) | reveals that file in the Finder |
+
+Anything else is ignored, silently and on purpose.
+
+A URL can come from anywhere — a shell script, a terminal, or a web page you
+merely visited — and macOS doesn't say which. So the scheme is kept deliberately
+narrow: each URL names one action and carries nothing else (no coordinates, no
+destination path, nothing that could turn into a file write), `capture` only ever
+opens the same overlay you have to drag on and an editor you have to press Copy
+in, and nothing ever answers back — a page that fires one learns nothing about
+your Mac, not even whether Pinpoint is installed. **No URL takes a screenshot on
+its own**, which is why the menu's full-screen capture has no deep link.
 
 ## Dependencies
 
@@ -219,6 +288,18 @@ gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
 scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/homebrew-tap
 scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
+
+> The cask lives in a separate repo (`croustibat/homebrew-tap`) and must carry a
+> `binary` stanza, otherwise `brew install` leaves the CLI unreachable:
+>
+> ```ruby
+> app "Pinpoint.app"
+> binary "#{appdir}/Pinpoint.app/Contents/Helpers/pinpoint"
+> ```
+>
+> `scripts/release.sh` signs that nested executable before signing the app —
+> `codesign` refuses to sign a bundle containing unsigned nested code, and
+> notarization refuses the archive after it.
 
 Add the release to the changelog (`landing/src/changelog.ts` — new entry at the top,
 mark it `latest`), then commit it together with `landing/public/appcast.xml` and redeploy

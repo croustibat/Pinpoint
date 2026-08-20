@@ -21,52 +21,18 @@ import AppKit
 /// ours to pollute — the Shelf watches it, so writing there would feed our own
 /// output back into the library. `CaptureHistory` already owns
 /// `Application Support/Pinpoint/Captures`, so we stay in the same root.
-enum FileHandoff {
-    // MARK: - Contract
-
-    /// Version of the JSON contract written to `capture.json`.
-    ///
-    /// Bumped only on a *breaking* change — a key removed, renamed, or given a
-    /// new meaning. Adding keys is not breaking, which is why #55 hanging an
-    /// `accessibility` object off each marker (and one on the document) left
-    /// this at 1: a consumer written against version 1 reads exactly what it
-    /// read before. Read what you know, ignore the rest.
-    static let schemaVersion = 1
-
+///
+/// Where those files live and how they are read back is in
+/// `HandoffContract.swift`, which the `pinpoint` CLI compiles too. This file is
+/// the writing half, and it stays in the app: nothing here works without
+/// AppKit, `Exporter` and the annotation model.
+extension FileHandoff {
     /// How many timestamped folders `archive/` keeps; the oldest are deleted on
     /// every write. Kept deliberately low because each folder carries a
     /// full-resolution copy of the PNG (a Retina capture runs to several MB),
     /// and this directory is never surfaced in the UI — nobody would notice it
     /// growing.
-    static let maxArchiveEntries = 10
-
-    /// `~/Library/Application Support/Pinpoint`.
-    static var rootDirectory: URL {
-        // No temp-directory fallback (unlike `CaptureHistory`): the whole point
-        // of this location is that an agent can hard-code it, so a random path
-        // would be worse than useless. If the lookup ever fails we rebuild the
-        // very path it would have returned.
-        let support = (try? FileManager.default.url(for: .applicationSupportDirectory,
-                                                    in: .userDomainMask,
-                                                    appropriateFor: nil, create: true))
-            ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-                .appendingPathComponent("Library/Application Support", isDirectory: true)
-        return support.appendingPathComponent("Pinpoint", isDirectory: true)
-    }
-
-    /// The fixed location an agent reads: always the most recent handoff.
-    static var latestDirectory: URL {
-        rootDirectory.appendingPathComponent("last", isDirectory: true)
-    }
-
-    /// Timestamped copies of past handoffs, capped to `maxArchiveEntries`.
-    static var archiveDirectory: URL {
-        rootDirectory.appendingPathComponent("archive", isDirectory: true)
-    }
-
-    static let pngFileName = "capture.png"
-    static let markdownFileName = "capture.md"
-    static let jsonFileName = "capture.json"
+    static var maxArchiveEntries: Int { 10 }
 
     /// Where a handoff landed. Returned so the callers that come next (the CLI
     /// of #56, the MCP server of #57) can report the paths without rebuilding
@@ -149,9 +115,9 @@ enum FileHandoff {
 
         return Output(
             directory: latest,
-            png: latest.appendingPathComponent(pngFileName),
-            markdown: latest.appendingPathComponent(markdownFileName),
-            json: latest.appendingPathComponent(jsonFileName),
+            png: latestPNG,
+            markdown: latestMarkdown,
+            json: latestJSON,
             archive: archived
         )
     }
@@ -172,36 +138,6 @@ enum FileHandoff {
             (markdownFileName, Data(markdown.utf8)),
             (jsonFileName, try encoder.encode(document))
         ]
-    }
-
-    /// The one encoder every producer of this contract uses.
-    ///
-    /// Pretty-printed, key-sorted and unescaped: a human debugging this reads it,
-    /// `\/Users\/…` for every path is noise, and a fixed key order keeps two
-    /// handoffs of the same annotations byte-identical. Shared with
-    /// `Exporter.buildJSON` so the file on disk and the JSON handed to the
-    /// clipboard can't drift into two dialects of the same schema.
-    static var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return encoder
-    }
-
-    /// Reads a handoff document back.
-    ///
-    /// The contract was write-only until now, which is a strange thing to hand
-    /// somebody as an interoperability format: the CLI (#56) and the MCP server
-    /// (#57) both have to read `last/capture.json` before they can act on it, and
-    /// so does anything a user scripts. Every field decodes the way it encodes,
-    /// and the keys added since version 1 are optional, so a document written by
-    /// an older build still reads.
-    static func readDocument(at url: URL) throws -> Document {
-        try JSONDecoder().decode(Document.self, from: Data(contentsOf: url))
-    }
-
-    /// The most recent handoff, or nil when none has been written yet.
-    static func latestDocument() -> Document? {
-        try? readDocument(at: latestDirectory.appendingPathComponent(jsonFileName))
     }
 
     /// Writes `files` into `directory`, replacing whatever was there.
