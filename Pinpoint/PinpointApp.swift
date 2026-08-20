@@ -42,7 +42,7 @@ struct SettingsView: View {
                 .textSelection(.enabled)
                 .padding(.vertical, 6)
         }
-        .frame(width: 460, height: 470)
+        .frame(width: 460, height: 520)
     }
 
     /// Marketing version + build read from the bundle, e.g. "Pinpoint 0.3.0 (3)".
@@ -62,6 +62,7 @@ struct CaptureSettingsView: View {
     @AppStorage(CaptureDelay.storageKey) private var captureDelay: CaptureDelay = .off
     @AppStorage(AXContextSettings.enabledKey) private var axContext = true
     @AppStorage(AXContextSettings.fieldValuesKey) private var axFieldValues = false
+    @AppStorage(TextRecognitionSettings.enabledKey) private var textRecognition = true
 
     /// Whether macOS grants Accessibility, re-read whenever the window comes
     /// back — the switch is flipped in System Settings, in another process, so
@@ -120,6 +121,7 @@ struct CaptureSettingsView: View {
                     .font(.callout)
             }
             accessibilitySection
+            textRecognitionSection
         }
         .formStyle(.grouped)
         // Coming back from System Settings is the moment the answer can have
@@ -167,6 +169,26 @@ struct CaptureSettingsView: View {
                 .disabled(!axContext)
             Text(String(localized: "settings.ax.fieldValues.explanation",
                         defaultValue: "Off by default: the accessibility tree returns the whole contents of a field, including the part scrolled out of the picture. Password fields are never read, whatever this says."))
+                .foregroundStyle(.secondary)
+                .font(.callout)
+        }
+    }
+
+    /// Reading the text in the capture (#49).
+    ///
+    /// Needs no permission and reaches no network, so unlike the section above
+    /// there is nothing to prompt for and nothing to warn about. What the
+    /// explanation has to be straight about instead is the change it makes:
+    /// the text was always in the picture, and this puts it in the text files
+    /// too — where it can be searched, quoted and pasted on, which is both the
+    /// point of the feature and the reason someone might want it off.
+    private var textRecognitionSection: some View {
+        Section(String(localized: "settings.ocr.section", defaultValue: "Text in the capture")) {
+            Toggle(String(localized: "settings.ocr.toggle",
+                          defaultValue: "Read the text under each marker"),
+                   isOn: $textRecognition)
+            Text(String(localized: "settings.ocr.explanation",
+                        defaultValue: "Pre-fills a marker’s description with the line of text it points at, and writes that line into the files for the agent — so small text an agent would misread from the image travels as text. Read on this Mac; nothing is sent anywhere. Areas you have hidden are never read."))
                 .foregroundStyle(.secondary)
                 .font(.callout)
         }

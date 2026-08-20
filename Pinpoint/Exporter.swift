@@ -340,6 +340,14 @@ enum Exporter {
             if snapshot != nil {
                 lines.append(String(localized: "export.markers.accessibility.legend", defaultValue: "“UI” lines name the interface element found under the marker in the macOS accessibility tree at capture time — its role, its label, the app owning it, and its box in this image. “Path” is the chain of containers around it."))
             }
+            // Said once, and only when at least one marker actually carries a
+            // read: a reader has to know that a quoted line came out of the
+            // pixels rather than out of the user, and that a description may
+            // have started as one. Same rule as the accessibility legend above —
+            // no promise of details that never come.
+            if orderedPins.contains(where: { $0.recognizedText(hiddenBy: mask) != nil }) {
+                lines.append(String(localized: "export.markers.text.legend", defaultValue: "“Text” lines are what Pinpoint read in the pixels under the marker, on this Mac. A marker’s description may have been pre-filled from such a read and then edited by the user."))
+            }
             lines.append("")
             for pin in orderedPins {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -352,6 +360,7 @@ enum Exporter {
                 // misread, and left out entirely when there's nothing to say.
                 lines.append(contentsOf: accessibilityLines(for: pin.position, snapshot: snapshot,
                                                             mask: mask, imageSize: imageSize))
+                lines.append(contentsOf: recognizedLines(for: pin, note: note, mask: mask))
             }
         }
 
@@ -442,6 +451,36 @@ enum Exporter {
         }
         lines.append("  - Path: " + resolved.path)
         return lines
+    }
+
+    /// The line quoting what Pinpoint read in the pixels under a marker (#49),
+    /// or nothing when there is nothing left to add.
+    ///
+    /// Two reasons it can come to nothing, and they are different reasons.
+    ///
+    /// **Nothing to add.** The marker's own description already *is* that text,
+    /// which is the common case: an empty description is pre-filled from the
+    /// read, so printing both would put the same string twice under one marker.
+    /// That is not corroboration — it is one source counted twice, and an agent
+    /// weighing "the label says X and the pixels say X" would be weighing a
+    /// copy of itself. The legend above says descriptions may come from a read;
+    /// this line exists for when the two have since diverged, which is exactly
+    /// when both are worth having.
+    ///
+    /// **Nothing allowed.** `recognizedText(hiddenBy:)` refuses a marker on a
+    /// redacted region and a read a bar touches.
+    ///
+    /// The accessibility overlap — a native app whose tree already names the
+    /// very string the pixels show — is settled earlier, in the editor, so that
+    /// `pin.recognized` is nil rather than filtered here: the pre-filled note
+    /// has to make the same choice, and one arbitration in one place is the
+    /// only way the note and the export can't disagree.
+    private static func recognizedLines(for pin: Pin, note: String, mask: RedactionMask) -> [String] {
+        guard let recognized = pin.recognizedText(hiddenBy: mask),
+              note.caseInsensitiveCompare(recognized.text) != .orderedSame else { return [] }
+        // `Text:` stays in English alongside `UI:`, `Value:` and `Path:`: these
+        // are field names in a machine-read file, not prose.
+        return ["  - Text: “\(recognized.text)”"]
     }
 
     /// An element's screen frame restated in the image's own pixel grid, so it

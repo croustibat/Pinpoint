@@ -622,6 +622,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dépose des captures dans %@ ou change le dossier surveillé dans les Réglages." } }
       }
     },
+    "editor.marker.read" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read in the image: “%@”" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lu dans l’image : « %@ »" } }
+      }
+    },
     "Embed legend in the image" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure la légende dans l’image" } }
@@ -655,6 +661,12 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker." } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… correspondent aux numéros dessinés sur l’image ; le code entre crochets est un identifiant stable de ce repère." } }
+      }
+    },
+    "export.markers.text.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "“Text” lines are what Pinpoint read in the pixels under the marker, on this Mac. A marker’s description may have been pre-filled from such a read and then edited by the user." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les lignes « Text » sont ce que Pinpoint a lu dans les pixels sous le repère, sur ce Mac. La description d’un repère a pu être pré-remplie à partir d’une telle lecture, puis modifiée par l’utilisateur." } }
       }
     },
     "export.shapes.heading" : {
@@ -1081,6 +1093,24 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable while the legend is embedded: the clipboard then carries the image alone. The files for the agent are written in both formats either way." } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Indisponible tant que la légende est incrustée : le presse-papier ne porte alors que l’image. Les fichiers pour l’agent sont écrits dans les deux formats quoi qu’il arrive." } }
+      }
+    },
+    "settings.ocr.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pre-fills a marker’s description with the line of text it points at, and writes that line into the files for the agent — so small text an agent would misread from the image travels as text. Read on this Mac; nothing is sent anywhere. Areas you have hidden are never read." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pré-remplit la description d’un repère avec la ligne de texte qu’il désigne, et écrit cette ligne dans les fichiers pour l’agent — pour que le petit texte qu’un agent lirait de travers sur l’image voyage sous forme de texte. Lu sur ce Mac ; rien n’est envoyé nulle part. Les zones que vous avez masquées ne sont jamais lues." } }
+      }
+    },
+    "settings.ocr.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Text in the capture" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte de la capture" } }
+      }
+    },
+    "settings.ocr.toggle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read the text under each marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lire le texte sous chaque repère" } }
       }
     },
     "Settings…" : {

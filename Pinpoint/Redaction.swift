@@ -117,3 +117,41 @@ extension AXSnapshot {
         return stripped
     }
 }
+
+// MARK: - Recognized text
+
+extension Pin {
+
+    /// What Pinpoint read in the pixels under this marker (#49), with anything
+    /// a redaction covers taken out of the answer — the only reading the
+    /// exporters are allowed to publish.
+    ///
+    /// The recognizer already worked on an image with the bars painted onto it,
+    /// so in the ordinary flow there is nothing left here to catch. This is the
+    /// check that makes that a *belt* rather than the only strap, and it earns
+    /// its keep in the cases where the two can drift apart:
+    ///
+    /// - a read taken before the bar was drawn, still cached on the marker
+    ///   while the next pass runs;
+    /// - a capture re-opened from the Shelf or the history, whose markers carry
+    ///   reads recorded in an earlier session;
+    /// - any future caller that builds a document straight from stored pins
+    ///   without an editor in the loop.
+    ///
+    /// In each of those the mask is right there in `shapes` and the read is
+    /// right there on the pin, so the exporters can simply ask — the same shape
+    /// as `AXSnapshot.element(atNormalized:hiddenBy:)`, and for the same
+    /// reason: this file is where the question "may this leave?" is answered,
+    /// and no exporter should have to trust that another one was careful.
+    ///
+    /// Two rules, mirroring the accessibility ones. A marker *on* a redacted
+    /// region reads nothing. A read whose box a redaction touches — however
+    /// little of it — is dropped whole, because a line's characters live inside
+    /// its box and the covered ones are exactly the ones the user meant to
+    /// hide.
+    func recognizedText(hiddenBy mask: RedactionMask) -> RecognizedText? {
+        guard let recognized else { return nil }
+        guard !mask.hides(position), !mask.hides(recognized.box) else { return nil }
+        return recognized
+    }
+}
