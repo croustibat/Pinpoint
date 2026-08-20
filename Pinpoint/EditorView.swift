@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 /// Annotation tools the user can switch between in the editor.
 enum EditorTool: String, CaseIterable, Identifiable {
-    case pin, arrow, rectangle
+    case pin, arrow, rectangle, redaction
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .pin: return String(localized: "Marker")
         case .arrow: return String(localized: "Arrow")
         case .rectangle: return String(localized: "Rectangle")
+        case .redaction: return String(localized: "tool.redaction", defaultValue: "Hide")
         }
     }
 
@@ -21,6 +22,7 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .pin: return "mappin"
         case .arrow: return "arrow.up.right"
         case .rectangle: return "rectangle"
+        case .redaction: return "eye.slash"
         }
     }
 
@@ -31,6 +33,20 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .pin: return "1"
         case .arrow: return "2"
         case .rectangle: return "3"
+        case .redaction: return "4"
+        }
+    }
+
+    /// The shape this tool draws, or nil for the marker tool — which places a
+    /// numbered `Pin` instead. Read by the canvas gesture and by
+    /// `isManipulable`, so adding a shape kind never means remembering to widen
+    /// a `switch` in either.
+    var markupKind: Markup.Kind? {
+        switch self {
+        case .pin: return nil
+        case .arrow: return .arrow
+        case .rectangle: return .rectangle
+        case .redaction: return .redaction
         }
     }
 }
@@ -376,6 +392,10 @@ struct EditorView: View {
             return shapes.contains { $0.kind == .rectangle }
                 ? String(localized: "Drag to draw a rectangle · click one to move or resize it")
                 : String(localized: "Drag to draw a rectangle")
+        case .redaction:
+            return shapes.contains(where: \.isRedaction)
+                ? String(localized: "hint.redaction.some", defaultValue: "Drag over what to hide · click one to move or resize it")
+                : String(localized: "hint.redaction", defaultValue: "Drag over what should never leave your Mac")
         }
     }
 
@@ -399,11 +419,13 @@ struct EditorView: View {
                     .shadow(radius: 8, y: 2)
                     .accessibilityLabel(String(localized: "a11y.canvas.image", defaultValue: "Screenshot being annotated"))
 
-                // Committed markups. Drawing and interaction are two layers:
-                // every shape draws first and takes no clicks, then the
-                // manipulable ones take them on top, so a handle is never
-                // buried under the outline of a shape drawn after it.
-                ForEach(shapes) { shape in
+                // Committed markups, redactions first (`inDrawOrder`, the order
+                // the exporter draws in too, so the preview stacks them the way
+                // the file will). Drawing and interaction are two layers: every
+                // shape draws first and takes no clicks, then the manipulable
+                // ones take them on top, so a handle is never buried under the
+                // outline of a shape drawn after it.
+                ForEach(shapes.inDrawOrder) { shape in
                     // The drawing layer is what VoiceOver reads: it carries
                     // every shape, where the grab bands below only exist for
                     // the ones the active tool can manipulate.
@@ -498,6 +520,10 @@ struct EditorView: View {
         switch shape.kind {
         case .arrow: return String(localized: "a11y.shape.arrow", defaultValue: "Arrow annotation")
         case .rectangle: return String(localized: "a11y.shape.rectangle", defaultValue: "Rectangle annotation")
+        // Announces the bar, not what went under it: VoiceOver is a channel
+        // like any other, and the text it reads is the text a screen recording
+        // of this session would carry.
+        case .redaction: return String(localized: "a11y.shape.redaction", defaultValue: "Hidden area")
         }
     }
 
@@ -536,23 +562,16 @@ struct EditorView: View {
     private func canvasGesture(in fitted: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                guard !isCropping else { return }
-                switch tool {
-                case .pin:
-                    break
-                case .arrow, .rectangle:
-                    let kind: Markup.Kind = tool == .arrow ? .arrow : .rectangle
-                    updateDraft(kind: kind, value: value, in: fitted)
-                }
+                guard !isCropping, let kind = tool.markupKind else { return }
+                updateDraft(kind: kind, value: value, in: fitted)
             }
             .onEnded { value in
                 guard !isCropping else { return }
-                switch tool {
-                case .pin:
+                guard tool.markupKind != nil else {
                     addPin(at: value.location, in: fitted)
-                case .arrow, .rectangle:
-                    commitDraft(value: value, in: fitted)
+                    return
                 }
+                commitDraft(value: value, in: fitted)
             }
     }
 
@@ -578,6 +597,17 @@ struct EditorView: View {
             )
             .stroke(Color.pinpointVermillon, style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+        case .redaction:
+            // Square corners and a border drawn inside, exactly like
+            // `Exporter.drawRedaction`: what the preview covers is what the
+            // file covers. The bar is opaque here too — a preview that let the
+            // secret show through would be telling the user it is still there.
+            let r = absoluteRect(shape.rect, in: fitted)
+            Rectangle()
+                .fill(Color.pinpointRedaction)
+                .overlay(Rectangle().strokeBorder(Color.pinpointVermillon, lineWidth: width))
+                .frame(width: r.width, height: r.height)
+                .position(x: r.midX, y: r.midY)
         }
     }
 
@@ -633,20 +663,26 @@ struct EditorView: View {
     /// overlay is modal and owns interaction.
     private func isManipulable(_ shape: Markup) -> Bool {
         guard !isCropping else { return false }
-        switch shape.kind {
-        case .arrow: return tool == .arrow
-        case .rectangle: return tool == .rectangle
-        }
+        return tool.markupKind == shape.kind
     }
 
     /// The clickable band along a shape's outline. Deliberately not its
     /// interior: a rectangle annotation is mostly hole, and clicking through it
     /// has to keep dropping markers and drawing new shapes.
+    ///
+    /// A redaction is the exception, and for the same reason: it is a solid
+    /// bar, not an outline around a hole, so its whole surface takes the click.
     @ViewBuilder
     private func shapeGrabBand(_ shape: Markup, in fitted: CGRect, metrics: MarkupMetrics) -> some View {
         let band = Self.grabBandWidth(metrics)
         Group {
             switch shape.kind {
+            case .redaction:
+                let r = absoluteRect(shape.rect, in: fitted)
+                Color.clear
+                    .frame(width: r.width, height: r.height)
+                    .contentShape(Rectangle())
+                    .position(x: r.midX, y: r.midY)
             case .rectangle:
                 let r = absoluteRect(shape.rect, in: fitted)
                 Color.clear
@@ -699,7 +735,7 @@ struct EditorView: View {
                           label: end.accessibilityLabel)
                     .gesture(arrowEndDrag(shape, end: end, in: fitted))
             }
-        case .rectangle:
+        case .rectangle, .redaction:
             let r = absoluteRect(shape.rect, in: fitted)
             ForEach(SelectionHandle.allCases, id: \.self) { handle in
                 handleDot(at: handle.point(in: r, orientation: .yDown),
@@ -770,7 +806,8 @@ struct EditorView: View {
             .onEnded { _ in endShapeDrag() }
     }
 
-    /// Drag one of a rectangle's eight handles to resize it.
+    /// Drag one of the eight handles of a rectangle — or of a redaction, which
+    /// is resized by the same geometry — to resize it.
     private func rectangleResizeDrag(_ shape: Markup, handle: SelectionHandle,
                                      in fitted: CGRect) -> some Gesture {
         DragGesture(minimumDistance: 0)
@@ -1308,6 +1345,19 @@ struct EditorView: View {
         for shape in shapes {
             let s = remap(shape.start)
             let e = remap(shape.end)
+            if shape.isRedaction {
+                // A redaction survives on overlap alone, and is clamped to what
+                // is left of it. The endpoint rule below would drop a bar wider
+                // than the crop — both its corners *and* its midpoint sit
+                // outside — and dropping it would uncover, in the cropped
+                // image, pixels the user had painted over. A crop must never be
+                // able to undo a redaction.
+                guard shape.rect.intersects(c) else { continue }
+                newShapes.append(
+                    Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e))
+                )
+                continue
+            }
             // Keep a markup iff at least one defining point survives the crop.
             // Midpoint-or-endpoint rule; straddlers keep what's inside.
             guard inside(s) || inside(e) || inside(CGPoint(x: (s.x+e.x)/2, y: (s.y+e.y)/2)) else { continue }

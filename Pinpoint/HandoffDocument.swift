@@ -123,9 +123,12 @@ extension FileHandoff {
             /// The element's value — present only when the privacy policy allows
             /// it (see `redacted`).
             let value: String?
-            /// Why `value` is absent: "secureField" (never read) or
-            /// "textFieldPolicy" (withheld by default). Absent when the element
-            /// simply has no value worth reporting.
+            /// Why `value` is absent: "secureField" (never read),
+            /// "textFieldPolicy" (withheld by default) or "userRedaction" (the
+            /// user painted over this element, so its name — `title`, `label`,
+            /// `identifier`, `help`, `placeholder` — was dropped along with its
+            /// value). Absent when the element simply has no value worth
+            /// reporting.
             let redacted: String?
             let enabled: Bool?
             /// The element's box in *this image's* pixel grid, the same one
@@ -173,23 +176,32 @@ extension FileHandoff {
             /// The interface element under `position`, resolved against the
             /// snapshot taken at capture time. Absent when there is none —
             /// which is the normal case for a capture of something that isn't
-            /// an app window, or with the feature switched off.
+            /// an app window, or with the feature switched off — and always
+            /// absent for a marker dropped on a redacted region, where naming
+            /// what sits under the bar would undo the redaction in text.
             let accessibility: AccessibilityElement?
         }
 
-        /// An unnumbered outline: arrow or rectangle.
+        /// An unnumbered shape: arrow, rectangle or redaction.
         struct Shape: Encodable {
             let id: String
             /// "S1", "S2"… matching `capture.md`.
             let label: String
-            /// "arrow" or "rectangle". Deliberately a plain string mapped by
-            /// hand, so renaming the internal enum can't silently change the
-            /// contract.
+            /// "arrow", "rectangle" or "redaction". Deliberately a plain string
+            /// mapped by hand, so renaming the internal enum can't silently
+            /// change the contract.
+            ///
+            /// A "redaction" is a region the user painted over before sharing:
+            /// its pixels are gone from the PNG, and no accessibility element
+            /// under it is described anywhere in this file. Its box is still
+            /// given — where something was hidden is not itself a secret, and a
+            /// consumer that knows a region is unreadable asks instead of
+            /// guessing.
             let kind: String
-            /// Arrow: the tail. Rectangle: its top-left corner.
+            /// Arrow: the tail. Rectangle/redaction: its top-left corner.
             let from: Point
-            /// Arrow: the tip, where the head is drawn. Rectangle: its
-            /// bottom-right corner.
+            /// Arrow: the tip, where the head is drawn. Rectangle/redaction:
+            /// its bottom-right corner.
             let to: Point
             let boundingBox: Box
         }
@@ -218,9 +230,16 @@ extension FileHandoff.Document {
         self.context = context.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let ordered = pins.sorted { $0.number < $1.number }
+        // The regions the user painted over (#50). This file is the one that
+        // makes a redaction worth anything or worth nothing: the PNG next to it
+        // is already clean, and without the mask the accessibility block below
+        // would hand over the label — and the typed value — of whatever sits
+        // under the bar, in plain text, keys sorted, ready to grep.
+        let mask = RedactionMask(shapes)
         if let snapshot = accessibility {
             self.markers = ordered.map { pin in
-                Marker(pin, in: imageSize, accessibility: snapshot.element(atNormalized: pin.position)
+                Marker(pin, in: imageSize,
+                       accessibility: snapshot.element(atNormalized: pin.position, hiddenBy: mask)
                     .map { AccessibilityElement($0, in: snapshot, imageSize: imageSize) })
             }
             self.accessibility = AccessibilityContext(snapshot, formatter: formatter)
@@ -240,6 +259,10 @@ extension FileHandoff.Document {
                 to = shape.end
             case .rectangle:
                 kind = "rectangle"
+                from = CGPoint(x: shape.rect.minX, y: shape.rect.minY)
+                to = CGPoint(x: shape.rect.maxX, y: shape.rect.maxY)
+            case .redaction:
+                kind = "redaction"
                 from = CGPoint(x: shape.rect.minX, y: shape.rect.minY)
                 to = CGPoint(x: shape.rect.maxX, y: shape.rect.maxY)
             }

@@ -1,9 +1,10 @@
 import AppKit
 
 enum Exporter {
-    /// Renders the base capture with markups (arrows/rectangles) and numbered
-    /// pins drawn on top, at full image resolution. Markups are drawn first so
-    /// numbered pins stay legible above them.
+    /// Renders the base capture with markups (redactions, arrows, rectangles)
+    /// and numbered pins drawn on top, at full image resolution. Markups are
+    /// drawn first so numbered pins stay legible above them, and redactions
+    /// first among those — `inDrawOrder`, the same order the editor previews.
     static func annotatedImage(base: NSImage, pins: [Pin], shapes: [Markup], style: PinStyle) -> NSImage {
         let size = base.size
         let result = NSImage(size: size)
@@ -16,7 +17,7 @@ enum Exporter {
         // no scaling here. `EditorView` builds the same metrics with the
         // canvas' scale factor, which is what makes the preview WYSIWYG.
         let metrics = MarkupMetrics(imageWidth: size.width)
-        for shape in shapes {
+        for shape in shapes.inDrawOrder {
             drawMarkup(shape, in: size, metrics: metrics)
         }
 
@@ -48,17 +49,14 @@ enum Exporter {
 
         switch shape.kind {
         case .rectangle:
-            let r = shape.rect
-            let rect = NSRect(
-                x: r.minX * size.width,
-                y: (1 - r.maxY) * size.height,
-                width: r.width * size.width,
-                height: r.height * size.height
-            )
+            let rect = imageRect(shape.rect, in: size)
             let path = NSBezierPath(roundedRect: rect,
                                     xRadius: metrics.cornerRadius, yRadius: metrics.cornerRadius)
             path.lineWidth = lineWidth
             path.stroke()
+
+        case .redaction:
+            drawRedaction(imageRect(shape.rect, in: size), lineWidth: lineWidth)
 
         case .arrow:
             let start = px(shape.start)
@@ -86,6 +84,56 @@ enum Exporter {
             path.line(to: right)
             path.stroke()
         }
+    }
+
+    /// A normalized rect (top-left origin) in the image's own drawing space
+    /// (bottom-left origin).
+    private static func imageRect(_ rect: CGRect, in size: CGSize) -> NSRect {
+        NSRect(
+            x: rect.minX * size.width,
+            y: (1 - rect.maxY) * size.height,
+            width: rect.width * size.width,
+            height: rect.height * size.height
+        )
+    }
+
+    /// Paints out a redacted region: an opaque bar, then a vermillon border
+    /// drawn *inside* it so the annotation reads as one of Pinpoint's own
+    /// without ever narrowing what it covers.
+    ///
+    /// Three details carry the guarantee, and none of them is cosmetic:
+    ///
+    /// - `.copy` rather than the default source-over, so the pixels underneath
+    ///   are **replaced** and not blended with. A colour that ever picked up an
+    ///   alpha below 1 would otherwise turn the bar into a tint.
+    /// - `integral`, which rounds the rect *outwards* to whole units. A bar on
+    ///   fractional bounds leaves a partially covered row of pixels along each
+    ///   edge — a sliver of the original image, and a sliver of a character is
+    ///   sometimes a whole character.
+    /// - antialiasing off while filling, for the same reason: a smoothed edge
+    ///   is a blended edge.
+    ///
+    /// Square corners, not the rounded ones a rectangle markup gets: a rounded
+    /// corner would leave the four corners of the region the user dragged
+    /// showing.
+    private static func drawRedaction(_ rect: NSRect, lineWidth: CGFloat) {
+        guard rect.width > 0, rect.height > 0 else { return }
+        let context = NSGraphicsContext.current
+        let wasAntialiasing = context?.shouldAntialias ?? true
+        context?.shouldAntialias = false
+        NSColor.pinpointRedaction.setFill()
+        rect.integral.fill(using: .copy)
+        context?.shouldAntialias = wasAntialiasing
+
+        // Inset by half the stroke width so the whole border sits inside the
+        // bar; a centred stroke would spill outside the area the user drew.
+        // Skipped on a bar too thin to hold one, where it would invert.
+        let inset = rect.insetBy(dx: lineWidth / 2, dy: lineWidth / 2)
+        guard inset.width > 0, inset.height > 0 else { return }
+        NSColor.pinpointVermillon.setStroke()
+        let border = NSBezierPath(rect: inset)
+        border.lineWidth = lineWidth
+        border.stroke()
     }
 
     /// Shifts `anchor` so the marker's badge stays fully within `size` (image
@@ -212,11 +260,20 @@ enum Exporter {
             lines.append(String(localized: "export.coordinates", defaultValue: "Positions are given in pixels from the top-left corner (0, 0), then as a percentage of the image size."))
         }
 
+        // What the user painted over (#50). Every accessibility lookup below
+        // goes through it: the bar hides the pixels, and this hides the text
+        // that describes the very same pixels — the leak this feature would
+        // otherwise open, since a marker dropped on a hidden token would carry
+        // the token's label and value into this file.
+        let mask = RedactionMask(shapes)
+
         // Kept only when at least one marker actually resolves to an element:
         // an empty snapshot must not print a legend promising details that never
         // come, and must leave the text byte-identical to what it was before.
         let snapshot = accessibility.flatMap { candidate in
-            orderedPins.contains { candidate.element(atNormalized: $0.position) != nil } ? candidate : nil
+            orderedPins.contains {
+                candidate.element(atNormalized: $0.position, hiddenBy: mask) != nil
+            } ? candidate : nil
         }
 
         if !orderedPins.isEmpty {
@@ -236,8 +293,8 @@ enum Exporter {
                 // accessibility tree while the capture was taken (#55). Indented
                 // under its marker so the association is positional and can't be
                 // misread, and left out entirely when there's nothing to say.
-                lines.append(contentsOf: accessibilityLines(for: pin.position,
-                                                            snapshot: snapshot, imageSize: imageSize))
+                lines.append(contentsOf: accessibilityLines(for: pin.position, snapshot: snapshot,
+                                                            mask: mask, imageSize: imageSize))
             }
         }
 
@@ -245,12 +302,19 @@ enum Exporter {
             lines.append("")
             lines.append("## " + String(localized: "export.shapes.heading", defaultValue: "Shapes"))
             lines.append(String(localized: "export.shapes.legend", defaultValue: "Unnumbered outlines drawn on the image: rectangles are listed top-left → bottom-right, arrows tail → tip, followed by the size of their bounding box."))
+            // Only when there is one, so a capture without redactions keeps the
+            // text it had before. Says what a hidden area *is* — never what it
+            // held — because an agent that doesn't know a region was painted
+            // out would read the bar as part of the interface.
+            if !mask.isEmpty {
+                lines.append(String(localized: "export.shapes.redaction.legend", defaultValue: "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing."))
+            }
             lines.append("")
             for (index, shape) in shapes.enumerated() {
                 let box = shape.rect
                 let from: CGPoint, to: CGPoint
                 switch shape.kind {
-                case .rectangle:
+                case .rectangle, .redaction:
                     from = CGPoint(x: box.minX, y: box.minY)
                     to = CGPoint(x: box.maxX, y: box.maxY)
                 case .arrow:
@@ -283,8 +347,9 @@ enum Exporter {
     /// the vocabulary shared with every inspector, and with the code that
     /// created the element in the first place.
     private static func accessibilityLines(for position: CGPoint, snapshot: AXSnapshot?,
-                                           imageSize: CGSize) -> [String] {
-        guard let snapshot, let resolved = snapshot.element(atNormalized: position) else { return [] }
+                                           mask: RedactionMask, imageSize: CGSize) -> [String] {
+        guard let snapshot,
+              let resolved = snapshot.element(atNormalized: position, hiddenBy: mask) else { return [] }
         let element = resolved.element
 
         var facts: [String] = [element.summary]
@@ -334,6 +399,9 @@ enum Exporter {
         case .textFieldPolicy:
             return String(localized: "export.ax.value.policy",
                           defaultValue: "withheld (text field — enable “Include what is typed in fields” in Pinpoint’s settings)")
+        case .userRedaction:
+            return String(localized: "export.ax.value.redacted",
+                          defaultValue: "withheld (the user painted over this element — its name and its contents were left out)")
         }
     }
 
