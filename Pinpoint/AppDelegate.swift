@@ -184,6 +184,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        // Opens the same Settings window rather than installing on the spot
+        // (#89): the elevation prompt and the install/remove state belong
+        // together in one place, not split between a menu click and a
+        // separate window. This item exists purely for discoverability — someone
+        // who never opens Settings still sees that the CLI can be installed.
+        let installCLIItem = NSMenuItem(title: String(localized: "Install Command Line Tool…"), action: #selector(openSettings), keyEquivalent: "")
+        installCLIItem.target = self
+        menu.addItem(installCLIItem)
         menu.addItem(.separator())
 
         menu.addItem(NSMenuItem(title: String(localized: "Quit Pinpoint"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
