@@ -45,6 +45,9 @@ On Homebrew 6+ you'll be asked to trust the tap once first — run
 `brew trust croustibat/tap`, then re-run the install. See the
 [tap](https://github.com/croustibat/homebrew-tap) for details.
 
+The cask also puts the `pinpoint` command on your `PATH` — see
+[Scripting](#scripting-the-pinpoint-cli).
+
 ### Direct download
 
 1. Grab the latest **`Pinpoint.dmg`** from the [releases page](https://github.com/croustibat/Pinpoint/releases/latest).
@@ -75,6 +78,10 @@ relaunch Pinpoint once.
 - **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
   rename, Quick Look, and reopen any capture with its annotations.
 - **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
+- **Scriptable** — a `pinpoint` CLI, a `pinpoint://` URL scheme, and an
+  [MCP](https://modelcontextprotocol.io) server (`pinpoint mcp`) so agents,
+  hooks and `!`-commands can ask for a capture and read the result directly —
+  the file path and structured Markdown, never an inline image.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
@@ -145,13 +152,173 @@ Pinpoint/
   PinStyle.swift                  # marker styles (disc / pointer / outline)
   Theme.swift                     # vermillon palette
   Exporter.swift                  # annotated PNG render + structured text + clipboard
+  FileHandoff.swift               # writes capture.{png,md,json} where an agent can read them
+  HandoffContract.swift           # where those files live + how to read one back (shared with the CLI)
+  HandoffDocument.swift           # the JSON contract for capture.json (schemaVersion 1)
+  HandoffDocumentBuilder.swift    # fills that contract in from the annotation model
+  URLCommand.swift                # pinpoint:// deep links — what is accepted, and what isn't
   SettingsWindowController.swift  # AppKit settings window (works around the macOS 14+ SettingsLink bug)
   ShelfWindowController.swift     # the shelf window
   ScreenshotDetailWindowController.swift  # detail window for a shelf item
   Localizable.xcstrings           # String Catalog (English base, French)
   Shelf/                          # the screenshot library (Models, Services, Stores, Views)
+PinpointCLI/                      # the `pinpoint` tool, embedded in the app at Contents/Helpers
+  MCP/                             # `pinpoint mcp` — the stdio server (JSONRPC, MCPTransport,
+                                    # MCPTools, MCPServer); reads the same HandoffContract
 landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
+
+## Agent handoff (files on disk)
+
+Copying from the editor doesn't only fill the clipboard: it also writes the
+capture to a fixed path, because a clipboard image is not something every agent
+can read (Claude Code doesn't render images returned inline by an MCP server —
+[anthropics/claude-code#31208](https://github.com/anthropics/claude-code/issues/31208)).
+A file path is the channel that reliably works.
+
+```
+~/Library/Application Support/Pinpoint/last/capture.png    annotated image, native resolution, no legend strip
+~/Library/Application Support/Pinpoint/last/capture.md     the agent-ready text (markers, shapes, instructions)
+~/Library/Application Support/Pinpoint/last/capture.json   the same facts, machine-readable — see HandoffDocument.swift
+~/Library/Application Support/Pinpoint/archive/<stamp>/    a timestamped copy of each handoff
+```
+
+- The path is fixed on purpose: an agent has to be able to hard-code it rather
+  than discover it. Point one at `capture.md` and it has everything.
+- The triplet is staged in a sibling folder and swapped in atomically, so a
+  reader gets the previous handoff or the new one, never a mix of the two.
+- `capture.md` always carries the complete text, whatever the "legend in the
+  image" setting says — unlike the clipboard, which drops it when the legend is
+  baked into the PNG.
+- Pixel coordinates in `.md`/`.json` are in the grid of `capture.png` itself, so
+  on a Retina capture they read 2× the size in points.
+- **The archive keeps the 10 most recent handoffs**, oldest deleted first. Each
+  folder holds a full-resolution PNG, so the cap is deliberately low.
+- `capture.json` carries a `schemaVersion`. New keys can appear without bumping
+  it — consumers must ignore what they don't know.
+
+## Scripting: the `pinpoint` CLI
+
+Pinpoint ships a small command-line tool **inside the app bundle**, at
+`Pinpoint.app/Contents/Helpers/pinpoint`, so it is signed and notarized with the
+app. The Homebrew cask symlinks it onto your `PATH`; after a direct download,
+link it yourself:
+
+```sh
+ln -s "/Applications/Pinpoint.app/Contents/Helpers/pinpoint" /usr/local/bin/pinpoint
+```
+
+```sh
+pinpoint capture --out ./bug.png --json   # ask the app for a capture, wait for the copy
+pinpoint last --json                      # the most recent handoff, machine-readable
+pinpoint last --format md                 # the agent-ready text, verbatim
+pinpoint --help
+```
+
+Two commands, split by what they need rather than by what they do:
+
+| command | needs | does |
+| --- | --- | --- |
+| `pinpoint last` | nothing — reads files | prints the handoff already on disk |
+| `pinpoint capture` | the running app | starts a region capture and waits for you to press Copy |
+
+`capture` deliberately doesn't take the screenshot itself. macOS grants Screen
+Recording to the app bundle you allowed by name, not to a bare executable, so the
+tool asks the app through `pinpoint://` and waits for the handoff to land. The
+region is always drawn by hand.
+
+The output is built to be read by a program:
+
+- `--json` puts **one** JSON document on stdout and nothing else — on success and
+  on failure alike (`{"ok":false,"error":{"code":…}}`). Every human sentence goes
+  to stderr.
+- `capture.json` travels **verbatim** under the `capture` key rather than being
+  re-encoded, so a newer app can add keys without an older CLI dropping them.
+- Exit codes tell a state from an error: `0` done · `1` failed · `2` bad usage ·
+  `3` no capture handed off yet · `4` timed out waiting for the copy · `5` Pinpoint
+  isn't installed.
+
+## MCP server: `pinpoint mcp`
+
+The same binary also speaks [MCP](https://modelcontextprotocol.io) over stdio, so
+an agent can ask for a capture itself instead of you pasting one in. It is **the
+one MCP annotation server that works system-wide** rather than only inside a
+browser DOM — Pinpoint captures whatever is on screen, any app, any window.
+
+The whole design turns on one fact: **Claude Code doesn't render an image an MCP
+tool returns inline** — the base64 lands in the transcript as raw text
+([anthropics/claude-code#31208](https://github.com/anthropics/claude-code/issues/31208),
+closed "not planned"). So `pinpoint mcp` never sends image bytes over the wire.
+Every tool call returns the **absolute path of the annotated PNG plus the
+structured Markdown** described above, and tells the agent outright to open the
+PNG with its own file-reading tool. That's the file handoff this README already
+describes — the MCP server is a thin JSON-RPC front door onto it, built on the
+very same `HandoffContract` the CLI reads, so the three never disagree about
+where a capture lives or what it contains.
+
+Add it with the Claude Code CLI, pointing at the binary the app already ships:
+
+```sh
+claude mcp add pinpoint -- /Applications/Pinpoint.app/Contents/Helpers/pinpoint mcp
+```
+
+or, if you linked `pinpoint` onto your `PATH` as shown above:
+
+```sh
+claude mcp add pinpoint -- pinpoint mcp
+```
+
+Equivalently, the JSON entry in `.mcp.json` or your client's config:
+
+```json
+{
+  "mcpServers": {
+    "pinpoint": {
+      "command": "/Applications/Pinpoint.app/Contents/Helpers/pinpoint",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Three tools:
+
+| tool | needs | does |
+| --- | --- | --- |
+| `capture_region` | the running app | starts an interactive region capture and blocks until you press Copy — same as `pinpoint capture` |
+| `get_last_capture` | nothing — reads files | returns the most recent handoff without prompting for a new screenshot |
+| `list_recent` | nothing — reads files | lists up to the last 10 archived captures, newest first |
+
+Every result carries the PNG's path, the same Markdown `capture.md` holds, and a
+`structuredContent` object with `capture.json` verbatim — so an agent that would
+rather index the facts than parse them back out of prose can. A capture that
+timed out or a "nothing handed off yet" comes back as a normal tool result with
+`isError: true`, not a protocol failure, so the agent can see what happened and
+retry or ask instead of just failing silently.
+
+`pinpoint mcp` writes **only** JSON-RPC to stdout — that's the stdio transport's
+rule, and one stray log line breaks it for the whole session. Every human-facing
+sentence, including the ones you'd see running `pinpoint capture` at a terminal,
+goes to stderr instead.
+
+## Deep links (`pinpoint://`)
+
+| URL | what it does |
+| --- | --- |
+| `pinpoint://capture` | starts the interactive region capture (same as ⌘⇧1) |
+| `pinpoint://last` | reopens the last handoff in the editor |
+| `pinpoint://last?format=json` (or `md`, `png`) | reveals that file in the Finder |
+
+Anything else is ignored, silently and on purpose.
+
+A URL can come from anywhere — a shell script, a terminal, or a web page you
+merely visited — and macOS doesn't say which. So the scheme is kept deliberately
+narrow: each URL names one action and carries nothing else (no coordinates, no
+destination path, nothing that could turn into a file write), `capture` only ever
+opens the same overlay you have to drag on and an editor you have to press Copy
+in, and nothing ever answers back — a page that fires one learns nothing about
+your Mac, not even whether Pinpoint is installed. **No URL takes a screenshot on
+its own**, which is why the menu's full-screen capture has no deep link.
 
 ## Dependencies
 
@@ -188,6 +355,18 @@ gh release create vX.Y.Z --latest build/dist/Pinpoint.dmg#Pinpoint.dmg
 scripts/update-cask.sh      # → pushes the version + sha256 to croustibat/homebrew-tap
 scripts/update-appcast.sh   # → signs the DMG (EdDSA) and adds it to landing/public/appcast.xml
 ```
+
+> The cask lives in a separate repo (`croustibat/homebrew-tap`) and must carry a
+> `binary` stanza, otherwise `brew install` leaves the CLI unreachable:
+>
+> ```ruby
+> app "Pinpoint.app"
+> binary "#{appdir}/Pinpoint.app/Contents/Helpers/pinpoint"
+> ```
+>
+> `scripts/release.sh` signs that nested executable before signing the app —
+> `codesign` refuses to sign a bundle containing unsigned nested code, and
+> notarization refuses the archive after it.
 
 Add the release to the changelog (`landing/src/changelog.ts` — new entry at the top,
 mark it `latest`), then commit it together with `landing/public/appcast.xml` and redeploy

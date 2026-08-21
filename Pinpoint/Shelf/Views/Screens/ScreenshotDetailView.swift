@@ -59,13 +59,15 @@ struct ScreenshotDetailView: View {
     private var header: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.filename)
+                Text(store.displayTitle(for: item))
                     .font(.title3.weight(.semibold))
                     .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
 
-                Text(item.url.deletingLastPathComponent().lastPathComponent)
+                Text(headerSubtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -75,15 +77,31 @@ struct ScreenshotDetailView: View {
                     .foregroundStyle(isFavorite ? .yellow : .secondary)
             }
             .buttonStyle(.borderless)
-            .help(isFavorite ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"))
+            .help(favoriteLabel)
+            .accessibilityLabel(favoriteLabel)
 
             Button(action: close) {
                 Image(systemName: "xmark")
             }
             .buttonStyle(.borderless)
             .help("Close")
+            .accessibilityLabel(Text("Close"))
         }
         .padding(16)
+    }
+
+    private var favoriteLabel: String {
+        isFavorite
+            ? String(localized: "Remove from favorites")
+            : String(localized: "Add to favorites")
+    }
+
+    /// The containing folder, prefixed with the file name whenever a custom
+    /// title took its place in the heading so it stays visible somewhere.
+    private var headerSubtitle: String {
+        let folder = item.url.deletingLastPathComponent().lastPathComponent
+        guard store.displayTitle(for: item) != item.filename else { return folder }
+        return "\(item.filename) · \(folder)"
     }
 
     private func close() {
@@ -104,6 +122,8 @@ struct ScreenshotDetailView: View {
                     .resizable()
                     .scaledToFit()
                     .padding(20)
+                    .accessibilityLabel(String(localized: "a11y.card.thumbnail",
+                                               defaultValue: "Preview of \(store.displayTitle(for: item))"))
             } else {
                 ProgressView()
                     .controlSize(.regular)
@@ -118,6 +138,7 @@ struct ScreenshotDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Details")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
                 detailValue(title: String(localized: "Captured"), value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
@@ -132,6 +153,7 @@ struct ScreenshotDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Actions")
                 .font(.headline)
+                .accessibilityAddTraits(.isHeader)
 
             Button("Edit in Pinpoint", systemImage: "pin.fill") {
                 close()
@@ -174,6 +196,8 @@ struct ScreenshotDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(.quaternary.opacity(0.18), in: RoundedRectangle(cornerRadius: 16))
+        // Caption then value are one fact, not two stops on the way through.
+        .accessibilityElement(children: .combine)
     }
 
     private func loadContent() async {
@@ -240,6 +264,7 @@ private struct RenameDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Rename screenshot")
                 .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
 
             TextField("File name", text: $newName)
                 .textFieldStyle(.roundedBorder)

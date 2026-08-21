@@ -15,5 +15,10 @@ struct SectionHeaderView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
+        // Read as one header instead of "Today" then a bare number, and marked
+        // as a header so VoiceOver's rotor can jump between the date groups.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(String(localized: "a11y.section", defaultValue: "\(title), \(count) screenshots"))
+        .accessibilityAddTraits(.isHeader)
     }
 }

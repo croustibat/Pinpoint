@@ -49,10 +49,15 @@ final class MultiFileDragNSButton: NSButton, NSDraggingSource {
     func configure(with items: [ScreenshotItem], compact: Bool) {
         itemURLs = items.map(\.url)
         self.compact = compact
-        title = compact ? "" : (itemURLs.count == 1
+        let name = itemURLs.count == 1
             ? String(localized: "Drag file")
-            : String(localized: "drag.files", defaultValue: "Drag \(itemURLs.count) files"))
+            : String(localized: "drag.files", defaultValue: "Drag \(itemURLs.count) files")
+        title = compact ? "" : name
         toolTip = String(localized: "Drag the selected screenshots into another app")
+        // In compact mode the button has no title, which leaves VoiceOver with
+        // nothing but the symbol to go on.
+        setAccessibilityLabel(name)
+        setAccessibilityHelp(toolTip)
         isEnabled = itemURLs.isEmpty == false
         alphaValue = isEnabled ? 1 : 0.45
         invalidateIntrinsicContentSize()

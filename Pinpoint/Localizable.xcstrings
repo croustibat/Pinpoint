@@ -58,6 +58,240 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "10 secondes" } }
       }
     },
+    "a11y.canvas" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Annotation canvas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone d’annotation" } }
+      }
+    },
+    "a11y.canvas.image" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot being annotated" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Capture en cours d’annotation" } }
+      }
+    },
+    "a11y.card.notSelected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not selected" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Non sélectionnée" } }
+      }
+    },
+    "a11y.card.selected" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Selected" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélectionnée" } }
+      }
+    },
+    "a11y.card.thumbnail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview of %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aperçu de %@" } }
+      }
+    },
+    "a11y.crop.move" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag to move the crop area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser pour déplacer la zone de recadrage" } }
+      }
+    },
+    "a11y.crop.overlay" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Crop area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone de recadrage" } }
+      }
+    },
+    "a11y.handle.arrow.tail" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow tail handle" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de départ de la flèche" } }
+      }
+    },
+    "a11y.handle.arrow.tip" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow tip handle" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de pointe de la flèche" } }
+      }
+    },
+    "a11y.handle.bottom" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord bas" } }
+      }
+    },
+    "a11y.handle.bottomLeft" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom-left corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin bas-gauche" } }
+      }
+    },
+    "a11y.handle.bottomRight" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "bottom-right corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin bas-droit" } }
+      }
+    },
+    "a11y.handle.left" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "left edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord gauche" } }
+      }
+    },
+    "a11y.handle.resize" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Resize handle, %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Poignée de redimensionnement, %@" } }
+      }
+    },
+    "a11y.handle.right" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "right edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord droit" } }
+      }
+    },
+    "a11y.handle.top" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top edge" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "bord haut" } }
+      }
+    },
+    "a11y.handle.topLeft" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top-left corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin haut-gauche" } }
+      }
+    },
+    "a11y.handle.topRight" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "top-right corner" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "coin haut-droit" } }
+      }
+    },
+    "a11y.marker" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Marker %1$lld: %2$@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repère %1$lld : %2$@" } }
+      }
+    },
+    "a11y.marker.delete" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete marker %lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer le repère %lld" } }
+      }
+    },
+    "a11y.marker.hint" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag to move this marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser pour déplacer ce repère" } }
+      }
+    },
+    "a11y.marker.note" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description of marker %lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Description du repère %lld" } }
+      }
+    },
+    "a11y.marker.position" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld percent from the left, %2$lld percent from the top" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld pour cent depuis la gauche, %2$lld pour cent depuis le haut" } }
+      }
+    },
+    "a11y.marker.untitled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Marker %lld, no description" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repère %lld, sans description" } }
+      }
+    },
+    "a11y.region.empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No region selected yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune région sélectionnée" } }
+      }
+    },
+    "a11y.region.selection" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Region selection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélection de région" } }
+      }
+    },
+    "a11y.region.size" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld by %2$lld" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$lld sur %2$lld" } }
+      }
+    },
+    "a11y.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$lld screenshots" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$lld captures" } }
+      }
+    },
+    "a11y.shape.arrow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Arrow annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annotation flèche" } }
+      }
+    },
+    "a11y.shape.delete" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer cette annotation" } }
+      }
+    },
+    "a11y.shape.rectangle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rectangle annotation" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annotation rectangle" } }
+      }
+    },
+    "a11y.shape.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hidden area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone masquée" } }
+      }
+    },
+    "a11y.shelf.dateFilter" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Date filter" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Filtre par date" } }
+      }
+    },
+    "a11y.shelf.refresh" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Refresh the shelf" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Actualiser l’étagère" } }
+      }
+    },
+    "a11y.shelf.results" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld screenshots shown" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld captures affichées" } }
+      }
+    },
+    "a11y.shelf.settings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les réglages" } }
+      }
+    },
+    "a11y.shelf.sortOrder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sort order" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ordre de tri" } }
+      }
+    },
+    "a11y.window.empty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No window under the pointer" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune fenêtre sous le pointeur" } }
+      }
+    },
+    "a11y.window.selection" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Window selection" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélection de fenêtre" } }
+      }
+    },
     "Add to favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter aux favoris" } }
@@ -154,6 +388,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vider l’historique" } }
       }
     },
+    "Clear search" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la recherche" } }
+      }
+    },
     "Clear selection" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Effacer la sélection" } }
@@ -199,6 +438,54 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier pour l’agent" } }
       }
     },
+    "export.ax.disabled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "disabled" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "désactivé" } }
+      }
+    },
+    "export.ax.value.policy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (text field — enable “Include what is typed in fields” in Pinpoint’s settings)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "masquée (champ texte — activez « Inclure ce qui est saisi dans les champs » dans les réglages de Pinpoint)" } }
+      }
+    },
+    "export.ax.value.redacted" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (the user painted over this element — its name and its contents were left out)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "retenue (l’utilisateur a masqué cet élément — son nom et son contenu ont été écartés)" } }
+      }
+    },
+    "export.ax.value.secure" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "withheld (secure field — Pinpoint never reads it)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "masquée (champ sécurisé — Pinpoint ne la lit jamais)" } }
+      }
+    },
+    "export.markers.accessibility.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "“UI” lines name the interface element found under the marker in the macOS accessibility tree at capture time — its role, its label, the app owning it, and its box in this image. “Path” is the chain of containers around it." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les lignes « UI » nomment l’élément d’interface trouvé sous le repère dans l’arbre d’accessibilité macOS au moment de la capture — son rôle, son libellé, l’app qui le possède et sa boîte dans cette image. « Path » est la chaîne de conteneurs qui l’entoure." } }
+      }
+    },
+    "permission.accessibility.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "To name the element under each marker, Pinpoint needs the Accessibility permission. Open System Settings ▸ Privacy & Security ▸ Accessibility, turn Pinpoint on, then relaunch the app. Captures keep working without it — they just carry no interface details." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pour nommer l’élément sous chaque repère, Pinpoint a besoin de l’autorisation Accessibilité. Ouvrez Réglages Système ▸ Confidentialité et sécurité ▸ Accessibilité, activez Pinpoint, puis relancez l’application. Les captures continuent de fonctionner sans elle — elles ne portent simplement aucun détail d’interface." } }
+      }
+    },
+    "permission.accessibility.openSettings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les Réglages Système" } }
+      }
+    },
+    "permission.accessibility.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t read the interface" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint ne peut pas lire l’interface" } }
+      }
+    },
     "Save image…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer l’image…" } }
@@ -222,6 +509,11 @@
     "Couldn’t copy the selected files." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de copier les fichiers sélectionnés." } }
+      }
+    },
+    "Export failed" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Échec de l’export" } }
       }
     },
     "Couldn’t save the watched folder." : {
@@ -269,9 +561,9 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Terminé" } }
       }
     },
-    "Drag a rectangle · Esc to cancel" : {
+    "Drag a rectangle · Space to pick a window · Esc to cancel" : {
       "localizations" : {
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Échap pour annuler" } }
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Trace un rectangle · Espace pour choisir une fenêtre · Échap pour annuler" } }
       }
     },
     "Drag file" : {
@@ -290,6 +582,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser %lld fichiers" } }
       }
     },
+    "Drag or nudge with arrows · ↵ to capture · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplace ou décale aux flèches · ↵ pour capturer · Échap pour annuler" } }
+      }
+    },
     "Drag the selected screenshots" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisser les captures sélectionnées" } }
@@ -305,9 +602,19 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer une flèche" } }
       }
     },
+    "Drag to draw an arrow · click one to move or re-aim it" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer une flèche · clique-en une pour la déplacer ou la réorienter" } }
+      }
+    },
     "Drag to draw a rectangle" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer un rectangle" } }
+      }
+    },
+    "Drag to draw a rectangle · click one to move or resize it" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Glisse pour tracer un rectangle · clique-en un pour le déplacer ou le redimensionner" } }
       }
     },
     "Drop screenshots into %@ or change the watched folder in Settings." : {
@@ -315,15 +622,75 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dépose des captures dans %@ ou change le dossier surveillé dans les Réglages." } }
       }
     },
+    "editor.marker.read" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read in the image: “%@”" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lu dans l’image : « %@ »" } }
+      }
+    },
     "Embed legend in the image" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure la légende dans l’image" } }
+      }
+    },
+    "export.coordinates" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Positions are given in pixels from the top-left corner (0, 0), then as a percentage of the image size." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les positions sont données en pixels depuis le coin haut-gauche (0, 0), puis en pourcentage de la taille de l’image." } }
       }
     },
     "export.header" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "# Annotated capture — %lld×%lld px" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "# Capture annotée — %lld×%lld px" } }
+      }
+    },
+    "export.json.button" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Export JSON…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Exporter en JSON…" } }
+      }
+    },
+    "export.json.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture couldn’t be written as JSON." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture n’a pas pu être écrite en JSON." } }
+      }
+    },
+    "export.markers.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… are the numbers drawn on the image; the code in brackets is a stable ID for that marker." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "M1, M2… correspondent aux numéros dessinés sur l’image ; le code entre crochets est un identifiant stable de ce repère." } }
+      }
+    },
+    "export.markers.text.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "“Text” lines are what Pinpoint read in the pixels under the marker, on this Mac. A marker’s description may have been pre-filled from such a read and then edited by the user." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les lignes « Text » sont ce que Pinpoint a lu dans les pixels sous le repère, sur ce Mac. La description d’un repère a pu être pré-remplie à partir d’une telle lecture, puis modifiée par l’utilisateur." } }
+      }
+    },
+    "export.shapes.heading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shapes" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Formes" } }
+      }
+    },
+    "export.shapes.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unnumbered outlines drawn on the image: rectangles are listed top-left → bottom-right, arrows tail → tip, followed by the size of their bounding box." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tracés non numérotés dessinés sur l’image : les rectangles sont donnés haut-gauche → bas-droite, les flèches base → pointe, suivis de la taille de leur boîte englobante." } }
+      }
+    },
+    "export.shapes.redaction.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Une zone masquée est une région que l’utilisateur a recouverte avant de partager : ses pixels ne sont pas dans l’image, et rien n’a été collecté sur ce qui se trouvait dessous. Demandez à l’utilisateur plutôt que de deviner." } }
+      }
+    },
+    "export.task.heading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Task — %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tâche — %@" } }
       }
     },
     "Favorites" : {
@@ -346,9 +713,49 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Disque plein" } }
       }
     },
+    "Folder unavailable" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Dossier introuvable" } }
+      }
+    },
     "Follow the macOS screenshot location" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Suivre l’emplacement des captures de macOS" } }
+      }
+    },
+    "format.json.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "JSON" } }
+      }
+    },
+    "format.markdown.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown" } }
+      }
+    },
+    "handoff.error.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The capture was copied to the clipboard, but the files for the agent couldn’t be written to %@: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La capture a été copiée dans le presse-papier, mais les fichiers destinés à l’agent n’ont pas pu être écrits dans %@ : %@" } }
+      }
+    },
+    "hint.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag over what should never leave your Mac" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser sur ce qui ne doit jamais quitter votre Mac" } }
+      }
+    },
+    "hint.redaction.some" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag over what to hide · click one to move or resize it" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Faites glisser sur ce qu’il faut masquer · cliquez sur une zone pour la déplacer ou la redimensionner" } }
+      }
+    },
+    "Hover a window · click to capture · Space for a rectangle · Esc to cancel" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Survole une fenêtre · clique pour capturer · Espace pour un rectangle · Échap pour annuler" } }
       }
     },
     "Instructions for the agent" : {
@@ -417,6 +824,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repères (position en % de l’image, origine haut-gauche) :" } }
       }
     },
+    "markup.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hidden area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Zone masquée" } }
+      }
+    },
     "More actions" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus d’actions" } }
@@ -432,14 +845,29 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer la sélection" } }
       }
     },
+    "Move this screenshot to the Trash?" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer cette capture dans la corbeille ?" } }
+      }
+    },
     "Move to folder" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déplacer vers un dossier" } }
       }
     },
+    "Move to Trash" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer dans la corbeille" } }
+      }
+    },
     "Newest" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus récent" } }
+      }
+    },
+    "No matching screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture correspondante" } }
       }
     },
     "No recent captures" : {
@@ -452,14 +880,29 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun écran disponible pour la capture." } }
       }
     },
+    "No screenshot matches the current search and filters." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture ne correspond à la recherche et aux filtres actuels." } }
+      }
+    },
     "No screenshots" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture d’écran" } }
       }
     },
+    "Nothing was written to the clipboard. The annotated image couldn’t be rendered." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien n’a été écrit dans le presse-papiers. L’image annotée n’a pas pu être générée." } }
+      }
+    },
     "Off" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivé" } }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }
       }
     },
     "Older" : {
@@ -487,6 +930,30 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pause avant la capture pour disposer les éléments ou ouvrir un menu." } }
       }
     },
+    "permission.screenRecording.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Captures stay blocked until Pinpoint is allowed to record the screen. Open System Settings ▸ Privacy & Security ▸ Screen Recording, turn Pinpoint on, then relaunch the app." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les captures resteront impossibles tant que Pinpoint n’est pas autorisé à enregistrer l’écran. Ouvrez Réglages Système ▸ Confidentialité et sécurité ▸ Enregistrement de l’écran, activez Pinpoint, puis relancez l’application." } }
+      }
+    },
+    "permission.screenRecording.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint isn’t allowed to record the screen." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint n’est pas autorisé à enregistrer l’écran." } }
+      }
+    },
+    "permission.screenRecording.openSettings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ouvrir les Réglages Système" } }
+      }
+    },
+    "permission.screenRecording.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t record the screen" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint ne peut pas enregistrer l’écran" } }
+      }
+    },
     "Pinpoint Settings" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages Pinpoint" } }
@@ -512,6 +979,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Captures récentes" } }
       }
     },
+    "Redo" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rétablir" } }
+      }
+    },
     "Remove from favorites" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer des favoris" } }
@@ -525,6 +997,11 @@
     "Rename screenshot" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Renommer la capture" } }
+      }
+    },
+    "Reset filters" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réinitialiser les filtres" } }
       }
     },
     "Reveal" : {
@@ -542,6 +1019,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer" } }
       }
     },
+    "Search screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher des captures" } }
+      }
+    },
     "Select" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Sélectionner" } }
@@ -553,6 +1035,84 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld sélectionnées" } }
       }
     },
+    "settings.ax.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Adds a line under each marker naming the interface element it points at — its role, its label and the app owning it — read while the capture is taken. Needs the Accessibility permission, which is separate from Screen Recording." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajoute sous chaque repère une ligne nommant l’élément d’interface visé — son rôle, son libellé et l’app qui le possède — lu au moment de la capture. Nécessite l’autorisation Accessibilité, distincte de l’Enregistrement de l’écran." } }
+      }
+    },
+    "settings.ax.fieldValues" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Include what is typed in fields" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure ce qui est saisi dans les champs" } }
+      }
+    },
+    "settings.ax.fieldValues.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Off by default: the accessibility tree returns the whole contents of a field, including the part scrolled out of the picture. Password fields are never read, whatever this says." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactivé par défaut : l’arbre d’accessibilité renvoie tout le contenu d’un champ, y compris la partie sortie du cadre. Les champs de mot de passe ne sont jamais lus, quel que soit ce réglage." } }
+      }
+    },
+    "settings.ax.permission.grant" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow access…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autoriser l’accès…" } }
+      }
+    },
+    "settings.ax.permission.missing" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility permission required. Without it, captures work exactly as before — they just carry no interface details." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autorisation Accessibilité requise. Sans elle, les captures fonctionnent exactement comme avant — elles ne portent simplement aucun détail d’interface." } }
+      }
+    },
+    "settings.ax.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Interface context" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Contexte d’interface" } }
+      }
+    },
+    "settings.ax.toggle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe the element under each marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décrire l’élément sous chaque repère" } }
+      }
+    },
+    "settings.format.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Markdown reads well when pasted into a conversation; JSON is the same facts in the versioned contract, for a script that indexes them. Both are always written to the files for the agent." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Markdown se lit bien collé dans une conversation ; JSON reprend les mêmes faits dans le contrat versionné, pour un script qui les indexe. Les deux sont de toute façon écrits dans les fichiers pour l’agent." } }
+      }
+    },
+    "settings.format.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied text:" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte copié :" } }
+      }
+    },
+    "settings.format.unused" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unavailable while the legend is embedded: the clipboard then carries the image alone. The files for the agent are written in both formats either way." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Indisponible tant que la légende est incrustée : le presse-papier ne porte alors que l’image. Les fichiers pour l’agent sont écrits dans les deux formats quoi qu’il arrive." } }
+      }
+    },
+    "settings.ocr.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pre-fills a marker’s description with the line of text it points at, and writes that line into the files for the agent — so small text an agent would misread from the image travels as text. Read on this Mac; nothing is sent anywhere. Areas you have hidden are never read." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pré-remplit la description d’un repère avec la ligne de texte qu’il désigne, et écrit cette ligne dans les fichiers pour l’agent — pour que le petit texte qu’un agent lirait de travers sur l’image voyage sous forme de texte. Lu sur ce Mac ; rien n’est envoyé nulle part. Les zones que vous avez masquées ne sont jamais lues." } }
+      }
+    },
+    "settings.ocr.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Text in the capture" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Texte de la capture" } }
+      }
+    },
+    "settings.ocr.toggle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read the text under each marker" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Lire le texte sous chaque repère" } }
+      }
+    },
     "Settings…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages…" } }
@@ -561,6 +1121,24 @@
     "Shelf" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Étagère" } }
+      }
+    },
+    "shelf.delete.confirm.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing is erased until you empty the Trash." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien n’est effacé tant que la corbeille n’est pas vidée." } }
+      }
+    },
+    "shelf.delete.confirm.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move %lld screenshots to the Trash?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Placer %lld captures dans la corbeille ?" } }
+      }
+    },
+    "shelf.empty.missingFolder.description" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint can’t read %@ anymore. It may have been moved, renamed, or unmounted." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint n’arrive plus à lire %@. Le dossier a peut-être été déplacé, renommé ou démonté." } }
       }
     },
     "Shelf…" : {
@@ -612,9 +1190,68 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Style :" } }
       }
     },
+    "task.bug.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at a defect. Find its cause before proposing anything: locate the code that produces what is marked, explain why it behaves this way, then propose the smallest change that addresses the cause rather than the symptom. If the capture isn’t enough to be sure, say what you would need to look at." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent un défaut. Cherchez-en la cause avant de proposer quoi que ce soit : localisez le code qui produit ce qui est marqué, expliquez pourquoi il se comporte ainsi, puis proposez la plus petite modification qui traite la cause plutôt que le symptôme. Si la capture ne suffit pas à en être sûr, dites ce qu’il faudrait aller regarder." } }
+      }
+    },
+    "task.bug.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Bug" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Bug" } }
+      }
+    },
+    "task.implement.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at what has to be built or changed. Match what is already there: reuse the existing components, naming and spacing rather than introducing your own. Change only what is marked, and list at the end anything you had to assume because the capture didn’t say." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent ce qui est à construire ou à modifier. Alignez-vous sur l’existant : réutilisez les composants, le nommage et les espacements déjà en place plutôt que d’introduire les vôtres. Ne modifiez que ce qui est marqué, et listez à la fin ce que vous avez dû supposer faute d’information dans la capture." } }
+      }
+    },
+    "task.implement.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Implement" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Implémentation" } }
+      }
+    },
+    "task.picker.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Task:" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tâche :" } }
+      }
+    },
+    "task.raw.caption" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No framing — the export carries only the markers and your instructions." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun cadrage — l’export ne porte que les repères et vos instructions." } }
+      }
+    },
+    "task.raw.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Raw" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Brut" } }
+      }
+    },
+    "task.review.guidance" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The markers point at things to assess, not to fix. Give a short verdict on each one — what works, what doesn’t, and what it would cost to change — and order your remarks by importance rather than by position on the image. Say plainly when something is fine as it is; only suggest a change where it is worth the effort." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les repères désignent des points à évaluer, pas à corriger. Donnez un verdict court sur chacun — ce qui fonctionne, ce qui ne fonctionne pas, et ce que coûterait un changement — et classez vos remarques par importance plutôt que par position sur l’image. Dites franchement quand quelque chose convient tel quel ; ne suggérez un changement que là où il en vaut la peine." } }
+      }
+    },
+    "task.review.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Revue" } }
+      }
+    },
     "The tip marks the exact pixel." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "La pointe désigne le pixel exact." } }
+      }
+    },
+    "The annotated image couldn’t be rendered." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "L’image annotée n’a pas pu être générée." } }
       }
     },
     "This month" : {
@@ -637,9 +1274,32 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Outil" } }
       }
     },
+    "tool.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hide" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Masquer" } }
+      }
+    },
+    "Undo" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annuler" } }
+      }
+    },
     "Unknown" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inconnu" } }
+      }
+    },
+    "url.last.empty.body" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint writes capture.png, capture.md and capture.json to %@ every time you copy from the editor. Take a capture, copy it, then try again." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Pinpoint écrit capture.png, capture.md et capture.json dans %@ à chaque copie depuis l’éditeur. Faites une capture, copiez-la, puis réessayez." } }
+      }
+    },
+    "url.last.empty.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No capture to open yet" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture à ouvrir" } }
       }
     },
     "Use the current macOS location" : {
@@ -660,6 +1320,12 @@
     "White ring + drop shadow." : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anneau blanc + ombre portée." } }
+      }
+    },
+    "window.untitled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Untitled window" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Fenêtre sans titre" } }
       }
     },
     "Yesterday" : {

@@ -23,6 +23,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Sparkle updater. Created (and started) at launch so scheduled background
     /// checks run; the menu item below also triggers a manual check.
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    /// Deep links that arrived before the app finished launching (#58).
+    ///
+    /// A cold `open pinpoint://capture` is delivered as an Apple Event between
+    /// `applicationWillFinishLaunching` and `applicationDidFinishLaunching`, so
+    /// acting on it straight away would run the capture flow before the status
+    /// item, the shortcuts and the observers exist. They queue here and are
+    /// replayed at the end of launch.
+    private var pendingURLs: [URL] = []
+    private var hasFinishedLaunching = false
+    /// Whether a deep link is already showing an alert. A URL can be fired in a
+    /// loop from a web page; one modal at a time is the difference between an
+    /// explanation and a lock-out.
+    private var isPresentingURLAlert = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -51,6 +64,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                            name: NSWindow.didBecomeKeyNotification, object: nil)
         center.addObserver(self, selector: #selector(refreshActivationPolicy),
                            name: NSWindow.willCloseNotification, object: nil)
+
+        hasFinishedLaunching = true
+        let queued = pendingURLs
+        pendingURLs = []
+        queued.forEach(handle)
+    }
+
+    // MARK: - Deep links (#58)
+
+    /// Entry point for `pinpoint://…`, declared in `project.yml` under
+    /// `CFBundleURLTypes`. See `URLCommand` for what is accepted, what is
+    /// refused, and why the list is as short as it is.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard hasFinishedLaunching else {
+            pendingURLs.append(contentsOf: urls)
+            return
+        }
+        urls.forEach(handle)
+    }
+
+    private func handle(_ url: URL) {
+        guard let command = URLCommand(url) else { return }
+        switch command {
+        case .capture:
+            // The app is `.accessory` with no window open, so nothing here is
+            // in front of the user yet. The overlay puts itself on screen at
+            // `.screenSaver` level and `RegionSelectionController` activates
+            // the app, which is what makes a cold deep link land on top of
+            // whatever the user was looking at.
+            startCapture()
+        case .openLast:
+            openLastHandoffInEditor()
+        case .revealLast(let file):
+            revealHandoffFile(file)
+        }
+    }
+
+    /// Reopens `last/capture.png` in the annotation editor, through the same
+    /// notification the shelf uses for "Edit in Pinpoint".
+    private func openLastHandoffInEditor() {
+        let png = FileHandoff.latestPNG
+        guard FileManager.default.fileExists(atPath: png.path) else {
+            presentNoHandoffAlert()
+            return
+        }
+        NotificationCenter.default.post(name: .pinpointOpenInEditor, object: png)
+    }
+
+    /// Shows one of the handoff files in the Finder.
+    private func revealHandoffFile(_ file: URLCommand.HandoffFile) {
+        let url = file.url
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            presentNoHandoffAlert()
+            return
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     /// Switches the app between `.regular` (Dock icon + ⌘Tab) and `.accessory`
@@ -89,7 +158,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(fullScreenItem)
         menu.addItem(.separator())
 
-        let shelfItem = NSMenuItem(title: String(localized: "Shelf…"), action: #selector(openShelf), keyEquivalent: "")
+        // Mirrors the global ⌘⇧2 shortcut (see `KeyboardShortcuts.Name.openShelf`),
+        // the same way the capture items advertise ⌘⇧1 / ⌘⇧3.
+        let shelfItem = NSMenuItem(title: String(localized: "Shelf…"), action: #selector(openShelf), keyEquivalent: "2")
+        shelfItem.keyEquivalentModifierMask = [.command, .shift]
         shelfItem.target = self
         menu.addItem(shelfItem)
 
@@ -160,7 +232,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
               let record = CaptureHistory.shared.records.first(where: { $0.id == id }),
               let image = CaptureHistory.shared.image(for: record) else { return }
         presentEditor(image: image, recordID: record.id,
-                      pins: record.pins, shapes: record.shapes, context: record.context)
+                      pins: record.pins, shapes: record.shapes, context: record.context,
+                      accessibility: CaptureHistory.shared.accessibility(for: record))
     }
 
     @objc private func clearHistory() {
@@ -174,9 +247,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func captureFullScreen() {
         Task { @MainActor in
             do {
-                let image = try await ScreenCapture.captureDisplayUnderCursor()
-                let record = CaptureHistory.shared.add(image: image)
-                presentEditor(image: image, recordID: record?.id)
+                let capture = try await ScreenCapture.captureDisplayUnderCursor()
+                let record = CaptureHistory.shared.add(image: capture.image,
+                                                       accessibility: capture.accessibility)
+                presentEditor(image: capture.image, recordID: record?.id,
+                              accessibility: capture.accessibility)
             } catch {
                 presentCaptureError(error)
             }
@@ -240,9 +315,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
 
             do {
-                let image = try await ScreenCapture.captureRegion(region)
-                let record = CaptureHistory.shared.add(image: image)
-                presentEditor(image: image, recordID: record?.id)
+                let capture = try await ScreenCapture.captureRegion(region)
+                let record = CaptureHistory.shared.add(image: capture.image,
+                                                       accessibility: capture.accessibility)
+                presentEditor(image: capture.image, recordID: record?.id,
+                              accessibility: capture.accessibility)
             } catch {
                 presentCaptureError(error)
             }
@@ -260,7 +337,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         let record = CaptureHistory.shared.add(image: image)
-        presentEditor(image: image, recordID: record?.id, sourceURL: url)
+        // A file from `last/` is the handoff contract, not a shelf screenshot:
+        // that folder is replaced wholesale on the next copy, so the
+        // `-cropped.png` a crop would drop beside it would both pollute what an
+        // agent reads there and vanish without notice. Everything else keeps
+        // writing its crop next to the original, which is what feeds it back to
+        // the shelf.
+        let source = FileHandoff.isInLatestDirectory(url) ? nil : url
+        presentEditor(image: image, recordID: record?.id, sourceURL: source)
     }
 
     /// Loads a bitmap at its native pixel size. `NSImage(contentsOf:)` would honor
@@ -304,17 +388,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor
     private func presentEditor(image: NSImage, recordID: UUID?, sourceURL: URL? = nil,
-                               pins: [Pin] = [], shapes: [Markup] = [], context: String = "") {
+                               pins: [Pin] = [], shapes: [Markup] = [], context: String = "",
+                               accessibility: AXSnapshot? = nil) {
         let controller = EditorWindowController(
             image: image,
             initialPins: pins,
             initialShapes: shapes,
             initialContext: context,
+            initialAccessibility: accessibility,
             sourceURL: sourceURL,
-            onPersist: { pins, shapes, context, image in
+            onPersist: { pins, shapes, context, image, accessibility in
                 guard let recordID else { return }
                 CaptureHistory.shared.update(id: recordID, pins: pins, shapes: shapes, context: context)
                 CaptureHistory.shared.replaceImage(id: recordID, image: image)
+                // Only the crop moves the snapshot, but it moves both at once,
+                // so they're re-persisted together — a stale sidecar would point
+                // at a region the image no longer shows.
+                CaptureHistory.shared.replaceAccessibility(id: recordID, snapshot: accessibility)
                 if let sourceURL {
                     Self.writeCroppedFile(from: image, nextTo: sourceURL)
                 }
@@ -329,6 +419,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @MainActor
     private func presentCaptureError(_ error: Error) {
+        // Missing screen-recording permission: the preflight already presented the
+        // dedicated alert (with the System Settings link), so don't stack a second.
+        guard !ScreenCapture.isPermissionError(error) else { return }
+
         let alert = NSAlert()
         alert.messageText = String(localized: "Capture failed")
         alert.informativeText = String(
@@ -336,6 +430,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             defaultValue: "\(error.localizedDescription)\n\nMake sure Pinpoint has the “Screen Recording” permission in System Settings ▸ Privacy & Security, then relaunch the app."
         )
         alert.alertStyle = .warning
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
+    /// Explains that there is nothing to open yet, and where the files will
+    /// appear once there is. Only reachable from a deep link — everything in
+    /// the UI that could show this is disabled instead.
+    @MainActor
+    private func presentNoHandoffAlert() {
+        guard !isPresentingURLAlert else { return }
+        isPresentingURLAlert = true
+        defer { isPresentingURLAlert = false }
+
+        let alert = NSAlert()
+        alert.messageText = String(localized: "url.last.empty.title",
+                                   defaultValue: "No capture to open yet")
+        alert.informativeText = String(
+            localized: "url.last.empty.body",
+            defaultValue: "Pinpoint writes capture.png, capture.md and capture.json to \(FileHandoff.latestDirectory.path) every time you copy from the editor. Take a capture, copy it, then try again."
+        )
+        alert.alertStyle = .informational
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
     }

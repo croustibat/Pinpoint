@@ -43,6 +43,8 @@ struct ScreenshotCardView: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: thumbnailWidth, height: 126)
+                        .accessibilityLabel(String(localized: "a11y.card.thumbnail",
+                                                   defaultValue: "Preview of \(title)"))
                 } else {
                     ProgressView()
                         .controlSize(.small)
@@ -56,13 +58,14 @@ struct ScreenshotCardView: View {
                     if !selectionMode {
                         Button(action: onEditInPinpoint) {
                             Image(systemName: "pin.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.title3.weight(.semibold))
                                 .foregroundStyle(.white, .black.opacity(0.45))
                                 .padding(.vertical, 8)
                                 .padding(.leading, 8)
                         }
                         .buttonStyle(.plain)
                         .help("Edit in Pinpoint")
+                        .accessibilityLabel(Text("Edit in Pinpoint"))
                     }
 
                     Menu {
@@ -85,27 +88,31 @@ struct ScreenshotCardView: View {
                         Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
                     } label: {
                         Image(systemName: "ellipsis.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.title3.weight(.semibold))
                             .foregroundStyle(.white, .black.opacity(0.45))
                             .padding(8)
                     }
                     .menuStyle(.borderlessButton)
+                    .accessibilityLabel(Text("More actions"))
                 }
             }
             .overlay(alignment: .topLeading) {
                 if selectionMode {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.title2.weight(.semibold))
                         .foregroundStyle(isSelected ? .white : .secondary, isSelected ? Color.accentColor : .clear)
                         .padding(8)
+                        .accessibilityLabel(selectionStateLabel)
                 } else {
                     Button(action: onToggleFavorite) {
                         Image(systemName: isFavorite ? "star.fill" : "star")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.title3.weight(.semibold))
                             .foregroundStyle(isFavorite ? .yellow : .secondary, .thinMaterial)
                             .padding(8)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(favoriteLabel)
+                    .help(favoriteLabel)
                 }
             }
 
@@ -141,6 +148,19 @@ struct ScreenshotCardView: View {
         .draggable(item.url) {
             dragPreview
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // Single and double click are mouse-only affordances; both need an
+        // equivalent in VoiceOver's actions menu.
+        .accessibilityAction {
+            onActivate()
+            if selectionMode { onSelect() }
+        }
+        .accessibilityAction(named: Text("Open details")) {
+            onActivate()
+            onOpenDetails()
+        }
         .task(id: item.url) {
             thumbnail = await ThumbnailService.shared.thumbnail(for: item.url)
         }
@@ -151,7 +171,7 @@ struct ScreenshotCardView: View {
         if isEditingTitle {
             TextField("Title", text: $draftTitle)
                 .textFieldStyle(.roundedBorder)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.headline)
                 .focused($titleFieldFocused)
                 .onAppear { titleFieldFocused = true }
                 .onSubmit(commitTitleEdit)
@@ -161,7 +181,7 @@ struct ScreenshotCardView: View {
                 }
         } else {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.headline)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .contentShape(Rectangle())
@@ -183,6 +203,20 @@ struct ScreenshotCardView: View {
 
     private func cancelTitleEdit() {
         isEditingTitle = false
+    }
+
+    private var favoriteLabel: String {
+        isFavorite
+            ? String(localized: "Remove from favorites")
+            : String(localized: "Add to favorites")
+    }
+
+    /// The checkmark in selection mode is decoration only — the card carries the
+    /// tap target — so it has to say out loud what its shape shows.
+    private var selectionStateLabel: String {
+        isSelected
+            ? String(localized: "a11y.card.selected", defaultValue: "Selected")
+            : String(localized: "a11y.card.notSelected", defaultValue: "Not selected")
     }
 
     private var selectionBackground: some ShapeStyle {

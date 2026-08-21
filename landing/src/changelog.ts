@@ -16,9 +16,29 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.7.0',
+    date: '2026-08-21',
+    latest: true,
+    changes: [
+      { type: 'added', text: 'Pinpoint now hands your capture to an AI agent as files. Every copy also writes capture.png, capture.md and capture.json to a stable folder, so an agent opens the real image with its own Read tool instead of choking on an inline one.' },
+      { type: 'added', text: 'Accessibility context under every marker — a pin is no longer just a percentage but “AXButton ‘Login’ in Safari”, turning a spot on your screen into an anchor an agent can act on. Optional, and off until you grant the permission.' },
+      { type: 'added', text: 'On-device OCR reads the text under each marker — error messages, logs, class names — and sends it along with the capture. Nothing is uploaded anywhere.' },
+      { type: 'added', text: 'A pinpoint command line, an MCP server (pinpoint mcp) and a pinpoint:// URL scheme, so agents, scripts and shell hooks can drive Pinpoint. The MCP server hands over file paths, never inline images.' },
+      { type: 'added', text: 'Redaction tool (⌘4) — drag over a token or an API key and it is painted out of the picture, the text, the JSON and the accessibility context alike, before anything is shared.' },
+      { type: 'added', text: 'Undo and Redo (⌘Z / ⇧⌘Z) throughout the editor — and arrows and rectangles can finally be selected, moved and resized after you have drawn them.' },
+      { type: 'added', text: 'Window capture — hold Space while selecting to highlight a single window and grab it cleanly, rounded corners included.' },
+      { type: 'added', text: 'The selection rectangle is now adjustable before you commit it: drag it around, resize it by its handles, nudge it with the arrow keys, Enter to confirm.' },
+      { type: 'added', text: 'Task presets (Bug, Review, Implement) prefill the framing you keep retyping, and a structured JSON export documents every capture against a published schema.' },
+      { type: 'added', text: 'Shelf: search your library, contextual empty states, and a confirmation before deleting several screenshots at once. Editor: delete the selected marker with ⌫, tool shortcuts ⌘1/⌘2/⌘3, and tooltips everywhere.' },
+      { type: 'added', text: 'VoiceOver labels, Dynamic Type and reduce-motion support across the editor and the shelf.' },
+      { type: 'fixed', text: 'What you see is now what you export: on-screen marker and stroke sizes follow the same formula as the exported image, so a small capture no longer ships with oversized annotations.' },
+      { type: 'fixed', text: 'Exported images were silently rendered at twice the requested size on Retina, which made every pixel coordinate in the copied text describe a grid half the size of the image it shipped with. Files are smaller and the numbers now match.' },
+      { type: 'fixed', text: 'A failed copy or save is reported instead of quietly showing “Copied!”, and the Screen Recording permission is checked before a capture, with a button that opens the right System Settings pane.' },
+    ],
+  },
+  {
     version: '0.6.0',
     date: '2026-07-14',
-    latest: true,
     changes: [
       { type: 'added', text: 'Crop tool in the editor — trim a capture with eight handles and a rule-of-thirds grid; existing markers and arrows are remapped into the cropped frame.' },
       { type: 'added', text: 'Optional capture timer — a 3, 5, or 10-second countdown before the shot so you can arrange your UI or open a menu; press Esc to cancel.' },

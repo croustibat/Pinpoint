@@ -12,6 +12,9 @@ struct ShelfView: View {
     @State private var selectedIDs = Set<URL>()
     @State private var activeItemID: URL?
     @State private var keyMonitor: Any?
+    @FocusState private var isSearchFieldFocused: Bool
+    @State private var itemsPendingDeletion: [ScreenshotItem] = []
+    @State private var isDeleteConfirmationPresented = false
     private let gridSpacing: CGFloat = 14
     private let gridPadding: CGFloat = 16
     private let gridColumnCount = 2
@@ -35,6 +38,16 @@ struct ShelfView: View {
                 }
             )
         }
+        .confirmationDialog(
+            deleteConfirmationTitle,
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Move to Trash"), role: .destructive, action: confirmPendingDeletion)
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "shelf.delete.confirm.message", defaultValue: "Nothing is erased until you empty the Trash."))
+        }
         .onAppear(perform: installKeyboardMonitor)
         .onDisappear(perform: removeKeyboardMonitor)
         .onChange(of: visibleItems.map(\.id), initial: true) { _, _ in
@@ -48,6 +61,7 @@ struct ShelfView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Shelf")
                         .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
 
                     Text(store.watchedFolderURL.lastPathComponent)
                         .font(.caption)
@@ -75,6 +89,8 @@ struct ShelfView: View {
                     Image(systemName: "gearshape")
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel(settingsLabel)
+                .help(settingsLabel)
 
                 Button {
                     Task { await store.refresh() }
@@ -82,7 +98,11 @@ struct ShelfView: View {
                     Image(systemName: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel(refreshLabel)
+                .help(refreshLabel)
             }
+
+            searchField
 
             HStack {
                 Menu {
@@ -101,6 +121,10 @@ struct ShelfView: View {
                     Label(store.selectedDateFilter.title, systemImage: "calendar")
                 }
                 .menuStyle(.borderlessButton)
+                // The menu shows the active filter and nothing else, so on its
+                // own VoiceOver announces "All" with no hint of what it filters.
+                .accessibilityLabel(String(localized: "a11y.shelf.dateFilter", defaultValue: "Date filter"))
+                .accessibilityValue(store.selectedDateFilter.title)
 
                 Button {
                     store.showsFavoritesOnly.toggle()
@@ -110,6 +134,7 @@ struct ShelfView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Show favorites only")
+                .accessibilityAddTraits(store.showsFavoritesOnly ? .isSelected : [])
 
                 Spacer()
 
@@ -129,6 +154,8 @@ struct ShelfView: View {
                     Label(store.selectedSortOrder.title, systemImage: "arrow.up.arrow.down")
                 }
                 .menuStyle(.borderlessButton)
+                .accessibilityLabel(String(localized: "a11y.shelf.sortOrder", defaultValue: "Sort order"))
+                .accessibilityValue(store.selectedSortOrder.title)
             }
             .font(.subheadline)
 
@@ -139,27 +166,50 @@ struct ShelfView: View {
         .padding(16)
     }
 
+    /// Free-text filter over the shelf. The shelf lives in a plain window with no
+    /// navigation container, so `.searchable()` has nothing to attach to — a
+    /// styled text field in the header plays the same role.
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            TextField("Search screenshots", text: $store.searchQuery)
+                .textFieldStyle(.plain)
+                .focused($isSearchFieldFocused)
+                .onSubmit { isSearchFieldFocused = false }
+                // A plain text field takes its placeholder as label only while
+                // it is empty; naming it explicitly keeps it a search field
+                // once something has been typed into it.
+                .accessibilityLabel(String(localized: "Search screenshots"))
+
+            if store.searchQuery.isEmpty == false {
+                Button {
+                    store.searchQuery = ""
+                    isSearchFieldFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Clear search")
+                .accessibilityLabel(Text("Clear search"))
+            }
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+    }
+
     @ViewBuilder
     private var content: some View {
         if store.isLoading && store.screenshots.isEmpty {
             ProgressView("Loading screenshots…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if store.groupedScreenshots.isEmpty {
-            VStack(spacing: 12) {
-                ContentUnavailableView(
-                    "No screenshots",
-                    systemImage: "photo.on.rectangle.angled",
-                    description: Text("Drop screenshots into \(store.watchedFolderURL.lastPathComponent) or change the watched folder in Settings.")
-                )
-
-                if let error = store.lastErrorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
+            emptyState
         } else {
             GeometryReader { proxy in
                 let cardWidth = gridCardWidth(for: proxy.size.width)
@@ -183,7 +233,13 @@ struct ShelfView: View {
                         }
 
                         if store.selectedDateFilter != .all {
+                            // No section headers in this mode, so the grid
+                            // itself carries the "how many are we looking at"
+                            // that `SectionHeaderView` provides otherwise.
                             screenshotGrid(items: store.filteredScreenshots, columns: columns, cardWidth: cardWidth)
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(String(localized: "a11y.shelf.results",
+                                                           defaultValue: "\(store.filteredScreenshots.count) screenshots shown"))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -191,6 +247,77 @@ struct ShelfView: View {
                 }
             }
         }
+    }
+
+    /// An empty shelf means one of three different things — an unreachable
+    /// folder, a folder with nothing in it, or filters that hide everything —
+    /// and each one gets its own way out.
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            if store.watchedFolderIsReadable == false {
+                ContentUnavailableView {
+                    Label("Folder unavailable", systemImage: "folder.badge.questionmark")
+                } description: {
+                    Text(String(localized: "shelf.empty.missingFolder.description", defaultValue: "Pinpoint can’t read \(store.watchedFolderURL.lastPathComponent) anymore. It may have been moved, renamed, or unmounted."))
+                } actions: {
+                    Button("Choose a folder…") {
+                        store.chooseWatchedFolder()
+                    }
+                }
+            } else if store.hasActiveFilters {
+                ContentUnavailableView {
+                    Label("No matching screenshots", systemImage: "line.3.horizontal.decrease.circle")
+                } description: {
+                    Text("No screenshot matches the current search and filters.")
+                } actions: {
+                    Button("Reset filters") {
+                        store.resetFilters()
+                    }
+                }
+            } else {
+                ContentUnavailableView {
+                    Label("No screenshots", systemImage: "photo.on.rectangle.angled")
+                } description: {
+                    Text("Drop screenshots into \(store.watchedFolderURL.lastPathComponent) or change the watched folder in Settings.")
+                } actions: {
+                    Button("Choose a folder…") {
+                        store.chooseWatchedFolder()
+                    }
+                }
+            }
+
+            // The unreachable-folder state already says what went wrong.
+            if let error = store.lastErrorMessage, store.watchedFolderIsReadable {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(emptyStateAccessibilityLabel)
+    }
+
+    /// Which of the three empty states is showing, in one sentence. VoiceOver
+    /// lands on the group before its contents, and "empty" on its own doesn't
+    /// say whether it's the folder, the filters, or the shelf itself.
+    private var emptyStateAccessibilityLabel: String {
+        if store.watchedFolderIsReadable == false {
+            return String(localized: "Folder unavailable")
+        }
+        return store.hasActiveFilters
+            ? String(localized: "No matching screenshots")
+            : String(localized: "No screenshots")
+    }
+
+    private var settingsLabel: String {
+        String(localized: "a11y.shelf.settings", defaultValue: "Open settings")
+    }
+
+    private var refreshLabel: String {
+        String(localized: "a11y.shelf.refresh", defaultValue: "Refresh the shelf")
     }
 
     private var selectedItems: [ScreenshotItem] {
@@ -219,6 +346,7 @@ struct ShelfView: View {
                     Image(systemName: "space")
                 }
                 .help("Quick Look")
+                .accessibilityLabel(Text("Quick Look"))
                 .keyboardShortcut(.space, modifiers: [])
 
                 Button {
@@ -227,6 +355,7 @@ struct ShelfView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .help("Copy files")
+                .accessibilityLabel(Text("Copy files"))
                 .keyboardShortcut("c")
 
                 Button {
@@ -238,6 +367,7 @@ struct ShelfView: View {
                     Image(systemName: "folder")
                 }
                 .help("Move selection")
+                .accessibilityLabel(Text("Move selection"))
 
                 Menu {
                     Button(allSelectedItemsAreFavorites ? String(localized: "Remove from favorites") : String(localized: "Add to favorites"), systemImage: allSelectedItemsAreFavorites ? "star.slash" : "star") {
@@ -264,16 +394,15 @@ struct ShelfView: View {
                     Image(systemName: "ellipsis.circle")
                 }
                 .help("More actions")
+                .accessibilityLabel(Text("More actions"))
 
                 Button(role: .destructive) {
-                    let items = selectedItems
-                    selectedIDs.removeAll()
-                    selectionMode = false
-                    store.delete(items)
+                    requestDeletion(of: selectedItems)
                 } label: {
                     Image(systemName: "trash")
                 }
                 .help("Delete selection")
+                .accessibilityLabel(Text("Delete selection"))
                 .keyboardShortcut(.delete, modifiers: [])
 
                 Button {
@@ -282,6 +411,7 @@ struct ShelfView: View {
                     Image(systemName: "xmark")
                 }
                 .help("Clear selection")
+                .accessibilityLabel(Text("Clear selection"))
             }
             .buttonStyle(.bordered)
         }
@@ -328,11 +458,18 @@ struct ShelfView: View {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        let commandPressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
+
+        // Handled before the guard below: the search field must stay reachable
+        // even when the current filters leave nothing visible.
+        if commandPressed, isSearchFieldFocused == false, event.charactersIgnoringModifiers?.lowercased() == "f" {
+            isSearchFieldFocused = true
+            return nil
+        }
+
         guard shouldHandleKeyEvent else {
             return event
         }
-
-        let commandPressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
 
         if commandPressed, event.charactersIgnoringModifiers?.lowercased() == "c" {
             copyFocusedItems()
@@ -385,11 +522,7 @@ struct ShelfView: View {
     }
 
     private var shouldHandleKeyEvent: Bool {
-        guard visibleItems.isEmpty == false else {
-            return false
-        }
-
-        if renameTarget != nil {
+        if isSearchFieldFocused || isDeleteConfirmationPresented || renameTarget != nil {
             return false
         }
 
@@ -397,7 +530,7 @@ struct ShelfView: View {
             return false
         }
 
-        return true
+        return visibleItems.isEmpty == false
     }
 
     private func syncActiveItem() {
@@ -454,7 +587,7 @@ struct ShelfView: View {
                     onCopyImage: { store.copyImage(item) },
                     onCopyPath: { store.copyPaths([item]) },
                     onOpenDetails: { openDetailWindow(for: item) },
-                    onDelete: { store.delete(item) },
+                    onDelete: { requestDeletion(of: [item]) },
                     onQuickLook: { store.quickLook(item) },
                     onMove: { store.move(item) },
                     onRename: {
@@ -515,10 +648,7 @@ struct ShelfView: View {
 
     private func deleteFocusedItems() {
         if selectionMode, selectedItems.isEmpty == false {
-            let items = selectedItems
-            selectedIDs.removeAll()
-            selectionMode = false
-            store.delete(items)
+            requestDeletion(of: selectedItems)
             return
         }
 
@@ -526,8 +656,43 @@ struct ShelfView: View {
             return
         }
 
-        activeItemID = nil
-        store.delete(focusedItem)
+        requestDeletion(of: [focusedItem])
+    }
+
+    /// Every deletion path funnels through here: moving files to the Trash is
+    /// destructive enough to be worth one confirmation.
+    private func requestDeletion(of items: [ScreenshotItem]) {
+        guard items.isEmpty == false else {
+            return
+        }
+
+        itemsPendingDeletion = items
+        isDeleteConfirmationPresented = true
+    }
+
+    private func confirmPendingDeletion() {
+        let items = itemsPendingDeletion
+
+        guard items.isEmpty == false else {
+            return
+        }
+
+        if selectionMode {
+            selectionMode = false
+            selectedIDs.removeAll()
+        }
+
+        if let activeItemID, items.contains(where: { $0.id == activeItemID }) {
+            self.activeItemID = nil
+        }
+
+        store.delete(items)
+    }
+
+    private var deleteConfirmationTitle: String {
+        itemsPendingDeletion.count == 1
+            ? String(localized: "Move this screenshot to the Trash?")
+            : String(localized: "shelf.delete.confirm.title", defaultValue: "Move \(itemsPendingDeletion.count) screenshots to the Trash?")
     }
 
     private func toggleFavoriteFocusedItems() {
@@ -564,6 +729,7 @@ private struct RenameScreenshotView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Rename screenshot")
                 .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
 
             TextField("File name", text: $newName)
                 .textFieldStyle(.roundedBorder)

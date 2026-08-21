@@ -29,8 +29,14 @@ final class CaptureHistory {
 
     /// Saves the raw image and prepends a new record. Returns it (or nil if the
     /// PNG couldn't be written).
+    ///
+    /// `accessibility` is the tree read at the same instant as the pixels
+    /// (#55), stored beside the PNG so reopening a capture from "Recent
+    /// captures" can still name the element under a marker placed days later.
+    /// Best effort: if the sidecar can't be written the capture is still
+    /// recorded, it just carries no interface details.
     @discardableResult
-    func add(image: NSImage) -> CaptureRecord? {
+    func add(image: NSImage, accessibility: AXSnapshot? = nil) -> CaptureRecord? {
         guard let png = Self.pngData(from: image) else { return nil }
         let id = UUID()
         let fileName = "\(id.uuidString).png"
@@ -48,7 +54,8 @@ final class CaptureHistory {
             height: Int(image.size.height.rounded()),
             pins: [],
             shapes: [],
-            context: ""
+            context: "",
+            axFileName: writeSidecar(accessibility, for: id)
         )
         records.insert(record, at: 0)
         prune()
@@ -83,9 +90,22 @@ final class CaptureHistory {
         saveIndex()
     }
 
+    /// Replaces the accessibility snapshot of an existing record — what a crop
+    /// (#21) produces, since it narrows the region the snapshot describes.
+    ///
+    /// A nil snapshot deletes the sidecar rather than leaving a stale one: after
+    /// a crop, the old file would describe a region the image no longer shows.
+    func replaceAccessibility(id: UUID, snapshot: AXSnapshot?) {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        removeSidecar(records[index])
+        records[index].axFileName = writeSidecar(snapshot, for: id)
+        saveIndex()
+    }
+
     func clear() {
         for record in records {
             try? fileManager.removeItem(at: directory.appendingPathComponent(record.imageFileName))
+            removeSidecar(record)
         }
         records.removeAll()
         saveIndex()
@@ -104,14 +124,27 @@ final class CaptureHistory {
         return image
     }
 
+    /// The accessibility snapshot stored with a record, if any. Read lazily —
+    /// only the capture being edited needs it, and decoding all fifteen at
+    /// launch would be pure waste.
+    func accessibility(for record: CaptureRecord) -> AXSnapshot? {
+        guard let name = record.axFileName,
+              let data = try? Data(contentsOf: directory.appendingPathComponent(name)) else { return nil }
+        return try? JSONDecoder().decode(AXSnapshot.self, from: data)
+    }
+
     // MARK: - Persistence
 
     private func load() {
         guard let data = try? Data(contentsOf: indexURL),
               let decoded = try? JSONDecoder().decode([CaptureRecord].self, from: data) else { return }
-        // Keep only records whose image file still exists.
-        records = decoded.filter {
-            fileManager.fileExists(atPath: directory.appendingPathComponent($0.imageFileName).path)
+        // Keep only records whose image file still exists — and take their
+        // accessibility sidecars down with them, so a hand-deleted PNG doesn't
+        // leave an orphan JSON behind forever.
+        records = decoded.filter { record in
+            let alive = fileManager.fileExists(atPath: directory.appendingPathComponent(record.imageFileName).path)
+            if !alive { removeSidecar(record) }
+            return alive
         }
     }
 
@@ -124,8 +157,30 @@ final class CaptureHistory {
         guard records.count > maxEntries else { return }
         for record in records[maxEntries...] {
             try? fileManager.removeItem(at: directory.appendingPathComponent(record.imageFileName))
+            removeSidecar(record)
         }
         records.removeLast(records.count - maxEntries)
+    }
+
+    // MARK: - Accessibility sidecar
+
+    /// Writes `snapshot` as `<uuid>-ax.json` and returns its file name, or nil
+    /// when there was nothing to write or the write failed. Never throws: a
+    /// missing sidecar costs the interface details, nothing else.
+    private func writeSidecar(_ snapshot: AXSnapshot?, for id: UUID) -> String? {
+        guard let snapshot, let data = try? JSONEncoder().encode(snapshot) else { return nil }
+        let name = "\(id.uuidString)-ax.json"
+        do {
+            try data.write(to: directory.appendingPathComponent(name), options: .atomic)
+        } catch {
+            return nil
+        }
+        return name
+    }
+
+    private func removeSidecar(_ record: CaptureRecord) {
+        guard let name = record.axFileName else { return }
+        try? fileManager.removeItem(at: directory.appendingPathComponent(name))
     }
 
     /// Encodes an NSImage as PNG. Static so callers outside this type (e.g. the
