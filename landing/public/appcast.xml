@@ -7,6 +7,14 @@
     <language>en</language>
     <!-- NEWEST-ITEM-ANCHOR — scripts/update-appcast.sh inserts each release below this line. -->
     <item>
+      <title>Version 0.7.1</title>
+      <pubDate>Fri, 21 Aug 2026 15:59:43 +0200</pubDate>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/croustibat/Pinpoint/releases/download/v0.7.1/Pinpoint.dmg" sparkle:edSignature="EfPnsHHjiKEo6XW6NpHMuU3dJ7xIx2HSxx/Yvo6+FS+JoDE/cXYx8iCtJ7cuy/LBVsygb69n2NaAwyXgT04oAA==" length="3939059" type="application/octet-stream" />
+    </item>
+    <item>
       <title>Version 0.6.0</title>
       <pubDate>Wed, 15 Jul 2026 08:26:19 +0200</pubDate>
       <sparkle:version>6</sparkle:version>
