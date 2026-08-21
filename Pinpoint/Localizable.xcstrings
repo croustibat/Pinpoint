@@ -758,6 +758,11 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Survole une fenêtre · clique pour capturer · Espace pour un rectangle · Échap pour annuler" } }
       }
     },
+    "Install Command Line Tool…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Installer l’outil en ligne de commande…" } }
+      }
+    },
     "Instructions for the agent" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Instructions pour l’agent" } }
@@ -1075,6 +1080,72 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe the element under each marker" } },
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décrire l’élément sous chaque repère" } }
+      }
+    },
+    "settings.cli.action.remove" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove Command Line Tool…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Retirer l’outil en ligne de commande…" } }
+      }
+    },
+    "settings.cli.error.install" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t install the command line tool: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’installer l’outil en ligne de commande : %@" } }
+      }
+    },
+    "settings.cli.error.missingBinary" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The pinpoint tool couldn’t be found inside this app. Try reinstalling Pinpoint." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de trouver l’outil pinpoint dans cette app. Essayez de réinstaller Pinpoint." } }
+      }
+    },
+    "settings.cli.error.remove" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn’t remove the command line tool: %@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible de retirer l’outil en ligne de commande : %@" } }
+      }
+    },
+    "settings.cli.error.verify" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The link was created, but pinpoint --version didn’t respond. Nothing was left in place." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Le lien a été créé, mais pinpoint --version n’a pas répondu. Rien n’a été laissé en place." } }
+      }
+    },
+    "settings.cli.explanation" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Puts pinpoint on your Terminal’s PATH by creating one link in /usr/local/bin, so scripts and AI agents can call it directly — the same tool the Homebrew cask already provides this way. Needs administrator approval once, to create the link." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Place pinpoint dans le PATH de votre Terminal en créant un lien dans /usr/local/bin, pour que les scripts et les agents IA puissent l’appeler directement — le même outil que fournit déjà le cask Homebrew de cette façon. Nécessite une autorisation d’administrateur, une seule fois, pour créer le lien." } }
+      }
+    },
+    "settings.cli.section" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Command line tool" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Outil en ligne de commande" } }
+      }
+    },
+    "settings.cli.status.broken" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This link points to a copy of Pinpoint that’s no longer there." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce lien pointe vers une copie de Pinpoint qui n’est plus là." } }
+      }
+    },
+    "settings.cli.status.external" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Already available — installed by Homebrew, or linked by hand. Pinpoint leaves it as is." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Déjà disponible — installé par Homebrew, ou lié à la main. Pinpoint n’y touche pas." } }
+      }
+    },
+    "settings.cli.status.installed" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Installed — pinpoint runs from any Terminal (/usr/local/bin/pinpoint)." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Installé — pinpoint fonctionne depuis n’importe quel Terminal (/usr/local/bin/pinpoint)." } }
+      }
+    },
+    "settings.cli.status.notInstalled" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Not installed — Terminal commands and AI agents can’t find pinpoint yet." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Non installé — les commandes de Terminal et les agents IA ne trouvent pas encore pinpoint." } }
       }
     },
     "settings.format.explanation" : {

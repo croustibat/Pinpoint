@@ -277,8 +277,14 @@ A file path is the channel that reliably works.
 
 Pinpoint ships a small command-line tool **inside the app bundle**, at
 `Pinpoint.app/Contents/Helpers/pinpoint`, so it is signed and notarized with the
-app. The Homebrew cask symlinks it onto your `PATH`; after a direct download,
-link it yourself:
+app. The Homebrew cask symlinks it onto your `PATH` automatically. After a
+direct DMG download, open **Pinpoint ▸ Settings ▸ Capture ▸ Command line
+tool ▸ Install Command Line Tool…** — it creates the same link in
+`/usr/local/bin`, asks for administrator approval once, and confirms the
+command actually responds before calling it done.
+
+Prefer doing it by hand, or scripting the install itself? The manual version
+still works:
 
 ```sh
 ln -s "/Applications/Pinpoint.app/Contents/Helpers/pinpoint" /usr/local/bin/pinpoint
