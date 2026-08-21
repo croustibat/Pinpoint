@@ -30,6 +30,12 @@ do {
         try Commands.last(parsed)
     case .capture:
         try Commands.capture(parsed)
+    case .mcp:
+        // Blocks until the client closes stdin — an MCP session lasts as long
+        // as the client wants it to, not a fixed number of round trips. See
+        // MCPServer and MCPTransport for the one rule that makes this safe:
+        // nothing but protocol ever reaches stdout from here on.
+        MCPServer().run()
     }
     exit(ExitCode.ok.rawValue)
 } catch let error as CLIError {
