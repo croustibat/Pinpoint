@@ -16,9 +16,16 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: '0.7.0',
+    version: '0.7.1',
     date: '2026-08-21',
     latest: true,
+    changes: [
+      { type: 'added', text: 'Install the pinpoint command from the app — Settings ▸ Capture now has a “Command line tool” section that puts pinpoint on your PATH in one click, asking for permission once. It was already there if you installed with Homebrew; this is for everyone who downloaded the DMG and would otherwise have had to symlink it by hand.' },
+    ],
+  },
+  {
+    version: '0.7.0',
+    date: '2026-08-21',
     changes: [
       { type: 'added', text: 'Pinpoint now hands your capture to an AI agent as files. Every copy also writes capture.png, capture.md and capture.json to a stable folder, so an agent opens the real image with its own Read tool instead of choking on an inline one.' },
       { type: 'added', text: 'Accessibility context under every marker — a pin is no longer just a percentage but “AXButton ‘Login’ in Safari”, turning a spot on your screen into an anchor an agent can act on. Optional, and off until you grant the permission.' },
