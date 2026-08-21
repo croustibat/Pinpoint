@@ -27,13 +27,6 @@ import AppKit
 /// the writing half, and it stays in the app: nothing here works without
 /// AppKit, `Exporter` and the annotation model.
 extension FileHandoff {
-    /// How many timestamped folders `archive/` keeps; the oldest are deleted on
-    /// every write. Kept deliberately low because each folder carries a
-    /// full-resolution copy of the PNG (a Retina capture runs to several MB),
-    /// and this directory is never surfaced in the UI — nobody would notice it
-    /// growing.
-    static var maxArchiveEntries: Int { 10 }
-
     /// Where a handoff landed. Returned so the callers that come next (the CLI
     /// of #56, the MCP server of #57) can report the paths without rebuilding
     /// them.

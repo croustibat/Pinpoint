@@ -50,6 +50,18 @@ enum FileHandoff {
         rootDirectory.appendingPathComponent("archive", isDirectory: true)
     }
 
+    /// How many timestamped folders `archive/` keeps; the oldest are deleted on
+    /// every write. Kept deliberately low because each folder carries a
+    /// full-resolution copy of the PNG (a Retina capture runs to several MB),
+    /// and this directory is never surfaced in the UI — nobody would notice it
+    /// growing.
+    ///
+    /// Part of the contract rather than of the writing half: the MCP server's
+    /// `list_recent` (#57) states this cap in its own tool schema and in the
+    /// sentence it hands the agent, and a second copy of the number is a second
+    /// thing to keep in step.
+    static let maxArchiveEntries = 10
+
     static let pngFileName = "capture.png"
     static let markdownFileName = "capture.md"
     static let jsonFileName = "capture.json"

@@ -58,31 +58,15 @@ enum Commands {
         // caller asked for.
         Out.stderr("Waiting for the capture to be copied (\(Int(arguments.timeout))s)…")
 
-        guard let handoff = try waitForHandoff(after: before, timeout: arguments.timeout) else {
+        switch HandoffWatcher.wait(after: before, timeout: arguments.timeout) {
+        case .handoff(let handoff):
+            let saved = try copyPNG(to: arguments.out)
+            try Report.emit(handoff, savedTo: saved, format: arguments.format)
+        case .timedOut, .cancelled:
+            // Nothing cancels this one — the CLI passes no `isCancelled` — so
+            // the two collapse into the same answer for the caller.
             throw CLIError.timedOut(arguments.timeout)
         }
-        let saved = try copyPNG(to: arguments.out)
-        try Report.emit(handoff, savedTo: saved, format: arguments.format)
-    }
-
-    /// Polls `last/capture.json` until it is a different document from `before`.
-    ///
-    /// Polling rather than a filesystem watcher: this process exists for a few
-    /// seconds, the directory is swapped in one move (so there is no
-    /// half-written state to catch), and a quarter-second granularity is well
-    /// under the time it takes a person to drag a rectangle. A watcher would be
-    /// more machinery for a race that cannot happen.
-    private static func waitForHandoff(after before: Handoff.Fingerprint,
-                                       timeout: TimeInterval) throws -> Handoff? {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.25)
-            // A read that fails here is transient by nature — the directory is
-            // being replaced under us — so it doesn't end the wait.
-            guard let handoff = try? Handoff.latest() else { continue }
-            if handoff.fingerprint != before { return handoff }
-        }
-        return nil
     }
 
     // MARK: - Shared
