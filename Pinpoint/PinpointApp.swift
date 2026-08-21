@@ -69,6 +69,8 @@ struct CaptureSettingsView: View {
     /// there's nothing to observe here beyond "the user came back to us".
     @State private var isTrusted = AXPermission.isTrusted
 
+    @ObservedObject private var cli = CLIInstaller.shared
+
     var body: some View {
         Form {
             Section("Shortcuts") {
@@ -122,6 +124,7 @@ struct CaptureSettingsView: View {
             }
             accessibilitySection
             textRecognitionSection
+            commandLineSection
         }
         .formStyle(.grouped)
         // Coming back from System Settings is the moment the answer can have
@@ -129,6 +132,7 @@ struct CaptureSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(
             for: NSApplication.didBecomeActiveNotification)) { _ in
             isTrusted = AXPermission.isTrusted
+            cli.refresh()
         }
     }
 
@@ -191,6 +195,80 @@ struct CaptureSettingsView: View {
                         defaultValue: "Pre-fills a marker’s description with the line of text it points at, and writes that line into the files for the agent — so small text an agent would misread from the image travels as text. Read on this Mac; nothing is sent anywhere. Areas you have hidden are never read."))
                 .foregroundStyle(.secondary)
                 .font(.callout)
+        }
+    }
+
+    /// Puts `pinpoint` on a Terminal's `PATH` after a plain DMG install (#89):
+    /// the Homebrew cask already does this itself, so the whole section is
+    /// about the download that doesn't come with a `binary` stanza.
+    ///
+    /// Modelled on the ax/ocr sections above: state first, one button whose
+    /// label follows that state, nothing else to configure.
+    private var commandLineSection: some View {
+        Section(String(localized: "settings.cli.section", defaultValue: "Command line tool")) {
+            Text(String(
+                localized: "settings.cli.explanation",
+                defaultValue: "Puts pinpoint on your Terminal’s PATH by creating one link in /usr/local/bin, so scripts and AI agents can call it directly — the same tool the Homebrew cask already provides this way. Needs administrator approval once, to create the link."
+            ))
+            .foregroundStyle(.secondary)
+            .font(.callout)
+
+            switch cli.status {
+            case .checking:
+                ProgressView()
+
+            case .notInstalled, .brokenPinpointLink:
+                if case .brokenPinpointLink = cli.status {
+                    Label(String(
+                        localized: "settings.cli.status.broken",
+                        defaultValue: "This link points to a copy of Pinpoint that’s no longer there."
+                    ), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                } else {
+                    Label(String(
+                        localized: "settings.cli.status.notInstalled",
+                        defaultValue: "Not installed — Terminal commands and AI agents can’t find pinpoint yet."
+                    ), systemImage: "xmark.circle")
+                    .foregroundStyle(.secondary)
+                }
+                installButton
+
+            case .installedByPinpoint:
+                Label(String(
+                    localized: "settings.cli.status.installed",
+                    defaultValue: "Installed — pinpoint runs from any Terminal (/usr/local/bin/pinpoint)."
+                ), systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                Button(String(localized: "settings.cli.action.remove", defaultValue: "Remove Command Line Tool…")) {
+                    Task { await cli.remove() }
+                }
+                .disabled(cli.isWorking)
+
+            case .installedExternally:
+                Label(String(
+                    localized: "settings.cli.status.external",
+                    defaultValue: "Already available — installed by Homebrew, or linked by hand. Pinpoint leaves it as is."
+                ), systemImage: "checkmark.circle")
+                .foregroundStyle(.secondary)
+
+            case .failed(let message):
+                Text(message)
+                    .foregroundStyle(.red)
+                installButton
+            }
+        }
+    }
+
+    private var installButton: some View {
+        HStack {
+            Button(String(localized: "Install Command Line Tool…")) {
+                Task { await cli.install() }
+            }
+            .disabled(cli.isWorking)
+            if cli.isWorking {
+                ProgressView()
+                    .controlSize(.small)
+            }
         }
     }
 }
