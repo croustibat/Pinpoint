@@ -78,8 +78,10 @@ relaunch Pinpoint once.
 - **The shelf** — a built-in library of your screenshots: browse, favorite, sort,
   rename, Quick Look, and reopen any capture with its annotations.
 - **Global shortcuts** — capture or open the shelf from anywhere, fully rebindable.
-- **Scriptable** — a `pinpoint` CLI and a `pinpoint://` URL scheme, so agents,
-  hooks and `!`-commands can ask for a capture and read the result.
+- **Scriptable** — a `pinpoint` CLI, a `pinpoint://` URL scheme, and an
+  [MCP](https://modelcontextprotocol.io) server (`pinpoint mcp`) so agents,
+  hooks and `!`-commands can ask for a capture and read the result directly —
+  the file path and structured Markdown, never an inline image.
 - **Bilingual** — follows your macOS language (English / French).
 - **Native & private** — SwiftUI + ScreenCaptureKit, living in your menu bar.
   Your captures never leave your Mac.
@@ -161,6 +163,8 @@ Pinpoint/
   Localizable.xcstrings           # String Catalog (English base, French)
   Shelf/                          # the screenshot library (Models, Services, Stores, Views)
 PinpointCLI/                      # the `pinpoint` tool, embedded in the app at Contents/Helpers
+  MCP/                             # `pinpoint mcp` — the stdio server (JSONRPC, MCPTransport,
+                                    # MCPTools, MCPServer); reads the same HandoffContract
 landing/                          # the marketing site (Astro + Tailwind v4, bilingual)
 ```
 
@@ -233,6 +237,69 @@ The output is built to be read by a program:
 - Exit codes tell a state from an error: `0` done · `1` failed · `2` bad usage ·
   `3` no capture handed off yet · `4` timed out waiting for the copy · `5` Pinpoint
   isn't installed.
+
+## MCP server: `pinpoint mcp`
+
+The same binary also speaks [MCP](https://modelcontextprotocol.io) over stdio, so
+an agent can ask for a capture itself instead of you pasting one in. It is **the
+one MCP annotation server that works system-wide** rather than only inside a
+browser DOM — Pinpoint captures whatever is on screen, any app, any window.
+
+The whole design turns on one fact: **Claude Code doesn't render an image an MCP
+tool returns inline** — the base64 lands in the transcript as raw text
+([anthropics/claude-code#31208](https://github.com/anthropics/claude-code/issues/31208),
+closed "not planned"). So `pinpoint mcp` never sends image bytes over the wire.
+Every tool call returns the **absolute path of the annotated PNG plus the
+structured Markdown** described above, and tells the agent outright to open the
+PNG with its own file-reading tool. That's the file handoff this README already
+describes — the MCP server is a thin JSON-RPC front door onto it, built on the
+very same `HandoffContract` the CLI reads, so the three never disagree about
+where a capture lives or what it contains.
+
+Add it with the Claude Code CLI, pointing at the binary the app already ships:
+
+```sh
+claude mcp add pinpoint -- /Applications/Pinpoint.app/Contents/Helpers/pinpoint mcp
+```
+
+or, if you linked `pinpoint` onto your `PATH` as shown above:
+
+```sh
+claude mcp add pinpoint -- pinpoint mcp
+```
+
+Equivalently, the JSON entry in `.mcp.json` or your client's config:
+
+```json
+{
+  "mcpServers": {
+    "pinpoint": {
+      "command": "/Applications/Pinpoint.app/Contents/Helpers/pinpoint",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Three tools:
+
+| tool | needs | does |
+| --- | --- | --- |
+| `capture_region` | the running app | starts an interactive region capture and blocks until you press Copy — same as `pinpoint capture` |
+| `get_last_capture` | nothing — reads files | returns the most recent handoff without prompting for a new screenshot |
+| `list_recent` | nothing — reads files | lists up to the last 10 archived captures, newest first |
+
+Every result carries the PNG's path, the same Markdown `capture.md` holds, and a
+`structuredContent` object with `capture.json` verbatim — so an agent that would
+rather index the facts than parse them back out of prose can. A capture that
+timed out or a "nothing handed off yet" comes back as a normal tool result with
+`isError: true`, not a protocol failure, so the agent can see what happened and
+retry or ask instead of just failing silently.
+
+`pinpoint mcp` writes **only** JSON-RPC to stdout — that's the stdio transport's
+rule, and one stray log line breaks it for the whole session. Every human-facing
+sentence, including the ones you'd see running `pinpoint capture` at a terminal,
+goes to stderr instead.
 
 ## Deep links (`pinpoint://`)
 
