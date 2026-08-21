@@ -11,6 +11,7 @@ struct Arguments {
     enum Command {
         case capture
         case last
+        case mcp
         case help
         case version
     }
@@ -107,6 +108,7 @@ struct Arguments {
         switch positional {
         case "capture": result.command = .capture
         case "last": result.command = .last
+        case "mcp": result.command = .mcp
         case nil: result.command = .help
         case let other?: throw CLIError.usage("Unknown command “\(other)”.")
         }

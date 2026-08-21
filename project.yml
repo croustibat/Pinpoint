@@ -84,20 +84,27 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
-  # The scriptable entry point (#56): `pinpoint capture`, `pinpoint last`.
-  # A command-line tool, not a second app — it drives the running app through
-  # the `pinpoint://` scheme above, because a bare executable has none of the
+  # The scriptable entry point (#56): `pinpoint capture`, `pinpoint last`, and
+  # the stdio MCP server (#57) at `pinpoint mcp` — a subcommand of this same
+  # tool rather than a second binary, so there is nothing new to sign
+  # individually in scripts/release.sh and scripts/install-local.sh, and
+  # nothing new to embed in project.yml's `Pinpoint` target above. A command-
+  # line tool, not a second app — it drives the running app through the
+  # `pinpoint://` scheme above, because a bare executable has none of the
   # app's TCC grants and could never take the screenshot itself.
   PinpointCLI:
     type: tool
     platform: macOS
     sources:
+      # Recurses into PinpointCLI/MCP/, which holds the JSON-RPC transport and
+      # tool definitions for `pinpoint mcp` (#57).
       - PinpointCLI
       # The handoff contract, compiled into both binaries instead of restated
-      # in the CLI: `pinpoint last` reads the very file the app writes, and a
-      # second copy of the paths or of the schema is a second thing to keep in
-      # step. A build error here is the point — it fires the day the contract
-      # grows a dependency a file reader shouldn't need.
+      # in the CLI: `pinpoint last` and `pinpoint mcp` read the very file the
+      # app writes, and a second copy of the paths or of the schema is a
+      # second thing to keep in step. A build error here is the point — it
+      # fires the day the contract grows a dependency a file reader shouldn't
+      # need.
       - path: Pinpoint/HandoffContract.swift
       - path: Pinpoint/HandoffDocument.swift
       # The deep-link vocabulary, for the same reason: the tool that fires

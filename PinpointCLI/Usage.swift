@@ -18,6 +18,7 @@ enum Usage {
     USAGE
       \(toolName) capture [--out <file.png>] [--json | --format <fmt>] [--timeout <seconds>] [--no-wait]
       \(toolName) last    [--out <file.png>] [--json | --format <fmt>]
+      \(toolName) mcp
       \(toolName) --help | --version
 
     COMMANDS
@@ -28,6 +29,12 @@ enum Usage {
                 picture on its own.
       last      Print the most recent handoff. Reads files only — it needs
                 neither the app running nor any permission.
+      mcp       Run as a stdio MCP server exposing capture_region,
+                get_last_capture and list_recent to an agent (#57). Speaks
+                JSON-RPC on stdin/stdout and nothing else — every human sentence
+                goes to stderr instead, same rule as --json above but absolute
+                here, because one stray line on stdout breaks the protocol. See
+                the README for the exact `claude mcp add` invocation.
 
     OPTIONS
       --out <file>       Copy the annotated PNG to <file>.
