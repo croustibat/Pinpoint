@@ -238,6 +238,30 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer cette annotation" } }
       }
     },
+    "a11y.shape.described" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$@: %2$@" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ : %2$@" } }
+      }
+    },
+    "a11y.shape.note.arrow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description of this arrow" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Description de cette flèche" } }
+      }
+    },
+    "a11y.shape.note.rectangle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description of this rectangle" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Description de ce rectangle" } }
+      }
+    },
+    "a11y.shape.note.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Description of this hidden area" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Description de cette zone masquée" } }
+      }
+    },
     "a11y.shape.rectangle" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Rectangle annotation" } },
@@ -681,6 +705,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tracés non numérotés dessinés sur l’image : les rectangles sont donnés haut-gauche → bas-droite, les flèches base → pointe, suivis de la taille de leur boîte englobante." } }
       }
     },
+    "export.shapes.note.legend" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The sentence between a shape’s kind and its coordinates is what the user wrote about that shape." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "La phrase entre le type d’une forme et ses coordonnées est ce que l’utilisateur a écrit à propos de cette forme." } }
+      }
+    },
     "export.shapes.redaction.legend" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing." } },
@@ -789,6 +819,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "REPÈRES" } }
       }
     },
+    "legend.shapes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "ANNOTATIONS" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "ANNOTATIONS" } }
+      }
+    },
     "Light outline" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Contour léger" } }
@@ -827,6 +863,24 @@
     "Markers (position in % of the image, top-left origin):" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Repères (position en % de l’image, origine haut-gauche) :" } }
+      }
+    },
+    "markup.note.placeholder.arrow" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe this arrow…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décris cette flèche…" } }
+      }
+    },
+    "markup.note.placeholder.rectangle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe this rectangle…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décris ce rectangle…" } }
+      }
+    },
+    "markup.note.placeholder.redaction" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Describe this hidden area…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Décris cette zone masquée…" } }
       }
     },
     "markup.redaction" : {

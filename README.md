@@ -73,13 +73,17 @@ relaunch Pinpoint once.
   alert rather than a blank image.
 - **Numbered markers & shapes** — click to drop ringed, numbered pins (drag to
   move, a note per marker); add arrows and rectangles for emphasis. Every
-  shape is selectable, movable and resizable after the fact, with full
-  **undo/redo** (**⌘Z** / **⇧⌘Z**) and keyboard delete.
+  shape takes a description of its own too, so a circled region can say *why*
+  it was circled — it travels in the copied text, in the JSON and in the
+  embedded legend. Every shape is selectable, movable and resizable after the
+  fact, with full **undo/redo** (**⌘Z** / **⇧⌘Z**) and keyboard delete.
 - **Three marker styles** — filled disc, pointer pin, light outline — applied on
   screen *and* in the export.
 - **Redact before you share** — **⌘4**, then drag over a token, password or API
   key: it's blacked out in the exported image, and stripped from the copied
-  text *and* the accessibility context below, not just visually covered.
+  text *and* the accessibility context below, not just visually covered. A
+  hidden area can still be described in your own words ("my API key"), which is
+  the only thing about it that reaches the agent.
 - **On-device OCR** — Vision reads the text sitting under each marker (an
   error message, a log line, a class name) with no network call, and can
   pre-fill a marker's note when nothing else already named the element.
@@ -101,9 +105,9 @@ relaunch Pinpoint once.
   of framing ("find the cause before proposing anything…") is written above
   your instructions, so the same scaffolding doesn't get retyped on every
   capture.
-- **Legend baked in** (optional) — embeds the marker descriptions + instructions
-  into the image, so a single paste carries everything (most chat UIs drop the
-  clipboard text).
+- **Legend baked in** (optional) — embeds the marker and shape descriptions +
+  instructions into the image, so a single paste carries everything (most chat
+  UIs drop the clipboard text).
 - **The shelf** — a built-in library of your screenshots: search, browse,
   favorite, sort, rename, Quick Look, and reopen any capture with its
   annotations (deleting one asks first).

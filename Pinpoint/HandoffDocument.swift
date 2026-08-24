@@ -292,6 +292,19 @@ extension FileHandoff {
             /// consumer that knows a region is unreadable asks instead of
             /// guessing.
             let kind: String
+            /// What the user wrote about this shape (#93), trimmed. Absent when
+            /// they wrote nothing rather than present and empty — the key is
+            /// new, and a consumer reading a file written by an older Pinpoint
+            /// would otherwise have to tell "no description" from "this version
+            /// couldn't carry one". Absent also keeps a capture without
+            /// descriptions serializing byte for byte as it did before.
+            ///
+            /// Unlike a marker's `note` this never has a machine-read twin:
+            /// nothing pre-fills it, so what is here is the user's own words
+            /// and nothing else. On a "redaction" it is the one statement about
+            /// a hidden area that can be made without undoing the redaction —
+            /// again, because the user is the one making it.
+            let note: String?
             /// Arrow: the tail. Rectangle/redaction: its top-left corner.
             let from: Point
             /// Arrow: the tip, where the head is drawn. Rectangle/redaction:

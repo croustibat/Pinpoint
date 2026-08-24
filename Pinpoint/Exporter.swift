@@ -375,6 +375,14 @@ enum Exporter {
             if !mask.isEmpty {
                 lines.append(String(localized: "export.shapes.redaction.legend", defaultValue: "A hidden area is a region the user painted over before sharing: its pixels are not in the image, and nothing was collected about what sat under it. Ask the user rather than guessing."))
             }
+            // Said only when at least one shape actually carries a description
+            // (#93) — same rule as every other legend line here: no promise of
+            // details that never come. Without it the sentence sitting between
+            // "Rectangle" and a pair of coordinates has no stated provenance,
+            // and a reader weighing it has to guess whether Pinpoint wrote it.
+            if shapes.contains(where: { $0.trimmedNote != nil }) {
+                lines.append(String(localized: "export.shapes.note.legend", defaultValue: "The sentence between a shape’s kind and its coordinates is what the user wrote about that shape."))
+            }
             lines.append("")
             for (index, shape) in shapes.enumerated() {
                 let box = shape.rect
@@ -389,7 +397,13 @@ enum Exporter {
                 }
                 let boxWidth = Int((box.width * imageSize.width).rounded())
                 let boxHeight = Int((box.height * imageSize.height).rounded())
-                lines.append("- S\(index + 1) [\(shape.id.shortToken)] · \(shape.label) — "
+                // The user's own words about this shape (#93), in the same slot
+                // a marker's description occupies — right after the identifier,
+                // before the geometry. Left out entirely when there is none, so
+                // the export of a capture without descriptions stays exactly the
+                // text it was before this field existed.
+                let described = shape.trimmedNote.map { " · \($0)" } ?? ""
+                lines.append("- S\(index + 1) [\(shape.id.shortToken)] · \(shape.label)\(described) — "
                              + "\(pixels(from, in: imageSize)) → \(pixels(to, in: imageSize)) px · "
                              + "\(percent(from)) → \(percent(to)) · \(boxWidth)×\(boxHeight) px")
             }
@@ -567,7 +581,7 @@ enum Exporter {
     static func exportImage(base: NSImage, pins: [Pin], shapes: [Markup], context: String,
                             style: PinStyle, includeLegend: Bool, preset: TaskPreset = .raw) -> NSImage {
         let annotated = annotatedImage(base: base, pins: pins, shapes: shapes, style: style)
-        guard includeLegend, let legend = legendString(pins: pins, context: context,
+        guard includeLegend, let legend = legendString(pins: pins, shapes: shapes, context: context,
                                                        preset: preset, width: annotated.size.width) else {
             return annotated
         }
@@ -609,12 +623,23 @@ enum Exporter {
     private static let legendDrawingOptions: NSString.DrawingOptions = [.usesLineFragmentOrigin]
 
     /// The legend rendered into the exported image, or nil if there's nothing to
-    /// show (no pins, no instructions and no task framing).
-    private static func legendString(pins: [Pin], context: String, preset: TaskPreset,
-                                     width: CGFloat) -> NSAttributedString? {
+    /// show (no pins, no described shapes, no instructions and no task framing).
+    ///
+    /// Shapes appear here only once they carry a description (#93). The reason
+    /// they have to appear at all is that `includeLegend` defaults to `true`,
+    /// and in that mode `copyToPasteboard` puts the PNG on the pasteboard and
+    /// nothing else — so anything left out of this strip never reaches the
+    /// agent in the default configuration (#69). A shape with nothing written
+    /// about it stays out: its outline is already on the image, and a line
+    /// saying "Rectangle" and no more would be the caption repeating the
+    /// picture.
+    private static func legendString(pins: [Pin], shapes: [Markup], context: String,
+                                     preset: TaskPreset, width: CGFloat) -> NSAttributedString? {
         let trimmedContext = context.trimmingCharacters(in: .whitespacesAndNewlines)
         let orderedPins = pins.sorted { $0.number < $1.number }
-        guard !orderedPins.isEmpty || !trimmedContext.isEmpty || preset.guidance != nil else { return nil }
+        let describedShapes = shapes.filter { $0.trimmedNote != nil }
+        guard !orderedPins.isEmpty || !describedShapes.isEmpty
+                || !trimmedContext.isEmpty || preset.guidance != nil else { return nil }
 
         let bodySize = max(15, width * 0.016)
         let body = NSFont.systemFont(ofSize: bodySize)
@@ -634,12 +659,34 @@ enum Exporter {
             ]))
         }
 
+        // Every section but the first is preceded by a blank line. Tracked
+        // rather than restated at each step: the conditions were already a
+        // cascade of "is anything above me?", and a fourth section would have
+        // made every later one wrong the day it was added.
+        var needsSeparator = false
+        func startSection(_ title: String) {
+            if needsSeparator { add("\n", body, dark) }
+            add(title + "\n", heading, secondary)
+            needsSeparator = true
+        }
+
         if !orderedPins.isEmpty {
-            add(String(localized: "legend.markers", defaultValue: "MARKERS") + "\n", heading, secondary)
+            startSection(String(localized: "legend.markers", defaultValue: "MARKERS"))
             for pin in orderedPins {
                 let note = pin.note.trimmingCharacters(in: .whitespacesAndNewlines)
                 add("\(pin.number)", number, .pinpointVermillon)
                 add("   \(note.isEmpty ? String(localized: "(no description)") : note)\n", body, dark)
+            }
+        }
+        // What the user wrote about the arrows, rectangles and hidden areas
+        // (#93). Named by kind rather than by the "S1"/"S2" codes `buildText`
+        // uses: those codes are nowhere on the image, so printing them here
+        // would invite a reader to look for labels that were never drawn.
+        if !describedShapes.isEmpty {
+            startSection(String(localized: "legend.shapes", defaultValue: "ANNOTATIONS"))
+            for shape in describedShapes {
+                add(shape.label, number, .pinpointVermillon)
+                add("   \(shape.trimmedNote ?? "")\n", body, dark)
             }
         }
         // The task framing belongs here for the same reason the legend exists at
@@ -647,13 +694,11 @@ enum Exporter {
         // nothing else, so anything left out of the strip never reaches the
         // agent. Same order as `buildText` — framing, then the user's own words.
         if let guidance = preset.guidance {
-            if !orderedPins.isEmpty { add("\n", body, dark) }
-            add(preset.heading.uppercased(with: .current) + "\n", heading, secondary)
+            startSection(preset.heading.uppercased(with: .current))
             add(guidance + "\n", body, dark)
         }
         if !trimmedContext.isEmpty {
-            if !orderedPins.isEmpty || preset.guidance != nil { add("\n", body, dark) }
-            add(String(localized: "legend.instructions", defaultValue: "INSTRUCTIONS") + "\n", heading, secondary)
+            startSection(String(localized: "legend.instructions", defaultValue: "INSTRUCTIONS"))
             add(trimmedContext, body, dark)
         }
         return result
