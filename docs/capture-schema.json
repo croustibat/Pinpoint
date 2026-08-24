@@ -208,6 +208,7 @@
         "id": { "type": "string" },
         "label": { "type": "string", "description": "\"S1\", \"S2\"… matching capture.md." },
         "kind": { "type": "string", "enum": ["arrow", "rectangle", "redaction"], "description": "A redaction is a region the user painted over before sharing: its pixels are gone from the PNG, and nothing under it — no accessibility element, no recognized text — is described anywhere in this file. Its box is still given: where something was hidden is not itself a secret, and a consumer that knows a region is unreadable asks rather than guessing." },
+        "note": { "type": "string", "minLength": 1, "description": "What the user wrote about this shape. Absent when they wrote nothing, and absent from every file written before Pinpoint 0.7.2 — so its absence means \"nothing to say\", never \"said elsewhere\". Unlike a marker's note this has no machine-read twin: nothing pre-fills it, so it is the user's own words and nothing else. On a redaction it is the one thing that can be said about a hidden area without undoing the redaction, because the user is the one saying it." },
         "from": { "$ref": "#/$defs/point", "description": "Arrow: the tail. Rectangle/redaction: its top-left corner." },
         "to": { "$ref": "#/$defs/point", "description": "Arrow: the tip, where the head is drawn. Rectangle/redaction: its bottom-right corner." },
         "boundingBox": { "$ref": "#/$defs/box" }

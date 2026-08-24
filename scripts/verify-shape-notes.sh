@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
-# Builds and runs the redaction check of #49 against the app's own sources.
+# Builds and runs the shape-description checks of #93 against the app's own
+# sources.
 #
-# Not part of the CI build: it exercises Vision's text recognizer, whose exact
-# output is a model's and not a contract's, and a check that can go amber on an
-# OS update has no business gating a merge. Run it when the recognizer, the
-# mask, or either exporter is touched.
+# Not part of the CI build, for the same reason as its sibling: the app has no
+# test target, and this is a standalone executable rather than a scheme
+# xcodebuild knows about. Run it when `Markup`, either exporter, the handoff
+# contract or the stored history is touched — the first case in it is what
+# stands between an added field and a deleted capture history.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-out="$(mktemp -d)/verify-ocr-redaction"
+out="$(mktemp -d)/verify-shape-notes"
 
 xcrun swiftc -O -target "$(uname -m)-apple-macos15.0" -o "$out" \
     Pinpoint/AgentTextFormat.swift \
     Pinpoint/AXSnapshot.swift \
+    Pinpoint/CaptureRecord.swift \
     Pinpoint/Exporter.swift \
     Pinpoint/FileHandoff.swift \
     Pinpoint/HandoffContract.swift \
@@ -26,6 +29,6 @@ xcrun swiftc -O -target "$(uname -m)-apple-macos15.0" -o "$out" \
     Pinpoint/TaskPreset.swift \
     Pinpoint/TextRecognizer.swift \
     Pinpoint/Theme.swift \
-    scripts/verify-ocr-redaction.swift
+    scripts/verify-shape-notes.swift
 
 exec "$out"

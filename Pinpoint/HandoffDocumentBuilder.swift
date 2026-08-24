@@ -92,6 +92,7 @@ extension FileHandoff.Document {
                 id: shape.id.shortToken,
                 label: "S\(index + 1)",
                 kind: kind,
+                note: shape.trimmedNote,
                 from: Point(from, in: imageSize),
                 to: Point(to, in: imageSize),
                 boundingBox: Box(shape.rect, in: imageSize)
