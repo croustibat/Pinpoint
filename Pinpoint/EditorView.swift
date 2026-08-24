@@ -55,6 +55,10 @@ enum EditorTool: String, CaseIterable, Identifiable {
 /// while the user is typing.
 private enum EditorField: Hashable {
     case note(Pin.ID)
+    /// A shape's description (#93). Tracked exactly like a marker's note: the
+    /// tool shortcuts stand down while it has focus, and `flushTextEdit` folds
+    /// the whole typing session into one undo entry when focus leaves.
+    case shapeNote(Markup.ID)
     case context
 }
 
@@ -541,15 +545,23 @@ struct EditorView: View {
                       defaultValue: "\(x) percent from the left, \(y) percent from the top")
     }
 
+    /// What VoiceOver reads for a shape: its kind, followed by the user's
+    /// description when there is one — the same rule as a marker, minus the
+    /// "no description" ending, which a marker needs because a bare number says
+    /// nothing and a shape's kind already does.
     private func accessibilityLabel(for shape: Markup) -> String {
+        let kind: String
         switch shape.kind {
-        case .arrow: return String(localized: "a11y.shape.arrow", defaultValue: "Arrow annotation")
-        case .rectangle: return String(localized: "a11y.shape.rectangle", defaultValue: "Rectangle annotation")
+        case .arrow: kind = String(localized: "a11y.shape.arrow", defaultValue: "Arrow annotation")
+        case .rectangle: kind = String(localized: "a11y.shape.rectangle", defaultValue: "Rectangle annotation")
         // Announces the bar, not what went under it: VoiceOver is a channel
         // like any other, and the text it reads is the text a screen recording
-        // of this session would carry.
-        case .redaction: return String(localized: "a11y.shape.redaction", defaultValue: "Hidden area")
+        // of this session would carry. What the *user* chose to say about it is
+        // another matter, and is read out below like any other description.
+        case .redaction: kind = String(localized: "a11y.shape.redaction", defaultValue: "Hidden area")
         }
+        guard let note = shape.trimmedNote else { return kind }
+        return String(localized: "a11y.shape.described", defaultValue: "\(kind): \(note)")
     }
 
     /// Drag-to-move a pin. Translation-based so grabbing anywhere on the marker
@@ -997,8 +1009,8 @@ struct EditorView: View {
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
 
-            ForEach(shapes) { shape in
-                shapeRow(shape)
+            ForEach($shapes) { $shape in
+                shapeRow($shape)
             }
         }
     }
@@ -1093,22 +1105,35 @@ struct EditorView: View {
             )
     }
 
-    private func shapeRow(_ shape: Markup) -> some View {
-        let isSelected = shape.id == selectedShapeID
+    /// One shape in the side panel: its icon, its description, and a way to
+    /// delete it.
+    ///
+    /// Deliberately the same three columns as `pinRow`, with the icon standing
+    /// in for the numbered badge — a shape and a marker are two ways of
+    /// pointing at something, and the panel shouldn't make them look like two
+    /// different kinds of object. The kind of shape is no longer written out
+    /// next to the icon: it moved into the field's placeholder, where it names
+    /// the row without taking a second column from a panel 260 pt wide.
+    private func shapeRow(_ shape: Binding<Markup>) -> some View {
+        let value = shape.wrappedValue
+        let isSelected = value.id == selectedShapeID
         let deleteLabel = String(localized: "a11y.shape.delete", defaultValue: "Delete this annotation")
 
         return HStack(spacing: 8) {
-            Image(systemName: shape.symbol)
+            Image(systemName: value.symbol)
                 .foregroundStyle(Color.pinpointVermillon)
                 .frame(width: pinBadgeSide, height: pinBadgeSide)
+                // The kind is repeated in the field's label right after it, so
+                // VoiceOver names it once instead of twice.
                 .accessibilityHidden(true)
 
-            Text(shape.label)
-
-            Spacer()
+            TextField(value.notePlaceholder, text: shape.note)
+                .textFieldStyle(.roundedBorder)
+                .focused($focusedField, equals: .shapeNote(value.id))
+                .accessibilityLabel(value.noteAccessibilityLabel)
 
             Button {
-                removeShape(shape)
+                removeShape(value)
             } label: {
                 Image(systemName: "trash")
             }
@@ -1119,10 +1144,10 @@ struct EditorView: View {
         }
         .padding(6)
         .background(rowSelectionBackground(isSelected))
-        .onTapGesture { selectShape(shape.id) }
+        .onTapGesture { selectShape(value.id) }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityAction { selectShape(shape.id) }
+        .accessibilityAction { selectShape(value.id) }
     }
 
     // MARK: - Actions
@@ -1587,7 +1612,8 @@ struct EditorView: View {
                 // able to undo a redaction.
                 guard shape.rect.intersects(c) else { continue }
                 newShapes.append(
-                    Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e))
+                    Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e),
+                           note: shape.note)
                 )
                 continue
             }
@@ -1595,7 +1621,10 @@ struct EditorView: View {
             // Midpoint-or-endpoint rule; straddlers keep what's inside.
             guard inside(s) || inside(e) || inside(CGPoint(x: (s.x+e.x)/2, y: (s.y+e.y)/2)) else { continue }
             newShapes.append(
-                Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e))
+                // The description rides along: a crop moves a shape into a new
+                // frame, it doesn't turn it into a different annotation.
+                Markup(id: shape.id, kind: shape.kind, start: clamp01(s), end: clamp01(e),
+                       note: shape.note)
             )
         }
 

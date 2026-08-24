@@ -21,3 +21,4 @@ Package.resolved
 
 # Throwaway Remotion project for the demo GIF
 .demo-remotion/
+.vercel

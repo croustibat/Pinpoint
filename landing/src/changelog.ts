@@ -16,9 +16,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.7.2',
+    date: '2026-08-24',
+    latest: true,
+    changes: [
+      { type: 'added', text: 'Every shape can carry its own description now — rectangles, arrows and redacted areas each get a field beside them, so circling a misaligned button finally has somewhere to say why. Until now only a numbered marker could hold a note, and describing a shape meant dropping a marker on top of it or pushing the explanation into the general instructions.' },
+      { type: 'added', text: 'Those descriptions travel wherever the capture goes: into capture.md, into an optional note on each shape in capture.json, and into a new ANNOTATIONS section of the baked-in legend. It matters most on a redacted area — “what I hid, and why” is exactly what an agent needs to know, and it was the one part of the handoff that had no way to say it.' },
+    ],
+  },
+  {
     version: '0.7.1',
     date: '2026-08-21',
-    latest: true,
     changes: [
       { type: 'added', text: 'Install the pinpoint command from the app — Settings ▸ Capture now has a “Command line tool” section that puts pinpoint on your PATH in one click, asking for permission once. It was already there if you installed with Homebrew; this is for everyone who downloaded the DMG and would otherwise have had to symlink it by hand.' },
     ],
