@@ -1,0 +1,16 @@
+# Vercel builds this project from the landing/ Root Directory, but the CLI
+# uploads the whole repository as build context first — and this repo carries a
+# 1.2 GB Xcode build directory next to a 500 MB Remotion project. Without this
+# file `vercel deploy` ships all of it (1.4 GB) before discarding everything but
+# landing/.
+#
+# Keep the root exclusion first and the re-includes second: gitignore semantics
+# can't re-include a path whose parent directory is already excluded.
+#
+# .git must survive. The project's Ignored Build Step runs
+# `git diff --quiet HEAD^ HEAD -- landing/` to skip rebuilds when only the app
+# changed, and that command fails the build outright if the clone isn't a git
+# repository any more.
+/*
+!/landing
+!/.git

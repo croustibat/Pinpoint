@@ -69,8 +69,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.croustibat.Pinpoint
-        MARKETING_VERSION: "0.7.1"
-        CURRENT_PROJECT_VERSION: "8"
+        MARKETING_VERSION: "0.7.2"
+        CURRENT_PROJECT_VERSION: "9"
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: "5.0"
         CODE_SIGN_STYLE: Automatic
@@ -114,8 +114,8 @@ targets:
       base:
         PRODUCT_NAME: pinpoint
         PRODUCT_BUNDLE_IDENTIFIER: app.croustibat.Pinpoint.cli
-        MARKETING_VERSION: "0.7.1"
-        CURRENT_PROJECT_VERSION: "8"
+        MARKETING_VERSION: "0.7.2"
+        CURRENT_PROJECT_VERSION: "9"
         # A tool has no Info.plist of its own; this embeds one in the binary so
         # `pinpoint --version` can read the version it was built with.
         GENERATE_INFOPLIST_FILE: YES
