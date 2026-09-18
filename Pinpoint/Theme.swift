@@ -27,3 +27,20 @@ extension Color {
     static let pinpointVermillonDark = Color(nsColor: .pinpointVermillonDark)
     static let pinpointRedaction = Color(nsColor: .pinpointRedaction)
 }
+
+/// Design tokens for glass surfaces (design system §02: glass is neutral, the
+/// only brand colour is vermillon, reserved for primary actions and markers).
+enum PinpointGlass {
+    /// Panels and toolbars.
+    static let cornerPanel: CGFloat = 16
+    /// Shelf cards.
+    static let cornerCard: CGFloat = 14
+    /// Buttons and chips that aren't capsules.
+    static let cornerControl: CGFloat = 10
+
+    /// The fallback's hairline, a touch stronger in dark mode where a white
+    /// edge on a dark material reads fainter.
+    static func strokeOpacity(for scheme: ColorScheme) -> Double {
+        scheme == .dark ? 0.18 : 0.12
+    }
+}
