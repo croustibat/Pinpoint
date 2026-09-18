@@ -17,11 +17,14 @@ final class ShelfWindowController: NSWindowController {
     init() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 440, height: 620),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = String(localized: "Shelf")
+        // Same see-through title bar as the editor (#99): the shelf's glass
+        // header and cards sit on one continuous backdrop.
+        window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("PinpointShelfWindow")
 

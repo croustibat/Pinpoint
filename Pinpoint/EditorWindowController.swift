@@ -23,12 +23,19 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
 
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "Pinpoint"
-        window.titlebarAppearsTransparent = false
+        // Content runs under a see-through title bar so the glass toolbar can
+        // float at the top (#99). `NSHostingView` keeps the SwiftUI layout
+        // inside the safe area, so nothing slides under the traffic lights.
+        window.titlebarAppearsTransparent = true
+        // A full-size content view counts the title bar in its height; grow the
+        // window by that much so the canvas keeps the size computed above.
+        let titlebarHeight = window.frame.height - window.contentLayoutRect.height
+        window.setContentSize(NSSize(width: contentSize.width, height: contentSize.height + titlebarHeight))
         window.isReleasedWhenClosed = false
         window.center()
 
