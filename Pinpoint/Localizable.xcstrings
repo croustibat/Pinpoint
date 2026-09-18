@@ -1,6 +1,21 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Annotate Clipboard Image" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annoter l’image du presse-papier" } }
+      }
+    },
+    "Annotate clipboard image:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annoter le presse-papier :" } }
+      }
+    },
+    "No image on the clipboard" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune image dans le presse-papier" } }
+      }
+    },
     "Double-click to edit the title" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Double-cliquez pour modifier le titre" } }

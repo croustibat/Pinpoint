@@ -1,10 +1,11 @@
 import SwiftUI
 import KeyboardShortcuts
 
-// Default global shortcuts: ⌘⇧1 capture, ⌘⇧2 étagère.
+// Default global shortcuts: ⌘⇧1 capture, ⌘⇧2 étagère, ⌥⇧A presse-papier.
 extension KeyboardShortcuts.Name {
     static let capture = Self("capture", default: .init(.one, modifiers: [.command, .shift]))
     static let openShelf = Self("openShelf", default: .init(.two, modifiers: [.command, .shift]))
+    static let annotateClipboard = Self("annotateClipboard", default: .init(.a, modifiers: [.option, .shift]))
 }
 
 @main
@@ -76,6 +77,7 @@ struct CaptureSettingsView: View {
             Section("Shortcuts") {
                 KeyboardShortcuts.Recorder(String(localized: "Capture screen:"), name: .capture)
                 KeyboardShortcuts.Recorder(String(localized: "Open shelf:"), name: .openShelf)
+                KeyboardShortcuts.Recorder(String(localized: "Annotate clipboard image:"), name: .annotateClipboard)
             }
             Section("Marker style") {
                 Picker("Style:", selection: $pinStyle) {
