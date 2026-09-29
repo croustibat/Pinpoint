@@ -1,9 +1,78 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "1 month" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 mois" } }
+      }
+    },
+    "1 week" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 semaine" } }
+      }
+    },
+    "1 year" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 an" } }
+      }
+    },
+    "3 months" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "3 mois" } }
+      }
+    },
+    "6 months" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "6 mois" } }
+      }
+    },
+    "Clean up the shelf" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nettoyer l’Étagère" } }
+      }
+    },
+    "Clean up the shelf…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nettoyer l’Étagère…" } }
+      }
+    },
+    "cleanup.age.days" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld days" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld jours" } }
+      }
+    },
+    "cleanup.reason.old" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "More than %lld days old." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus de %lld jours." } }
+      }
+    },
+    "cleanup.reason.stale" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "More than %lld days old and never opened again." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus de %lld jours et jamais rouvertes." } }
+      }
+    },
+    "cleanup.smart.summary" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Proposes duplicates, retakes from bursts, screenshots never reopened after %1$lld days and anything older than %2$lld days. Favorites, titled screenshots and the last %3$lld days are never touched." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Propose les doublons, les reprises d’une rafale, les captures jamais rouvertes après %1$lld jours et tout ce qui a plus de %2$lld jours. Les favoris, les captures titrées et les %3$lld derniers jours ne sont jamais touchés." } }
+      }
+    },
+    "Custom" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Personnalisé" } }
+      }
+    },
     "Double-click to edit the title" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Double-cliquez pour modifier le titre" } }
+      }
+    },
+    "Duplicates" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Doublons" } }
       }
     },
     "Edit in Pinpoint" : {
@@ -14,6 +83,76 @@
     "Edit title…" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modifier le titre…" } }
+      }
+    },
+    "Favorites and titled screenshots are never touched." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Les favoris et les captures titrées ne sont jamais touchés." } }
+      }
+    },
+    "Looking for screenshots to clean up…" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Recherche des captures à nettoyer…" } }
+      }
+    },
+    "Mode" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mode" } }
+      }
+    },
+    "Never reopened" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Jamais rouvertes" } }
+      }
+    },
+    "No screenshot matches these criteria." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune capture ne correspond à ces critères." } }
+      }
+    },
+    "Nothing to clean up" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rien à nettoyer" } }
+      }
+    },
+    "Old" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Anciennes" } }
+      }
+    },
+    "Older than" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Plus anciennes que" } }
+      }
+    },
+    "Only macOS screenshots" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Seulement les captures macOS" } }
+      }
+    },
+    "Only screenshots never reopened" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Seulement les captures jamais rouvertes" } }
+      }
+    },
+    "Retakes" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Reprises" } }
+      }
+    },
+    "Same image as another screenshot, which is kept." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Même image qu’une autre capture, qui est conservée." } }
+      }
+    },
+    "Smart" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Intelligent" } }
+      }
+    },
+    "Taken seconds before another screenshot, which is kept." : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Prises quelques secondes avant une autre capture, qui est conservée." } }
       }
     },
     "Title" : {
