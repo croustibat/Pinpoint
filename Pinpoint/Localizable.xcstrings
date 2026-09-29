@@ -1,6 +1,21 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Annotate Clipboard Image" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annoter l’image du presse-papier" } }
+      }
+    },
+    "Annotate clipboard image:" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Annoter le presse-papier :" } }
+      }
+    },
+    "No image on the clipboard" : {
+      "localizations" : {
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucune image dans le presse-papier" } }
+      }
+    },
     "1 month" : {
       "localizations" : {
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "1 mois" } }
