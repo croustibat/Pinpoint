@@ -15,6 +15,7 @@ struct ShelfView: View {
     @FocusState private var isSearchFieldFocused: Bool
     @State private var itemsPendingDeletion: [ScreenshotItem] = []
     @State private var isDeleteConfirmationPresented = false
+    @State private var isCleanupPresented = false
     private let gridSpacing: CGFloat = 14
     private let gridPadding: CGFloat = 16
     private let gridColumnCount = 2
@@ -37,6 +38,10 @@ struct ShelfView: View {
                     renameTarget = nil
                 }
             )
+        }
+        .sheet(isPresented: $isCleanupPresented) {
+            CleanupSheetView(onDismiss: { isCleanupPresented = false })
+                .environmentObject(store)
         }
         .confirmationDialog(
             deleteConfirmationTitle,
@@ -82,6 +87,16 @@ struct ShelfView: View {
                     }
                     .buttonStyle(.borderless)
                 }
+
+                Button {
+                    isCleanupPresented = true
+                } label: {
+                    Image(systemName: "wand.and.stars")
+                }
+                .buttonStyle(.borderless)
+                .disabled(store.screenshots.isEmpty)
+                .accessibilityLabel(cleanupLabel)
+                .help(cleanupLabel)
 
                 Button {
                     openSettingsWindow()
@@ -316,6 +331,10 @@ struct ShelfView: View {
         String(localized: "a11y.shelf.settings", defaultValue: "Open settings")
     }
 
+    private var cleanupLabel: String {
+        String(localized: "Clean up the shelf…")
+    }
+
     private var refreshLabel: String {
         String(localized: "a11y.shelf.refresh", defaultValue: "Refresh the shelf")
     }
@@ -458,6 +477,12 @@ struct ShelfView: View {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        // The monitor sees every key of the app, the cleanup sheet's included:
+        // Space or Delete typed there must not act on the shelf behind it.
+        if isCleanupPresented {
+            return event
+        }
+
         let commandPressed = event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
 
         // Handled before the guard below: the search field must stay reachable

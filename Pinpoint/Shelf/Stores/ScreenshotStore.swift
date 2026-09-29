@@ -349,6 +349,17 @@ final class ScreenshotStore: ObservableObject {
         }
     }
 
+    /// Screenshots worth moving to the Trash under `criteria`. Favorites and
+    /// titled captures go in as protected; the planning runs off the main
+    /// actor since it reads Spotlight metadata and may hash files.
+    func cleanupCandidates(for criteria: CleanupCriteria) async -> [CleanupCandidate] {
+        let items = screenshots
+        let protectedPaths = favoritePaths.union(customTitles.keys)
+        return await Task.detached(priority: .userInitiated) {
+            CleanupPlanner.plan(items: items, protectedPaths: protectedPaths, criteria: criteria)
+        }.value
+    }
+
     func setLaunchAtLogin(enabled: Bool) {
         do {
             if enabled {
