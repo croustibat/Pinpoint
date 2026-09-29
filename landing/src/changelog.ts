@@ -16,9 +16,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.7.3',
+    date: '2026-09-29',
+    latest: true,
+    changes: [
+      { type: 'added', text: 'Clean up the Shelf — a new ✨ button reviews your old screenshots before anything goes. Smart mode proposes exact duplicates, the retakes of a burst, screenshots never reopened after 30 days and anything older than 90 days; Custom mode lets you pick the age yourself. Everything is grouped by reason and ticked, untick what you want to keep, and nothing moves until you confirm — then it goes to the Trash, not into the void. Favorites, titled screenshots, the last week and images macOS didn’t take as screenshots are never proposed, so the photos on your Desktop are safe.' },
+      { type: 'added', text: 'Annotate whatever is on the clipboard — ⌥⇧A, or “Annotate Clipboard Image” in the menu, opens the copied image straight in the editor, a file copied in Finder included. Nothing to annotate? A small toast says so instead of an alert stealing focus.' },
+      { type: 'added', text: 'Drop an image onto the menu bar icon to open it in the editor.' },
+      { type: 'changed', text: 'The editor and the Shelf now draw their content under a transparent title bar — the first step towards the Liquid Glass look of macOS 26.' },
+    ],
+  },
+  {
     version: '0.7.2',
     date: '2026-08-24',
-    latest: true,
     changes: [
       { type: 'added', text: 'Every shape can carry its own description now — rectangles, arrows and redacted areas each get a field beside them, so circling a misaligned button finally has somewhere to say why. Until now only a numbered marker could hold a note, and describing a shape meant dropping a marker on top of it or pushing the explanation into the general instructions.' },
       { type: 'added', text: 'Those descriptions travel wherever the capture goes: into capture.md, into an optional note on each shape in capture.json, and into a new ANNOTATIONS section of the baked-in legend. It matters most on a redacted area — “what I hid, and why” is exactly what an agent needs to know, and it was the one part of the handoff that had no way to say it.' },
