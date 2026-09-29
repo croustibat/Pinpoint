@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var countdownController: CountdownController?
     private var settingsController: SettingsWindowController?
     private var shelfController: ShelfWindowController?
+    private var statusItemDropTarget: StatusItemDropTarget?
     private let recentMenu = NSMenu()
     /// Sparkle updater. Created (and started) at launch so scheduled background
     /// checks run; the menu item below also triggers a manual check.
@@ -45,6 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         KeyboardShortcuts.onKeyUp(for: .openShelf) { [weak self] in
             self?.openShelf()
+        }
+        KeyboardShortcuts.onKeyUp(for: .annotateClipboard) { [weak self] in
+            self?.annotateClipboard()
         }
 
         let center = NotificationCenter.default
@@ -144,6 +148,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "Pinpoint")
             button.image?.isTemplate = true
+            // Drop an image file on the icon to annotate it (#100).
+            statusItemDropTarget = StatusItemDropTarget(button: button) { [weak self] url in
+                self?.openImportedFile(url)
+            }
         }
 
         let menu = NSMenu()
@@ -156,6 +164,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         fullScreenItem.keyEquivalentModifierMask = [.command, .shift]
         fullScreenItem.target = self
         menu.addItem(fullScreenItem)
+
+        // Mirrors the global ⌥⇧A shortcut (`KeyboardShortcuts.Name.annotateClipboard`).
+        let clipboardItem = NSMenuItem(title: String(localized: "Annotate Clipboard Image"), action: #selector(annotateClipboard), keyEquivalent: "a")
+        clipboardItem.keyEquivalentModifierMask = [.option, .shift]
+        clipboardItem.target = self
+        menu.addItem(clipboardItem)
         menu.addItem(.separator())
 
         // Mirrors the global ⌘⇧2 shortcut (see `KeyboardShortcuts.Name.openShelf`),
@@ -341,7 +355,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// new `-cropped.png` next to the original.
     @objc private func openInEditor(_ notification: Notification) {
         guard let url = notification.object as? URL else { return }
-        guard let image = Self.loadImage(at: url) else {
+        guard let image = ImageImport.load(at: url) else {
             presentImportError()
             return
         }
@@ -356,15 +370,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         presentEditor(image: image, recordID: record?.id, sourceURL: source)
     }
 
-    /// Loads a bitmap at its native pixel size. `NSImage(contentsOf:)` would honor
-    /// the file's DPI, shrinking Retina screenshots (e.g. ⌘⇧4) to half size; this
-    /// keeps the editor canvas at full resolution, like `CaptureHistory.image(for:)`.
-    private static func loadImage(at url: URL) -> NSImage? {
-        guard let data = try? Data(contentsOf: url),
-              let rep = NSBitmapImageRep(data: data) else { return nil }
-        let image = NSImage(size: NSSize(width: rep.pixelsWide, height: rep.pixelsHigh))
-        image.addRepresentation(rep)
-        return image
+    // MARK: - Importing images (#100)
+
+    /// Opens the image on the clipboard in the editor, as if it had just been
+    /// captured — minus the accessibility snapshot, which only exists for
+    /// pixels Pinpoint read off the screen itself.
+    @objc private func annotateClipboard() {
+        guard let image = ImageImport.clipboardImage() else {
+            ToastController.shared.show(String(localized: "No image on the clipboard"),
+                                        systemImage: "clipboard")
+            return
+        }
+        let record = CaptureHistory.shared.add(image: image)
+        presentEditor(image: image, recordID: record?.id)
+    }
+
+    /// Opens a file dropped on the menu-bar icon. Unlike a shelf screenshot, no
+    /// `sourceURL`: the file can live anywhere, and a crop quietly writing a
+    /// `-cropped.png` into someone's project folder isn't what a drop asks for.
+    private func openImportedFile(_ url: URL) {
+        guard let image = ImageImport.load(at: url) else {
+            presentImportError()
+            return
+        }
+        let record = CaptureHistory.shared.add(image: image)
+        presentEditor(image: image, recordID: record?.id)
     }
 
     /// Writes `image` as a new `<stem>-cropped.png` beside `source`, so cropping a
